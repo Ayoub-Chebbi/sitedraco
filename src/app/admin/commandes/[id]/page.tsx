@@ -38,7 +38,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
       ? { email: order.user.email, name: order.user.name, since: formatDate(order.user.createdAt) }
       : { email: order.guestEmail || "Invité", name: null, since: null },
     agent: order.agent ? { email: order.agent.email, name: order.agent.name } : null,
-    items: order.items.map((item) => ({
+    items: order.items.map((item: typeof order.items[0]) => ({
       id: item.id,
       quantity: item.quantity,
       unitPrice: item.unitPrice,

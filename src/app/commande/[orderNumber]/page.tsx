@@ -44,7 +44,7 @@ export default async function OrderTrackingPage({
         imageUrl: item.product.imageUrl,
       },
       key: item.key && order.status === "delivered"
-        ? { value: (() => { try { return decryptKey(item.key!.keyValue); } catch { return null; } })() }
+        ? { value: (() => { try { return decryptKey(item.key!.keyValue) ?? ""; } catch { return ""; } })() }
         : null,
     })),
   };

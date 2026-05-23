@@ -31,7 +31,7 @@ export default async function ClesPage() {
         platform: item.product.platform,
         orderNumber: order.orderNumber,
         deliveredAt: order.updatedAt.toISOString(),
-        keyValue: (() => { try { return decryptKey(item.key!.keyValue); } catch { return null; } })(),
+        keyValue: (() => { try { return decryptKey(item.key!.keyValue) ?? ""; } catch { return ""; } })(),
       }))
   );
 
