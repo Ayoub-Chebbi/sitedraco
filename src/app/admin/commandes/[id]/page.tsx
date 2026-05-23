@@ -45,7 +45,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
       hasKey: !!item.key,
       product: { id: item.product.id, name: item.product.name, platform: item.product.platform, imageUrl: item.product.imageUrl },
     })),
-    auditLogs: order.auditLogs.map((log) => ({
+    auditLogs: order.auditLogs.map((log: typeof order.auditLogs[0]) => ({
       id: log.id,
       action: log.action,
       actorEmail: log.actor?.email || "Système",
