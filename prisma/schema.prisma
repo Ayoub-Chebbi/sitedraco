@@ -1,0 +1,226 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  phone         String?
+  passwordHash  String?
+  name          String?
+  role          String    @default("customer")
+  isVerified    Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  lastLogin     DateTime?
+
+  pushToken      String?
+
+  orders         Order[]
+  assignedOrders Order[]         @relation("AgentOrders")
+  tickets        SupportTicket[] @relation("UserTickets")
+  agentTickets   SupportTicket[] @relation("AgentTickets")
+  ticketMessages TicketMessage[]
+  auditLogs      AuditLog[]
+  addedKeys      ProductKey[]    @relation("KeyAddedBy")
+  accounts       Account[]
+  sessions       Session[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Product {
+  id                   String   @id @default(cuid())
+  name                 String
+  slug                 String   @unique
+  description          String?
+  platform             String
+  category             String
+  productType          String   @default("key")
+  price                Float
+  discountPrice        Float?
+  accountPrice         Float?
+  accountDiscountPrice Float?
+  imageUrl             String?
+  isActive             Boolean  @default(true)
+  lowStockAlert        Int      @default(5)
+  soldCount            Int      @default(0)
+  rating               Float    @default(4.8)
+  reviewCount          Int      @default(0)
+  urgencyHours         Int      @default(4)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  keys        ProductKey[]
+  orderItems  OrderItem[]
+  upsells     ProductUpsell[] @relation("ProductUpsells")
+  upsellOf    ProductUpsell[] @relation("UpsellOf")
+}
+
+model HeroSlide {
+  id            String   @id @default(cuid())
+  title         String
+  subtitle      String
+  badge         String
+  price         Float
+  discountPrice Float?
+  href          String
+  imageUrl      String
+  gradient      String   @default("from-purple-950/90 via-purple-950/60 to-transparent")
+  accentColor   String   @default("text-purple-400")
+  displayOrder  Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+}
+
+model ProductUpsell {
+  id              String  @id @default(cuid())
+  productId       String
+  upsellProductId String
+  displayOrder    Int     @default(0)
+
+  product       Product @relation("ProductUpsells", fields: [productId], references: [id], onDelete: Cascade)
+  upsellProduct Product @relation("UpsellOf", fields: [upsellProductId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, upsellProductId])
+}
+
+model ProductKey {
+  id          String    @id @default(cuid())
+  productId   String
+  keyValue    String
+  status      String    @default("available")
+  orderId     String?
+  addedById   String?
+  deliveredAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  product   Product    @relation(fields: [productId], references: [id])
+  order     Order?     @relation(fields: [orderId], references: [id])
+  addedBy   User?      @relation("KeyAddedBy", fields: [addedById], references: [id])
+  orderItem OrderItem?
+}
+
+model Order {
+  id            String   @id @default(cuid())
+  orderNumber   String   @unique
+  userId        String?
+  guestEmail    String?
+  status        String   @default("pending")
+  paymentMethod String?
+  paymentStatus String   @default("pending")
+  paymentRef    String?
+  totalAmount   Float
+  notesInternal String?
+  agentId       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user      User?          @relation(fields: [userId], references: [id])
+  agent     User?          @relation("AgentOrders", fields: [agentId], references: [id])
+  items     OrderItem[]
+  keys      ProductKey[]
+  ticket    SupportTicket?
+  auditLogs AuditLog[]
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Int     @default(1)
+  unitPrice Float
+  keyId     String? @unique
+
+  order   Order       @relation(fields: [orderId], references: [id])
+  product Product     @relation(fields: [productId], references: [id])
+  key     ProductKey? @relation(fields: [keyId], references: [id])
+}
+
+model SupportTicket {
+  id         String    @id @default(cuid())
+  orderId    String?   @unique
+  userId     String?
+  agentId    String?
+  subject    String
+  category   String    @default("general")
+  priority   String    @default("normal")
+  status     String    @default("open")
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
+  order    Order?          @relation(fields: [orderId], references: [id])
+  user     User?           @relation("UserTickets", fields: [userId], references: [id])
+  agent    User?           @relation("AgentTickets", fields: [agentId], references: [id])
+  messages TicketMessage[]
+}
+
+model TicketMessage {
+  id        String   @id @default(cuid())
+  ticketId  String
+  senderId  String
+  message   String
+  createdAt DateTime @default(now())
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id])
+  sender User          @relation(fields: [senderId], references: [id])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  targetType String
+  targetId   String
+  metadata   String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  actor User?  @relation(fields: [actorId], references: [id])
+  order Order? @relation(fields: [targetId], references: [id])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}

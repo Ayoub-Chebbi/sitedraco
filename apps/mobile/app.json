@@ -1,0 +1,67 @@
+{
+  "expo": {
+    "name": "LootStore",
+    "slug": "lootstore",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0d0d14"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "tn.lootstore.app",
+      "infoPlist": {
+        "UIViewControllerBasedStatusBarAppearance": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0d0d14"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "tn.lootstore.app",
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "scheme": "lootstore",
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-secure-store",
+      "expo-dev-client",
+      [
+        "expo-notifications",
+        {
+          "sounds": [
+            "./assets/sounds/ching.wav"
+          ]
+        }
+      ],
+      "expo-web-browser"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "apiUrl": "http://192.168.1.40:3000",
+      "router": {},
+      "eas": {
+        "projectId": "28155ffd-1374-4810-bc96-95f912acfd30"
+      }
+    },
+    "owner": "siayoub"
+  }
+}

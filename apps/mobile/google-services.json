@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "92145501824",
+    "project_id": "draco-d7485",
+    "storage_bucket": "draco-d7485.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:92145501824:android:32fc98ec42e61e7a39c865",
+        "android_client_info": {
+          "package_name": "tn.lootstore.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCvQLm6vr8O6V5nYmaJWVDj_sd2VuMB7FE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
