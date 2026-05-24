@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, Plus, Eye, EyeOff, Loader2, Package, CheckCircle, Clock, Minus } from "lucide-react";
+import { Trash2, Plus, Eye, EyeOff, Loader2, Package, CheckCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/lib/use-toast";
 
@@ -132,9 +132,9 @@ export function StockClient({ productId, productName, keys: initialKeys, manualS
             <button
               type="button"
               onClick={() => setManualStock((v) => Math.max(0, v - 1))}
-              className="w-9 h-9 rounded-lg border border-gray-700 bg-gray-800 flex items-center justify-center text-gray-300 hover:text-white hover:border-gray-600 transition-colors"
+              className="w-9 h-9 rounded-lg border border-gray-700 bg-gray-800 flex items-center justify-center text-gray-300 hover:text-white hover:border-gray-600 transition-colors text-xl font-light"
             >
-              <Minus className="h-4 w-4" />
+              −
             </button>
 
             <input
@@ -148,9 +148,9 @@ export function StockClient({ productId, productName, keys: initialKeys, manualS
             <button
               type="button"
               onClick={() => setManualStock((v) => v + 1)}
-              className="w-9 h-9 rounded-lg border border-gray-700 bg-gray-800 flex items-center justify-center text-gray-300 hover:text-white hover:border-gray-600 transition-colors"
+              className="w-9 h-9 rounded-lg border border-gray-700 bg-gray-800 flex items-center justify-center text-gray-300 hover:text-white hover:border-gray-600 transition-colors text-xl font-light"
             >
-              <Plus className="h-4 w-4" />
+              +
             </button>
           </div>
 
