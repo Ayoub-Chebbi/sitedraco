@@ -295,7 +295,7 @@ export default async function HomePage() {
                 Créer mon compte <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
-            <a href="https://wa.me/21600000000" target="_blank" rel="noopener noreferrer">
+            <a href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP ?? "21600000000"}`} target="_blank" rel="noopener noreferrer">
               <Button size="lg" variant="outline" className="gap-2 border-gray-700 hover:border-green-600 hover:text-green-400">
                 <MessageCircle className="h-4 w-4 text-green-400" />
                 WhatsApp

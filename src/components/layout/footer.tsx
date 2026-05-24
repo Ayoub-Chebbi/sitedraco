@@ -40,7 +40,7 @@ export function Footer({ siteName = "Loot", logoUrl = "" }: { siteName?: string;
             Votre boutique de confiance pour les jeux numériques, cartes prépayées et abonnements gaming.
           </p>
           <div className="flex items-center gap-3 mt-4">
-            <a href="https://wa.me/21600000000" target="_blank" rel="noopener noreferrer"
+            <a href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP ?? "21600000000"}`} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-2 text-sm text-green-400 hover:text-green-300 transition-colors">
               <MessageCircle className="h-4 w-4" />
               WhatsApp Support

@@ -93,7 +93,7 @@ export function OrderTrackingClient({ order }: { order: OrderData }) {
           <p className="text-sm text-gray-400 mt-1">
             Cette commande n&apos;a pas pu être traitée. Contactez notre support pour plus d&apos;informations.
           </p>
-          <a href="https://wa.me/21600000000" target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex">
+          <a href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP ?? "21600000000"}`} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex">
             <Button variant="outline" size="sm" className="gap-2">
               <MessageCircle className="h-4 w-4 text-green-400" />
               Contacter le support
@@ -181,7 +181,7 @@ export function OrderTrackingClient({ order }: { order: OrderData }) {
         <Link href="/produits">
           <Button variant="outline" className="w-full sm:w-auto">Continuer mes achats</Button>
         </Link>
-        <a href="https://wa.me/21600000000" target="_blank" rel="noopener noreferrer">
+        <a href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP ?? "21600000000"}`} target="_blank" rel="noopener noreferrer">
           <Button variant="ghost" className="w-full sm:w-auto gap-2">
             <MessageCircle className="h-4 w-4 text-green-400" />
             Besoin d&apos;aide ?

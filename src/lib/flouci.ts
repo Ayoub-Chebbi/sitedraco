@@ -1,5 +1,9 @@
 const FLOUCI_BASE = "https://developers.flouci.com/api";
 
+export function getFlouciBase(): string {
+  return process.env.SITE_URL ?? process.env.NEXTAUTH_URL ?? "https://loot.tn";
+}
+
 export async function initiateFlouciPayment({
   amount,
   orderId,
@@ -11,12 +15,16 @@ export async function initiateFlouciPayment({
   successLink: string;
   failLink: string;
 }): Promise<{ paymentUrl: string; paymentId: string }> {
+  const token = process.env.FLOUCI_APP_TOKEN;
+  const secret = process.env.FLOUCI_APP_SECRET;
+  if (!token || !secret) throw new Error("Flouci credentials not configured");
+
   const res = await fetch(`${FLOUCI_BASE}/generate_payment`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      app_token: process.env.FLOUCI_APP_TOKEN,
-      app_secret: process.env.FLOUCI_APP_SECRET,
+      app_token: token,
+      app_secret: secret,
       amount: Math.round(amount * 1000), // TND → millimes
       accept_card: "true",
       session_timeout_secs: 1200,
@@ -26,12 +34,9 @@ export async function initiateFlouciPayment({
     }),
   });
 
-  if (!res.ok) throw new Error(`Flouci HTTP ${res.status}`);
-  const data = await res.json();
-
-  if (!data.result?.success) {
-    throw new Error(data.result?.message ?? "Flouci initiation failed");
-  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(`Flouci HTTP ${res.status}: ${JSON.stringify(data)}`);
+  if (!data.result?.success) throw new Error(`Flouci error: ${data.result?.message ?? JSON.stringify(data)}`);
 
   return {
     paymentUrl: data.result.link as string,
@@ -39,15 +44,31 @@ export async function initiateFlouciPayment({
   };
 }
 
-// Flouci appends ?payment_id=xxx to the success_link redirect.
 export async function verifyFlouciPayment(paymentId: string): Promise<boolean> {
+  const token = process.env.FLOUCI_APP_TOKEN;
+  const secret = process.env.FLOUCI_APP_SECRET;
+  if (!token || !secret) {
+    console.error("[flouci] verify: credentials not configured");
+    return false;
+  }
+
   const res = await fetch(`${FLOUCI_BASE}/verify_payment/${paymentId}`, {
     headers: {
-      apppublic: process.env.FLOUCI_APP_TOKEN!,
-      appsecret: process.env.FLOUCI_APP_SECRET!,
+      apppublic: token,
+      appsecret: secret,
     },
   });
-  if (!res.ok) return false;
-  const data = await res.json();
-  return data.result?.status === "SUCCESS";
+
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    console.error(`[flouci] verify HTTP ${res.status}:`, JSON.stringify(data));
+    return false;
+  }
+
+  const status = data.result?.status;
+  if (status !== "SUCCESS") {
+    console.error(`[flouci] verify status not SUCCESS:`, JSON.stringify(data));
+  }
+  return status === "SUCCESS";
 }

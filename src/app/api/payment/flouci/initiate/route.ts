@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  const base = process.env.NEXTAUTH_URL ?? "https://loot.tn";
+  const base = process.env.SITE_URL ?? process.env.NEXTAUTH_URL ?? "https://loot.tn";
 
   try {
     const { paymentUrl, paymentId } = await initiateFlouciPayment({
