@@ -30,7 +30,7 @@ export function SettingsClient({ initial }: Props) {
       if (!res.ok) throw new Error();
       toast({ title: "Paramètres sauvegardés", variant: "success" });
     } catch {
-      toast({ title: "Erreur lors de la sauvegarde", variant: "destructive" });
+      toast({ title: "Erreur lors de la sauvegarde", variant: "error" });
     } finally {
       setSaving(false);
     }
