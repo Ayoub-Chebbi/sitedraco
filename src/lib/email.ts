@@ -30,7 +30,7 @@ export async function sendWelcomeEmail(email: string, password: string, orderNum
       <p style="margin:0"><span style="color:#9ca3af">Mot de passe temporaire :</span> <strong style="color:#a78bfa;font-size:18px;letter-spacing:2px">${password}</strong></p>
     </div>
     <p style="color:#9ca3af;font-size:13px;margin:0 0 20px">⚠️ Pensez à changer votre mot de passe après votre première connexion.</p>
-    <a href="${process.env.NEXTAUTH_URL || "http://localhost:3000"}/connexion" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">
+    <a href="${process.env.NEXTAUTH_URL || "https://loot.tn"}/connexion" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">
       Voir ma commande →
     </a>
   ${foot}`;

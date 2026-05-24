@@ -272,7 +272,7 @@ export function Header({ siteName = "Loot", logoUrl = "" }: { siteName?: string;
                   </button>
                 </Link>
                 {(session.user.role === "admin" || session.user.role === "support") && (
-                  <Link href="/admin" title="Administration" className="p-1.5 rounded-lg hover:bg-purple-900/30 transition-colors">
+                  <Link href={session.user.role === "support" ? "/admin/commandes" : "/admin"} title="Administration" className="p-1.5 rounded-lg hover:bg-purple-900/30 transition-colors">
                     <Shield className="h-3.5 w-3.5 text-purple-400 hover:text-purple-300" />
                   </Link>
                 )}

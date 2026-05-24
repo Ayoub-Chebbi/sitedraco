@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  const base = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+  const base = process.env.NEXTAUTH_URL ?? "https://loot.tn";
 
   try {
     const { paymentUrl, paymentId } = await initiateFlouciPayment({

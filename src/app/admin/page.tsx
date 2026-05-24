@@ -102,6 +102,7 @@ export default async function AdminPage() {
   if (!session || !["admin", "support"].includes(session.user.role)) {
     redirect("/");
   }
+  if (session.user.role === "support") redirect("/admin/commandes");
 
   const metrics = await getMetrics();
 

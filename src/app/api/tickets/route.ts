@@ -42,22 +42,26 @@ export async function POST(req: NextRequest) {
 
   const { subject, message, category, priority, orderId } = parsed.data;
 
-  const ticket = await prisma.supportTicket.create({
-    data: {
-      subject,
-      category,
-      priority,
-      userId: token.id as string,
-      orderId: orderId || null,
-      messages: {
-        create: {
-          message,
-          senderId: token.id as string,
+  try {
+    const ticket = await prisma.supportTicket.create({
+      data: {
+        subject,
+        category,
+        priority,
+        userId: token.id as string,
+        orderId: orderId || null,
+        messages: {
+          create: {
+            message,
+            senderId: token.id as string,
+          },
         },
       },
-    },
-    include: { messages: true },
-  });
-
-  return NextResponse.json(ticket, { status: 201 });
+      include: { messages: true },
+    });
+    return NextResponse.json(ticket, { status: 201 });
+  } catch (err) {
+    console.error("Ticket creation error:", err);
+    return NextResponse.json({ error: "Impossible de créer le ticket." }, { status: 500 });
+  }
 }

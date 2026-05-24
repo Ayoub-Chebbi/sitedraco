@@ -157,7 +157,7 @@ model Order {
   agent     User?          @relation("AgentOrders", fields: [agentId], references: [id])
   items     OrderItem[]
   keys      ProductKey[]
-  ticket    SupportTicket?
+  tickets   SupportTicket[]
   auditLogs AuditLog[]
 }
 
@@ -176,7 +176,7 @@ model OrderItem {
 
 model SupportTicket {
   id         String    @id @default(cuid())
-  orderId    String?   @unique
+  orderId    String?
   userId     String?
   agentId    String?
   subject    String
