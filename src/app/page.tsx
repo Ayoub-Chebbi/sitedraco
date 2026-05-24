@@ -100,7 +100,7 @@ function SectionHeader({ title, icon: Icon, iconColor, href, linkLabel = "Voir t
 }
 
 export default async function HomePage() {
-  const [heroSlides, newArrivals, deals, ps5, ps4, xbox, nintendo, steam, mobile, giftCards] =
+  const [heroSlides, newArrivals, deals, ps5, ps4, xbox, nintendo, pc, steam, mobile, giftCards] =
     await Promise.all([
       getHeroSlides(),
       getNewArrivals(),
@@ -109,12 +109,13 @@ export default async function HomePage() {
       getByPlatform("ps4"),
       getByPlatform("xbox"),
       getByPlatform("nintendo"),
+      getByPlatform("pc"),
       getByPlatform("steam"),
       getByPlatform("mobile"),
       getGiftCards(),
     ]);
 
-  const platforms = { ps5, ps4, xbox, nintendo, steam, mobile };
+  const platforms = { ps5, ps4, xbox, nintendo, pc, steam, mobile };
   const hasPlatformProducts = Object.values(platforms).some((arr) => arr.length > 0);
 
   return (

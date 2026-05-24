@@ -11,7 +11,8 @@ const TABS = [
   { key: "ps4",      label: "PlayStation 4", emoji: "🕹️" },
   { key: "xbox",     label: "Xbox",          emoji: "🟢" },
   { key: "nintendo", label: "Nintendo",      emoji: "🔴" },
-  { key: "steam",    label: "PC / Steam",    emoji: "💻" },
+  { key: "pc",       label: "PC",            emoji: "🖥️" },
+  { key: "steam",    label: "Steam",         emoji: "💻" },
   { key: "mobile",   label: "Mobile",        emoji: "📱" },
 ];
 

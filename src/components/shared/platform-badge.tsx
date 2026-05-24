@@ -5,6 +5,7 @@ const PLATFORM_CONFIG: Record<string, { label: string; variant: BadgeProps["vari
   ps4: { label: "PS4", variant: "ps4" },
   ps5: { label: "PS5", variant: "ps5" },
   xbox: { label: "Xbox", variant: "xbox" },
+  pc: { label: "PC", variant: "secondary" },
   steam: { label: "Steam", variant: "steam" },
   nintendo: { label: "Nintendo", variant: "nintendo" },
   mobile: { label: "Mobile", variant: "mobile" },

@@ -15,6 +15,7 @@ const PLATFORMS = [
   { value: "ps5", label: "PS5" },
   { value: "ps4", label: "PS4" },
   { value: "xbox", label: "Xbox" },
+  { value: "pc", label: "PC" },
   { value: "steam", label: "Steam" },
   { value: "nintendo", label: "Nintendo" },
   { value: "mobile", label: "Mobile" },
