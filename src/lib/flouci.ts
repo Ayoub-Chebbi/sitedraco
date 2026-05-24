@@ -23,6 +23,7 @@ export async function initiateFlouciPayment({
     session_timeout_secs: 1200,
     success_link: successLink,
     fail_link: failLink,
+    developer_tracking_id: crypto.randomUUID(), // must be UUID format
   };
 
   console.log("[flouci] sending payload:", JSON.stringify({ ...payload, app_token: "***", app_secret: "***" }));
