@@ -91,48 +91,11 @@ function SlideFormPanel({
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="col-span-2">
-          <label className="block text-xs text-gray-500 mb-1">Titre *</label>
-          <input required value={value.title} onChange={(e) => set("title", e.target.value)}
-            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
-            placeholder="God of War Ragnarök" />
-        </div>
-        <div className="col-span-2">
-          <label className="block text-xs text-gray-500 mb-1">Sous-titre *</label>
-          <textarea rows={2} required value={value.subtitle} onChange={(e) => set("subtitle", e.target.value)}
-            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500 resize-none"
-            placeholder="Description courte du produit…" />
-        </div>
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Badge *</label>
-          <input required value={value.badge} onChange={(e) => set("badge", e.target.value)}
-            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
-            placeholder="PS5 • Exclusivité" />
-        </div>
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Lien (href) *</label>
-          <input required value={value.href} onChange={(e) => set("href", e.target.value)}
-            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
-            placeholder="/produits/mon-produit" />
-        </div>
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Prix (TND) *</label>
-          <input required type="number" min="0" step="0.001" value={value.price} onChange={(e) => set("price", e.target.value)}
-            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500" />
-        </div>
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Prix promo (TND)</label>
-          <input type="number" min="0" step="0.001" value={value.discountPrice} onChange={(e) => set("discountPrice", e.target.value)}
-            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500" />
-        </div>
-      </div>
-
-      {/* Image */}
+      {/* Image — primary field */}
       <div>
         <label className="block text-xs text-gray-500 mb-1">Image</label>
         {value.imageUrl && (
-          <div className="relative w-full h-24 rounded-lg overflow-hidden border border-gray-700 bg-gray-800 mb-2">
+          <div className="relative w-full h-28 rounded-lg overflow-hidden border border-gray-700 bg-gray-800 mb-2">
             <Image src={value.imageUrl} alt="aperçu" fill className="object-cover"
               unoptimized={value.imageUrl.startsWith("/uploads")} />
             <button type="button" onClick={() => set("imageUrl", "")}
@@ -151,6 +114,44 @@ function SlideFormPanel({
           <input value={value.imageUrl} onChange={(e) => set("imageUrl", e.target.value)}
             className="flex-1 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-500"
             placeholder="https://… ou /uploads/…" />
+        </div>
+      </div>
+
+      {/* Optional text fields */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="col-span-2">
+          <label className="block text-xs text-gray-500 mb-1">Titre <span className="text-gray-600">(optionnel)</span></label>
+          <input value={value.title} onChange={(e) => set("title", e.target.value)}
+            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
+            placeholder="God of War Ragnarök" />
+        </div>
+        <div className="col-span-2">
+          <label className="block text-xs text-gray-500 mb-1">Sous-titre <span className="text-gray-600">(optionnel)</span></label>
+          <textarea rows={2} value={value.subtitle} onChange={(e) => set("subtitle", e.target.value)}
+            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500 resize-none"
+            placeholder="Description courte du produit…" />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Badge <span className="text-gray-600">(optionnel)</span></label>
+          <input value={value.badge} onChange={(e) => set("badge", e.target.value)}
+            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
+            placeholder="PS5 • Exclusivité" />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Lien (href) <span className="text-gray-600">(optionnel)</span></label>
+          <input value={value.href} onChange={(e) => set("href", e.target.value)}
+            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
+            placeholder="/produits/mon-produit" />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Prix (TND) <span className="text-gray-600">(optionnel)</span></label>
+          <input type="number" min="0" step="0.001" value={value.price} onChange={(e) => set("price", e.target.value)}
+            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500" />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Prix promo (TND) <span className="text-gray-600">(optionnel)</span></label>
+          <input type="number" min="0" step="0.001" value={value.discountPrice} onChange={(e) => set("discountPrice", e.target.value)}
+            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500" />
         </div>
       </div>
 
@@ -238,9 +239,9 @@ export function HeroEditorClient({ initialSlides }: { initialSlides: Slide[] }) 
         title: editForm.title,
         subtitle: editForm.subtitle,
         badge: editForm.badge,
-        price: parseFloat(editForm.price),
+        price: parseFloat(editForm.price) || 0,
         discountPrice: editForm.discountPrice ? parseFloat(editForm.discountPrice) : null,
-        href: editForm.href,
+        href: editForm.href || "/produits",
         imageUrl: editForm.imageUrl,
         gradient: editForm.gradient,
         accentColor: editForm.accentColor,
@@ -267,10 +268,10 @@ export function HeroEditorClient({ initialSlides }: { initialSlides: Slide[] }) 
         title: addForm.title,
         subtitle: addForm.subtitle,
         badge: addForm.badge,
-        price: parseFloat(addForm.price),
+        price: parseFloat(addForm.price) || 0,
         discountPrice: addForm.discountPrice ? parseFloat(addForm.discountPrice) : null,
-        href: addForm.href,
-        imageUrl: addForm.imageUrl || "https://placehold.co/600x400/1e1b4b/a78bfa?text=Hero",
+        href: addForm.href || "/produits",
+        imageUrl: addForm.imageUrl,
         gradient: addForm.gradient,
         accentColor: addForm.accentColor,
         displayOrder: parseInt(addForm.displayOrder) || slides.length,
@@ -295,7 +296,7 @@ export function HeroEditorClient({ initialSlides }: { initialSlides: Slide[] }) 
       const res = await fetch(`/api/admin/hero-slides/${id}`, { method: "DELETE" });
       if (!res.ok) { toast({ title: "Erreur", variant: "error" }); return; }
       setSlides((prev) => prev.filter((s) => s.id !== id));
-      toast({ title: "Slide supprimé", description: title, variant: "success" });
+      toast({ title: "Slide supprimé", description: title || "Sans titre", variant: "success" });
     });
   }
 
@@ -339,12 +340,14 @@ export function HeroEditorClient({ initialSlides }: { initialSlides: Slide[] }) 
             <div className="flex items-center gap-3 p-3">
               <GripVertical className="h-4 w-4 text-gray-700 shrink-0" />
               <div className="relative w-16 h-10 rounded-md overflow-hidden bg-gray-800 shrink-0">
-                <Image src={slide.imageUrl} alt={slide.title} fill className="object-cover"
-                  unoptimized={slide.imageUrl.startsWith("/uploads")} />
+                {slide.imageUrl
+                  ? <Image src={slide.imageUrl} alt={slide.title || "slide"} fill className="object-cover" unoptimized={slide.imageUrl.startsWith("/uploads")} />
+                  : <div className="w-full h-full flex items-center justify-center text-gray-600 text-xs">—</div>
+                }
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white truncate">{slide.title}</p>
-                <p className="text-xs text-gray-500 truncate">{slide.badge} · {formatPrice(slide.discountPrice ?? slide.price)}</p>
+                <p className="text-sm font-semibold text-white truncate">{slide.title || <span className="text-gray-600 italic">Sans titre</span>}</p>
+                <p className="text-xs text-gray-500 truncate">{slide.badge || "—"}{slide.price > 0 ? ` · ${formatPrice(slide.discountPrice ?? slide.price)}` : ""}</p>
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 <button onClick={() => toggleActive(slide)}

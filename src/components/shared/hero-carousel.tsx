@@ -105,28 +105,36 @@ export function HeroCarousel({ slides = DEFAULT_SLIDES }: { slides?: Slide[] }) 
         <div className="w-full max-w-7xl mx-auto px-6 pb-16">
           <div className="max-w-2xl">
             {/* Badge */}
-            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-sm bg-white/10 backdrop-blur-sm border border-white/20 text-xs font-bold uppercase tracking-widest mb-5 ${slide.accentColor}`}>
-              <Zap className="h-3 w-3" />
-              {slide.badge}
-            </div>
+            {slide.badge && (
+              <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-sm bg-white/10 backdrop-blur-sm border border-white/20 text-xs font-bold uppercase tracking-widest mb-5 ${slide.accentColor}`}>
+                <Zap className="h-3 w-3" />
+                {slide.badge}
+              </div>
+            )}
 
             {/* Headline */}
-            <h1 className="text-4xl md:text-5xl font-black text-white mb-4 leading-tight">
-              {slide.title}
-            </h1>
+            {slide.title && (
+              <h1 className="text-4xl md:text-5xl font-black text-white mb-4 leading-tight">
+                {slide.title}
+              </h1>
+            )}
 
             {/* Subtitle */}
-            <p className="text-gray-300 text-base md:text-lg mb-8 leading-relaxed max-w-xl">
-              {slide.subtitle}
-            </p>
+            {slide.subtitle && (
+              <p className="text-gray-300 text-base md:text-lg mb-8 leading-relaxed max-w-xl">
+                {slide.subtitle}
+              </p>
+            )}
 
             {/* CTAs */}
             <div className="flex flex-wrap items-center gap-3">
-              <Link href={slide.href}>
-                <Button size="lg" className="gap-2 bg-white text-black hover:bg-gray-100 font-bold shadow-xl">
-                  Découvrir l&apos;offre <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
+              {slide.href && (
+                <Link href={slide.href}>
+                  <Button size="lg" className="gap-2 bg-white text-black hover:bg-gray-100 font-bold shadow-xl">
+                    Découvrir l&apos;offre <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+              )}
               <Link href="/produits">
                 <Button size="lg" variant="outline" className="gap-2 border-white/30 text-white hover:bg-white/10 font-semibold">
                   Toute la boutique

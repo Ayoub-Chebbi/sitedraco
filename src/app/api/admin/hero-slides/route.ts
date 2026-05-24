@@ -4,13 +4,13 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
 const SlideSchema = z.object({
-  title: z.string().min(1).max(120),
-  subtitle: z.string().min(1).max(300),
-  badge: z.string().min(1).max(80),
-  price: z.number().positive(),
+  title: z.string().max(120).optional().default(""),
+  subtitle: z.string().max(300).optional().default(""),
+  badge: z.string().max(80).optional().default(""),
+  price: z.number().min(0).optional().default(0),
   discountPrice: z.number().positive().optional().nullable(),
-  href: z.string().min(1),
-  imageUrl: z.string().min(1),
+  href: z.string().optional().default("/produits"),
+  imageUrl: z.string().optional().default(""),
   gradient: z.string().optional().default("from-purple-950/90 via-purple-950/60 to-transparent"),
   accentColor: z.string().optional().default("text-purple-400"),
   displayOrder: z.number().int().min(0).optional().default(0),
