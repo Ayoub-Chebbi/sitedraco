@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { MessageCircle, Mail, Clock, Shield, Zap, RefreshCw } from "lucide-react";
 
-export function Footer() {
+export function Footer({ siteName = "Loot", logoUrl = "" }: { siteName?: string; logoUrl?: string }) {
   return (
     <footer className="bg-gray-950 border-t border-gray-800 mt-16">
       {/* Trust bar */}
@@ -27,8 +27,14 @@ export function Footer() {
       <div className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-2 md:grid-cols-4 gap-8">
         <div className="col-span-2 md:col-span-1">
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center text-white font-bold text-sm">G</div>
-            <span className="font-bold text-xl text-white">Loot</span>
+            <div className="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
+              {logoUrl ? (
+                <img src={logoUrl} alt={siteName} className="w-full h-full object-contain" />
+              ) : (
+                siteName.charAt(0)
+              )}
+            </div>
+            <span className="font-bold text-xl text-white">{siteName}</span>
           </div>
           <p className="text-sm text-gray-500 leading-relaxed">
             Votre boutique de confiance pour les jeux numériques, cartes prépayées et abonnements gaming.
@@ -111,7 +117,7 @@ export function Footer() {
 
       <div className="border-t border-gray-800 py-4">
         <p className="text-center text-xs text-gray-600">
-          © {new Date().getFullYear()} Loot — Tous droits réservés
+          © {new Date().getFullYear()} {siteName} — Tous droits réservés
         </p>
       </div>
     </footer>

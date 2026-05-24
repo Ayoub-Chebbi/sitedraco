@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth";
-import { LayoutDashboard, ShoppingBag, Package, Users, ImageIcon, Ticket, Sparkles } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, Package, Users, ImageIcon, Ticket, Sparkles, Settings } from "lucide-react";
 
 const ADMIN_NAV = [
   { href: "/admin",             label: "Dashboard",      icon: LayoutDashboard },
@@ -9,6 +9,7 @@ const ADMIN_NAV = [
   { href: "/admin/produits",    label: "Produits",       icon: Package },
   { href: "/admin/utilisateurs",label: "Clients",        icon: Users },
   { href: "/admin/hero",        label: "Hero Carrousel", icon: ImageIcon },
+  { href: "/admin/settings",    label: "Paramètres",     icon: Settings },
 ];
 
 const SUPPORT_NAV = [

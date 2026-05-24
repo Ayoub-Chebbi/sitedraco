@@ -107,7 +107,7 @@ function useDebounce<T>(value: T, delay: number): T {
   return debounced;
 }
 
-export function Header() {
+export function Header({ siteName = "Loot", logoUrl = "" }: { siteName?: string; logoUrl?: string }) {
   const { data: session } = useSession();
   const count = useCart((s) => s.count());
   const [mounted, setMounted] = useState(false);
@@ -162,11 +162,15 @@ export function Header() {
 
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 shrink-0 mr-2">
-            <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center shrink-0">
-              <span className="font-black text-black text-lg leading-none">L</span>
+            <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center shrink-0 overflow-hidden">
+              {logoUrl ? (
+                <img src={logoUrl} alt={siteName} className="w-full h-full object-contain" />
+              ) : (
+                <span className="font-black text-black text-lg leading-none">{siteName.charAt(0)}</span>
+              )}
             </div>
             <span className="font-black text-lg text-white hidden sm:block tracking-widest uppercase">
-              Loot
+              {siteName}
             </span>
           </Link>
 

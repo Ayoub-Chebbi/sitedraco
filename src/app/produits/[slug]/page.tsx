@@ -1,14 +1,37 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getSiteSettings } from "@/lib/site-settings";
 import { ProductDetailClient } from "./product-detail-client";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const product = await prisma.product.findUnique({ where: { slug } });
+  const [product, settings] = await Promise.all([
+    prisma.product.findUnique({ where: { slug } }),
+    getSiteSettings(),
+  ]);
   if (!product) return {};
+
+  const description =
+    product.description ||
+    `Achetez ${product.name} au meilleur prix sur ${settings.siteName}. Livraison rapide en Tunisie.`;
+  const images = product.imageUrl ? [{ url: product.imageUrl, width: 800, height: 800, alt: product.name }] : [];
+
   return {
-    title: `${product.name} — LootStore`,
-    description: product.description || `Achetez ${product.name} au meilleur prix sur LootStore.`,
+    title: product.name,
+    description,
+    openGraph: {
+      type: "website",
+      title: `${product.name} | ${settings.siteName}`,
+      description,
+      images,
+      siteName: settings.siteName,
+    },
+    twitter: {
+      card: images.length ? "summary_large_image" : "summary",
+      title: `${product.name} | ${settings.siteName}`,
+      description,
+      images: images.map((i) => i.url),
+    },
   };
 }
 
