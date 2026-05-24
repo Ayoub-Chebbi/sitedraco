@@ -19,8 +19,9 @@ const CreateSchema = z.object({
     .max(120)
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug invalide (lettres minuscules, chiffres et tirets uniquement)"),
   description: z.string().max(2000).optional().nullable(),
+  accountDescription: z.string().max(2000).optional().nullable(),
   platform: z.enum(["ps4", "ps5", "xbox", "steam", "nintendo", "mobile", "other"]),
-  category: z.enum(["game", "dlc", "subscription", "credit", "giftcard"]),
+  category: z.string().min(1).max(50),
   productType: z.enum(["key", "account", "both"]).optional().default("key"),
   price: z.number().positive(),
   discountPrice: z.number().positive().optional().nullable(),

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useRef, useTransition } from "react";
+import { useState, useRef, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Upload, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/lib/use-toast";
-import { PLATFORMS, CATEGORIES } from "@/lib/utils";
+import { PLATFORMS } from "@/lib/utils";
 
 function slugify(str: string) {
   return str
@@ -27,6 +27,7 @@ export type ProductFormValues = {
   accountDiscountPrice: string;
   slug: string;
   description: string;
+  accountDescription: string;
   platform: string;
   category: string;
   productType: "key" | "account" | "both";
@@ -47,6 +48,7 @@ const DEFAULTS: ProductFormValues = {
   accountDiscountPrice: "",
   slug: "",
   description: "",
+  accountDescription: "",
   platform: "steam",
   category: "game",
   productType: "key",
@@ -72,7 +74,15 @@ export function ProductForm({ initial, mode, productId }: Props) {
   const [isUploading, setIsUploading] = useState(false);
   const [form, setForm] = useState<ProductFormValues>({ ...DEFAULTS, ...initial });
   const [slugEdited, setSlugEdited] = useState(mode === "edit");
+  const [categories, setCategories] = useState<{ id: string; slug: string; label: string }[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetch("/api/categories")
+      .then((r) => r.json())
+      .then(setCategories)
+      .catch(() => {});
+  }, []);
 
   function set(key: keyof ProductFormValues, value: string | boolean) {
     setForm((prev) => {
@@ -121,6 +131,7 @@ export function ProductForm({ initial, mode, productId }: Props) {
         name: form.name.trim(),
         slug: form.slug.trim(),
         description: form.description.trim() || null,
+        accountDescription: (hasAccount && form.accountDescription.trim()) ? form.accountDescription.trim() : null,
         platform: form.platform,
         category: form.category,
         productType: form.productType,
@@ -163,6 +174,9 @@ export function ProductForm({ initial, mode, productId }: Props) {
     });
   }
 
+  const hasKey = form.productType === "key" || form.productType === "both";
+  const hasAccount = form.productType === "account" || form.productType === "both";
+
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {/* Main info */}
@@ -193,16 +207,6 @@ export function ProductForm({ initial, mode, productId }: Props) {
           <p className="text-xs text-gray-600 mt-1">Lettres minuscules, chiffres, tirets</p>
         </div>
 
-        <div>
-          <label className="block text-sm text-gray-300 mb-1.5">Description</label>
-          <textarea
-            rows={3}
-            value={form.description}
-            onChange={(e) => set("description", e.target.value)}
-            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500 resize-none"
-          />
-        </div>
-
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-sm text-gray-300 mb-1.5">Plateforme *</label>
@@ -223,7 +227,7 @@ export function ProductForm({ initial, mode, productId }: Props) {
               onChange={(e) => set("category", e.target.value)}
               className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
             >
-              {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+              {categories.map((c) => <option key={c.id} value={c.slug}>{c.label}</option>)}
             </select>
           </div>
         </div>
@@ -235,13 +239,7 @@ export function ProductForm({ initial, mode, productId }: Props) {
 
         {form.imageUrl && (
           <div className="relative w-32 h-20 rounded-lg overflow-hidden border border-gray-700 bg-gray-800">
-            <Image
-              src={form.imageUrl}
-              alt="Aperçu"
-              fill
-              className="object-cover"
-              unoptimized
-            />
+            <Image src={form.imageUrl} alt="Aperçu" fill className="object-cover" unoptimized />
             <button
               type="button"
               onClick={() => set("imageUrl", "")}
@@ -310,12 +308,47 @@ export function ProductForm({ initial, mode, productId }: Props) {
         </div>
       </div>
 
+      {/* Descriptions */}
+      <div className="rounded-xl border border-gray-800 bg-gray-900 p-5 space-y-4">
+        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Description(s)</h2>
+
+        <div>
+          <label className="block text-sm text-gray-300 mb-1.5">
+            {form.productType === "both" ? "Description — Clé / Code" : "Description"}
+          </label>
+          <textarea
+            rows={3}
+            value={form.description}
+            onChange={(e) => set("description", e.target.value)}
+            placeholder="Décrivez ce produit pour le client…"
+            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500 resize-none"
+          />
+        </div>
+
+        {hasAccount && (
+          <div>
+            <label className="block text-sm text-gray-300 mb-1.5">
+              {form.productType === "both" ? "Description — Compte" : "Description du compte"}
+            </label>
+            <textarea
+              rows={3}
+              value={form.accountDescription}
+              onChange={(e) => set("accountDescription", e.target.value)}
+              placeholder={form.productType === "both" ? "Description spécifique à la version compte…" : "Décrivez ce compte pour le client…"}
+              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500 resize-none"
+            />
+            {form.productType === "both" && (
+              <p className="text-xs text-gray-600 mt-1">Si vide, la description de la clé sera affichée par défaut.</p>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Pricing */}
       <div className="rounded-xl border border-gray-800 bg-gray-900 p-5 space-y-4">
         <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tarification</h2>
 
-        {/* Key pricing — shown for "key" and "both" */}
-        {(form.productType === "key" || form.productType === "both") && (
+        {hasKey && (
           <div>
             {form.productType === "both" && (
               <p className="text-xs font-medium text-purple-400 mb-2 uppercase tracking-wider">Clé / Code</p>
@@ -327,9 +360,7 @@ export function ProductForm({ initial, mode, productId }: Props) {
                 </label>
                 <input
                   required
-                  type="number"
-                  min="0"
-                  step="0.001"
+                  type="number" min="0" step="0.001"
                   value={form.price}
                   onChange={(e) => set("price", e.target.value)}
                   className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
@@ -339,9 +370,7 @@ export function ProductForm({ initial, mode, productId }: Props) {
               <div>
                 <label className="block text-sm text-gray-300 mb-1.5">Prix promo clé (TND)</label>
                 <input
-                  type="number"
-                  min="0"
-                  step="0.001"
+                  type="number" min="0" step="0.001"
                   value={form.discountPrice}
                   onChange={(e) => set("discountPrice", e.target.value)}
                   className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
@@ -352,8 +381,7 @@ export function ProductForm({ initial, mode, productId }: Props) {
           </div>
         )}
 
-        {/* Account pricing — shown for "account" and "both" */}
-        {(form.productType === "account" || form.productType === "both") && (
+        {hasAccount && (
           <div>
             {form.productType === "both" && (
               <p className="text-xs font-medium text-blue-400 mb-2 uppercase tracking-wider">Compte</p>
@@ -365,9 +393,7 @@ export function ProductForm({ initial, mode, productId }: Props) {
                 </label>
                 <input
                   required={form.productType === "account"}
-                  type="number"
-                  min="0"
-                  step="0.001"
+                  type="number" min="0" step="0.001"
                   value={form.productType === "account" ? form.price : form.accountPrice}
                   onChange={(e) =>
                     set(form.productType === "account" ? "price" : "accountPrice", e.target.value)
@@ -379,9 +405,7 @@ export function ProductForm({ initial, mode, productId }: Props) {
               <div>
                 <label className="block text-sm text-gray-300 mb-1.5">Prix promo compte (TND)</label>
                 <input
-                  type="number"
-                  min="0"
-                  step="0.001"
+                  type="number" min="0" step="0.001"
                   value={form.productType === "account" ? form.discountPrice : form.accountDiscountPrice}
                   onChange={(e) =>
                     set(form.productType === "account" ? "discountPrice" : "accountDiscountPrice", e.target.value)

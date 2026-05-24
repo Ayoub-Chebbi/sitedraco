@@ -20,13 +20,12 @@ const PLATFORMS = [
   { value: "mobile", label: "Mobile" },
 ];
 
-const CATEGORIES = [
-  { value: "", label: "Tous" },
-  { value: "game", label: "Jeu complet" },
-  { value: "dlc", label: "DLC" },
-  { value: "subscription", label: "Abonnement" },
-  { value: "credit", label: "Crédit" },
-  { value: "giftcard", label: "Carte cadeau" },
+const DEFAULT_CATEGORIES = [
+  { slug: "game",         label: "Jeu complet" },
+  { slug: "dlc",          label: "DLC" },
+  { slug: "subscription", label: "Abonnement" },
+  { slug: "credit",       label: "Crédit" },
+  { slug: "giftcard",     label: "Carte cadeau" },
 ];
 
 const SORTS = [
@@ -40,11 +39,13 @@ type ExtProduct = Product & { availableKeys: number; soldCount?: number; rating?
 
 type Props = {
   products: ExtProduct[];
+  categories?: { slug: string; label: string }[];
   initialPlatform?: string;
   initialCategory?: string;
 };
 
-export function ProductsClient({ products, initialPlatform = "", initialCategory = "" }: Props) {
+export function ProductsClient({ products, categories: propCategories, initialPlatform = "", initialCategory = "" }: Props) {
+  const categoryList = propCategories ?? DEFAULT_CATEGORIES;
   const router = useRouter();
   const addItem = useCart((s) => s.addItem);
   const { toast } = useToast();
@@ -128,11 +129,17 @@ export function ProductsClient({ products, initialPlatform = "", initialCategory
       <div>
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Catégorie</p>
         <div className="flex flex-col gap-1">
-          {CATEGORIES.map((c) => (
+          <button
+            onClick={() => navigate(platform, "")}
+            className={`px-3 py-1.5 rounded-lg text-sm text-left transition-colors ${category === "" ? "bg-purple-600/20 text-purple-300 border border-purple-600/40" : "text-gray-400 hover:bg-gray-800"}`}
+          >
+            Tous
+          </button>
+          {categoryList.map((c) => (
             <button
-              key={c.value}
-              onClick={() => navigate(platform, c.value)}
-              className={`px-3 py-1.5 rounded-lg text-sm text-left transition-colors ${category === c.value ? "bg-purple-600/20 text-purple-300 border border-purple-600/40" : "text-gray-400 hover:bg-gray-800"}`}
+              key={c.slug}
+              onClick={() => navigate(platform, c.slug)}
+              className={`px-3 py-1.5 rounded-lg text-sm text-left transition-colors ${category === c.slug ? "bg-purple-600/20 text-purple-300 border border-purple-600/40" : "text-gray-400 hover:bg-gray-800"}`}
             >
               {c.label}
             </button>

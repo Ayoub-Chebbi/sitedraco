@@ -19,6 +19,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     name: product.name,
     slug: product.slug,
     description: product.description ?? "",
+    accountDescription: product.accountDescription ?? "",
     platform: product.platform,
     category: product.category,
     productType: (product.productType ?? "key") as "key" | "account" | "both",

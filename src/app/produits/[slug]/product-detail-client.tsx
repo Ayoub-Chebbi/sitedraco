@@ -25,6 +25,7 @@ type ExtProduct = Product & {
   productType?: string | null;
   accountPrice?: number | null;
   accountDiscountPrice?: number | null;
+  accountDescription?: string | null;
 };
 
 type Props = {
@@ -168,9 +169,12 @@ export function ProductDetailClient({ product, upsells }: Props) {
             )}
           </div>
 
-          {product.description && (
-            <p className="text-gray-400 text-sm leading-relaxed">{product.description}</p>
-          )}
+          {(() => {
+            const desc = isKeyVariant
+              ? product.description
+              : (product.accountDescription ?? product.description);
+            return desc ? <p className="text-gray-400 text-sm leading-relaxed">{desc}</p> : null;
+          })()}
 
           {/* Urgency timer */}
           {inStock && (product.urgencyHours ?? 4) > 0 && (
