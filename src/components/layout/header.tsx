@@ -161,12 +161,12 @@ export function Header({ siteName = "Loot", logoUrl = "" }: { siteName?: string;
         <div className="flex h-16 items-center gap-3">
 
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 shrink-0 mr-2">
-            <div className="w-14 h-14 rounded-xl bg-white flex items-center justify-center shrink-0 overflow-hidden">
+          <Link href="/" className="flex items-center gap-2.5 shrink-0 mr-2 py-1 px-1">
+            <div className="w-12 h-12 flex items-center justify-center shrink-0 overflow-hidden">
               {logoUrl ? (
                 <img src={logoUrl} alt={siteName} className="w-full h-full object-contain" />
               ) : (
-                <span className="font-black text-black text-2xl leading-none">{siteName.charAt(0)}</span>
+                <span className="font-black text-white text-2xl leading-none">{siteName.charAt(0)}</span>
               )}
             </div>
             <span className="font-black text-lg text-white hidden sm:block tracking-widest uppercase">
