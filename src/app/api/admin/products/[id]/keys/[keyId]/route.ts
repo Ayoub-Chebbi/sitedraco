@@ -1,21 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-
-async function requireAdmin(req: NextRequest) {
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  if (!token || !["admin", "support"].includes(token.role as string)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
-}
 
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string; keyId: string }> }
 ) {
-  const guard = await requireAdmin(req);
-  if (guard) return guard;
+  const session = await auth();
+  if (!session || !["admin", "support"].includes(session.user.role)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const { id, keyId } = await params;
 

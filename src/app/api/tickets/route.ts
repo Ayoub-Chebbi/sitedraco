@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
@@ -11,14 +11,14 @@ const CreateSchema = z.object({
   orderId: z.string().optional().nullable(),
 });
 
-export async function GET(req: NextRequest) {
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function GET() {
+  const session = await auth();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const isAdmin = ["admin", "support"].includes(token.role as string);
+  const isAdmin = ["admin", "support"].includes(session.user.role);
 
   const tickets = await prisma.supportTicket.findMany({
-    where: isAdmin ? undefined : { userId: token.id as string },
+    where: isAdmin ? undefined : { userId: session.user.id },
     include: {
       user: { select: { name: true, email: true } },
       agent: { select: { name: true, email: true } },
@@ -33,10 +33,16 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const session = await auth();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await req.json();
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Requête invalide" }, { status: 400 });
+  }
+
   const parsed = CreateSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
 
@@ -48,12 +54,12 @@ export async function POST(req: NextRequest) {
         subject,
         category,
         priority,
-        userId: token.id as string,
+        userId: session.user.id,
         orderId: orderId || null,
         messages: {
           create: {
             message,
-            senderId: token.id as string,
+            senderId: session.user.id,
           },
         },
       },

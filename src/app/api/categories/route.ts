@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+
 
 const DEFAULTS = [
   { slug: "game",         label: "Jeu complet",   displayOrder: 0 },
@@ -33,8 +34,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  if (!token || token.role !== "admin") {
+  const session = await auth();
+  if (!session || session.user.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

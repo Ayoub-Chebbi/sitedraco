@@ -1,21 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 import { put } from "@vercel/blob";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif", "image/svg+xml"];
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 
-async function requireAdmin(req: NextRequest) {
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  if (!token || !["admin", "support"].includes(token.role as string)) {
+export async function POST(req: NextRequest) {
+  const session = await auth();
+  if (!session || !["admin", "support"].includes(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  return null;
-}
-
-export async function POST(req: NextRequest) {
-  const guard = await requireAdmin(req);
-  if (guard) return guard;
 
   let formData: FormData;
   try {

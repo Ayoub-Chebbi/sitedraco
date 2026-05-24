@@ -1,15 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-
-async function requireAdmin(req: NextRequest) {
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  if (!token || !["admin", "support"].includes(token.role as string)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
-}
 
 const SlideSchema = z.object({
   title: z.string().min(1).max(120),
@@ -29,8 +21,12 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const all = searchParams.get("all") === "true";
 
-  const guard = all ? await requireAdmin(req) : null;
-  if (all && guard) return guard;
+  if (all) {
+    const session = await auth();
+    if (!session || !["admin", "support"].includes(session.user.role)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
 
   const slides = await prisma.heroSlide.findMany({
     where: all ? undefined : { isActive: true },
@@ -41,8 +37,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const guard = await requireAdmin(req);
-  if (guard) return guard;
+  const session = await auth();
+  if (!session || !["admin", "support"].includes(session.user.role)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const body = await req.json();
   const parsed = SlideSchema.safeParse(body);

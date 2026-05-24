@@ -1,15 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-
-async function requireAdmin(req: NextRequest) {
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  if (!token || !["admin", "support"].includes(token.role as string)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
-}
 
 const CreateSchema = z.object({
   name: z.string().min(2).max(120),
@@ -36,9 +28,11 @@ const CreateSchema = z.object({
   urgencyHours: z.number().int().min(0).optional().default(4),
 });
 
-export async function GET(req: NextRequest) {
-  const guard = await requireAdmin(req);
-  if (guard) return guard;
+export async function GET() {
+  const session = await auth();
+  if (!session || !["admin", "support"].includes(session.user.role)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const products = await prisma.product.findMany({
     include: {
@@ -51,8 +45,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const guard = await requireAdmin(req);
-  if (guard) return guard;
+  const session = await auth();
+  if (!session || !["admin", "support"].includes(session.user.role)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const body = await req.json();
   const parsed = CreateSchema.safeParse(body);

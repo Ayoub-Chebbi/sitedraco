@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
@@ -9,17 +9,11 @@ const Schema = z.object({
   displayOrder: z.number().int().min(0).optional(),
 });
 
-async function requireAdmin(req: NextRequest) {
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  if (!token || token.role !== "admin") {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await auth();
+  if (!session || session.user.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  return null;
-}
-
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAdmin(req);
-  if (guard) return guard;
 
   const { id } = await params;
   const body = await req.json();
@@ -35,8 +29,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAdmin(req);
-  if (guard) return guard;
+  const session = await auth();
+  if (!session || session.user.role !== "admin") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const { id } = await params;
   try {

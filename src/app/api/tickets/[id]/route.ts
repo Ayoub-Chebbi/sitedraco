@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
@@ -10,11 +10,11 @@ const UpdateSchema = z.object({
 });
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const session = await auth();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const isAdmin = ["admin", "support"].includes(token.role as string);
+  const isAdmin = ["admin", "support"].includes(session.user.role);
 
   const ticket = await prisma.supportTicket.findUnique({
     where: { id },
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   });
 
   if (!ticket) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!isAdmin && ticket.userId !== (token.id as string)) {
+  if (!isAdmin && ticket.userId !== session.user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -38,8 +38,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  if (!token || !["admin", "support"].includes(token.role as string)) {
+  const session = await auth();
+  if (!session || !["admin", "support"].includes(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
