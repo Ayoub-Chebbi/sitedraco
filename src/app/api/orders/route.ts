@@ -79,18 +79,21 @@ export async function POST(req: NextRequest) {
       paymentMethod,
       paymentStatus: "pending",
       totalAmount: serverTotal,
-      items: {
-        create: items.map((item) => {
-          const product = products.find((p) => p.id === item.productId)!;
-          return {
-            productId: item.productId,
-            quantity: item.quantity,
-            unitPrice: product.discountPrice ?? product.price,
-          };
-        }),
-      },
     },
   });
+
+  // Neon HTTP adapter doesn't support transactions — insert items separately
+  for (const item of items) {
+    const product = products.find((p) => p.id === item.productId)!;
+    await prisma.orderItem.create({
+      data: {
+        orderId: order.id,
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPrice: product.discountPrice ?? product.price,
+      },
+    });
+  }
 
   await prisma.auditLog.create({
     data: {
