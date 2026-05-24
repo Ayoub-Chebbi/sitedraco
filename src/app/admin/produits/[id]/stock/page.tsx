@@ -12,7 +12,10 @@ export default async function StockPage({ params }: { params: Promise<{ id: stri
   }
 
   const { id } = await params;
-  const product = await prisma.product.findUnique({ where: { id } });
+  const product = await prisma.product.findUnique({
+    where: { id },
+    select: { id: true, name: true, manualStock: true },
+  });
   if (!product) notFound();
 
   const keys = await prisma.productKey.findMany({
@@ -41,7 +44,7 @@ export default async function StockPage({ params }: { params: Promise<{ id: stri
         <ChevronRight className="h-3 w-3" />
         <Link href="/admin/produits" className="hover:text-gray-300">Produits</Link>
         <ChevronRight className="h-3 w-3" />
-        <span className="text-gray-300 truncate max-w-[160px]">{product.name}</span>
+        <span className="text-gray-300 truncate max-w-40">{product.name}</span>
         <ChevronRight className="h-3 w-3" />
         <span className="text-gray-300">Stock</span>
       </nav>
@@ -53,6 +56,7 @@ export default async function StockPage({ params }: { params: Promise<{ id: stri
         productId={product.id}
         productName={product.name}
         keys={serialized}
+        manualStock={product.manualStock}
       />
     </div>
   );

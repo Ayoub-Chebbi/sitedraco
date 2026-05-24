@@ -34,6 +34,7 @@ const UpdateSchema = z.object({
   rating: z.number().min(0).max(5).optional(),
   reviewCount: z.number().int().min(0).optional(),
   urgencyHours: z.number().int().min(0).optional(),
+  manualStock: z.number().int().min(0).optional().nullable(),
 });
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

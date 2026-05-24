@@ -79,6 +79,7 @@ model Product {
   accountDiscountPrice Float?
   imageUrl             String?
   isActive             Boolean  @default(true)
+  manualStock          Int?
   lowStockAlert        Int      @default(5)
   soldCount            Int      @default(0)
   rating               Float    @default(4.8)
