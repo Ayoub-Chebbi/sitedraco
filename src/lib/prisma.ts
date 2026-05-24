@@ -1,10 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaNeonHttp } from "@prisma/adapter-neon";
-import { neon } from "@neondatabase/serverless";
 
 function createPrismaClient() {
-  const sql = neon(process.env.DATABASE_URL!);
-  const adapter = new PrismaNeonHttp(sql);
+  const adapter = new PrismaNeonHttp(process.env.DATABASE_URL!);
   return new PrismaClient({
     adapter,
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
