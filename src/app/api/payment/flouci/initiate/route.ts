@@ -80,8 +80,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ paymentUrl, orderId: order.id });
   } catch (err) {
-    console.error("[flouci] initiate error:", err);
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[flouci] initiate error:", msg);
     await prisma.order.delete({ where: { id: order.id } }).catch(() => {});
-    return NextResponse.json({ error: "Erreur de paiement. Réessayez." }, { status: 502 });
+    return NextResponse.json({ error: msg }, { status: 502 });
   }
 }

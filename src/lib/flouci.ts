@@ -30,7 +30,6 @@ export async function initiateFlouciPayment({
       session_timeout_secs: 1200,
       success_link: successLink,
       fail_link: failLink,
-      developer_tracking_id: orderId,
     }),
   });
 
