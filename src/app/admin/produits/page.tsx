@@ -25,6 +25,11 @@ export default async function AdminProductsPage() {
     orderBy: { name: "asc" },
   });
 
+  const productsWithStock = products.map((p) => ({
+    ...p,
+    totalStock: p._count.keys + (p.manualStock ?? 0),
+  }));
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-8">
@@ -55,7 +60,7 @@ export default async function AdminProductsPage() {
             </tr>
           </thead>
           <tbody>
-            {products.map((product, i) => (
+            {productsWithStock.map((product, i) => (
               <tr
                 key={product.id}
                 className={`border-b border-gray-800/50 ${i % 2 === 0 ? "bg-gray-950" : "bg-gray-900/30"} hover:bg-gray-900/60 transition-colors`}
@@ -79,8 +84,8 @@ export default async function AdminProductsPage() {
                   )}
                 </td>
                 <td className="px-4 py-3 text-center">
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${product._count.keys > 5 ? "bg-green-900/40 text-green-400" : product._count.keys > 0 ? "bg-yellow-900/40 text-yellow-400" : "bg-red-900/40 text-red-400"}`}>
-                    {product._count.keys}
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${product.totalStock > product.lowStockAlert ? "bg-green-900/40 text-green-400" : product.totalStock > 0 ? "bg-yellow-900/40 text-yellow-400" : "bg-red-900/40 text-red-400"}`}>
+                    {product.totalStock}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-center">
@@ -102,9 +107,9 @@ export default async function AdminProductsPage() {
                   <Link
                     href={`/admin/produits/${product.id}/stock`}
                     className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
-                      product._count.keys === 0
+                      product.totalStock === 0
                         ? "text-red-400 hover:text-red-300 bg-red-900/20 hover:bg-red-900/40"
-                        : product._count.keys <= product.lowStockAlert
+                        : product.totalStock <= product.lowStockAlert
                         ? "text-yellow-400 hover:text-yellow-300 bg-yellow-900/20 hover:bg-yellow-900/40"
                         : "text-green-400 hover:text-green-300 bg-green-900/20 hover:bg-green-900/40"
                     }`}
