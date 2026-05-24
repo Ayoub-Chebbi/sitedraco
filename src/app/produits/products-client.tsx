@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Filter, SlidersHorizontal } from "lucide-react";
+import { Filter, SlidersHorizontal, ChevronDown, X } from "lucide-react";
 import { ProductCard } from "@/components/shared/product-card";
 import { QuickViewModal } from "@/components/shared/quick-view-modal";
 import { Button } from "@/components/ui/button";
@@ -49,15 +49,21 @@ export function ProductsClient({ products, initialPlatform = "", initialCategory
   const addItem = useCart((s) => s.addItem);
   const { toast } = useToast();
 
-  // Platform & category are URL-driven — clicking them triggers a server re-fetch
   const platform = initialPlatform;
   const category = initialCategory;
 
-  // Sort/price/stock are client-only (no round-trip needed)
   const [sort, setSort] = useState("newest");
   const [onlyInStock, setOnlyInStock] = useState(false);
   const [maxPrice, setMaxPrice] = useState(500);
   const [quickViewProduct, setQuickViewProduct] = useState<ExtProduct | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const activeFilterCount = [
+    platform !== "",
+    category !== "",
+    onlyInStock,
+    maxPrice < 500,
+  ].filter(Boolean).length;
 
   function navigate(nextPlatform: string, nextCategory: string) {
     const params = new URLSearchParams();
@@ -102,93 +108,132 @@ export function ProductsClient({ products, initialPlatform = "", initialCategory
     toast({ title: "Ajouté au panier", description: product.name, variant: "success" });
   }
 
+  const filterPanel = (
+    <div className="space-y-5">
+      <div>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Plateforme</p>
+        <div className="flex flex-wrap gap-1.5">
+          {PLATFORMS.map((p) => (
+            <button
+              key={p.value}
+              onClick={() => navigate(p.value, category)}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${platform === p.value ? "bg-purple-600 text-white" : "bg-gray-800 text-gray-400 hover:bg-gray-700"}`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Catégorie</p>
+        <div className="flex flex-col gap-1">
+          {CATEGORIES.map((c) => (
+            <button
+              key={c.value}
+              onClick={() => navigate(platform, c.value)}
+              className={`px-3 py-1.5 rounded-lg text-sm text-left transition-colors ${category === c.value ? "bg-purple-600/20 text-purple-300 border border-purple-600/40" : "text-gray-400 hover:bg-gray-800"}`}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Prix max : {maxPrice} TND</p>
+        <input
+          type="range" min={10} max={500} step={10}
+          value={maxPrice}
+          onChange={(e) => setMaxPrice(Number(e.target.value))}
+          className="w-full accent-purple-600"
+        />
+      </div>
+
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={onlyInStock}
+          onChange={(e) => setOnlyInStock(e.target.checked)}
+          className="rounded border-gray-600 bg-gray-800 text-purple-600 focus:ring-purple-500"
+        />
+        <span className="text-sm text-gray-400">En stock uniquement</span>
+      </label>
+
+      <Button variant="ghost" size="sm" className="w-full text-gray-500" onClick={reset}>
+        Réinitialiser
+      </Button>
+    </div>
+  );
+
   return (
     <>
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Header row */}
+        <div className="flex items-center justify-between mb-4 gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-white">Catalogue</h1>
-            <p className="text-sm text-gray-500 mt-0.5">{filtered.length} produit{filtered.length !== 1 ? "s" : ""}</p>
+            <h1 className="text-xl font-bold text-white">Catalogue</h1>
+            <p className="text-sm text-gray-500">{filtered.length} produit{filtered.length !== 1 ? "s" : ""}</p>
           </div>
           <div className="flex items-center gap-2">
-            <SlidersHorizontal className="h-4 w-4 text-gray-500" />
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value)}
-              className="text-sm bg-gray-800 border border-gray-700 text-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:border-purple-500"
+            {/* Mobile filter toggle */}
+            <button
+              className="lg:hidden flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border border-gray-700 bg-gray-800 text-gray-300 hover:text-white transition-colors"
+              onClick={() => setFiltersOpen((v) => !v)}
             >
-              {SORTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
+              <Filter className="h-4 w-4" />
+              Filtres
+              {activeFilterCount > 0 && (
+                <span className="ml-0.5 bg-purple-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">{activeFilterCount}</span>
+              )}
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${filtersOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal className="h-4 w-4 text-gray-500 hidden sm:block" />
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value)}
+                className="text-sm bg-gray-800 border border-gray-700 text-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:border-purple-500"
+              >
+                {SORTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-6">
-          <aside className="w-full lg:w-56 shrink-0">
-            <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 space-y-6 sticky top-20">
+        {/* Mobile filter panel — collapsible */}
+        {filtersOpen && (
+          <div className="lg:hidden rounded-xl border border-gray-800 bg-gray-900 p-4 mb-4">
+            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-purple-400" />
                 <h3 className="text-sm font-semibold text-white">Filtres</h3>
               </div>
+              <button onClick={() => setFiltersOpen(false)} className="text-gray-500 hover:text-gray-300">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            {filterPanel}
+          </div>
+        )}
 
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Plateforme</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {PLATFORMS.map((p) => (
-                    <button
-                      key={p.value}
-                      onClick={() => navigate(p.value, category)}
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${platform === p.value ? "bg-purple-600 text-white" : "bg-gray-800 text-gray-400 hover:bg-gray-700"}`}
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
+        <div className="flex gap-6">
+          {/* Desktop sidebar */}
+          <aside className="hidden lg:block w-56 shrink-0">
+            <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 sticky top-20">
+              <div className="flex items-center gap-2 mb-5">
+                <Filter className="h-4 w-4 text-purple-400" />
+                <h3 className="text-sm font-semibold text-white">Filtres</h3>
               </div>
-
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Catégorie</p>
-                <div className="flex flex-col gap-1">
-                  {CATEGORIES.map((c) => (
-                    <button
-                      key={c.value}
-                      onClick={() => navigate(platform, c.value)}
-                      className={`px-3 py-1.5 rounded-lg text-sm text-left transition-colors ${category === c.value ? "bg-purple-600/20 text-purple-300 border border-purple-600/40" : "text-gray-400 hover:bg-gray-800"}`}
-                    >
-                      {c.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Prix max : {maxPrice} TND</p>
-                <input
-                  type="range" min={10} max={500} step={10}
-                  value={maxPrice}
-                  onChange={(e) => setMaxPrice(Number(e.target.value))}
-                  className="w-full accent-purple-600"
-                />
-              </div>
-
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={onlyInStock}
-                  onChange={(e) => setOnlyInStock(e.target.checked)}
-                  className="rounded border-gray-600 bg-gray-800 text-purple-600 focus:ring-purple-500"
-                />
-                <span className="text-sm text-gray-400">En stock uniquement</span>
-              </label>
-
-              <Button variant="ghost" size="sm" className="w-full text-gray-500" onClick={reset}>
-                Réinitialiser
-              </Button>
+              {filterPanel}
             </div>
           </aside>
 
-          <div className="flex-1">
+          {/* Products grid */}
+          <div className="flex-1 min-w-0">
             {filtered.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                 {filtered.map((product) => (
                   <ProductCard
                     key={product.id}
