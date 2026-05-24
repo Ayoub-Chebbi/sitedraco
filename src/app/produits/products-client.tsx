@@ -36,7 +36,16 @@ const SORTS = [
   { value: "price_desc", label: "Prix décroissant" },
 ];
 
-type ExtProduct = Product & { availableKeys: number; soldCount?: number; rating?: number; reviewCount?: number };
+type ProductVariant = { id: string; name: string; price: number; discountPrice?: number | null; displayOrder: number };
+type ExtProduct = Product & {
+  availableKeys: number;
+  soldCount?: number;
+  rating?: number;
+  reviewCount?: number;
+  accountPrice?: number | null;
+  accountDiscountPrice?: number | null;
+  variants?: ProductVariant[];
+};
 
 type Props = {
   products: ExtProduct[];

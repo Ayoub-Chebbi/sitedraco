@@ -18,6 +18,7 @@ async function getProducts(platform?: string, category?: string) {
     },
     include: {
       _count: { select: { keys: { where: { status: "available" } } } },
+      variants: { where: { isActive: true }, orderBy: { displayOrder: "asc" } },
     },
     orderBy: { createdAt: "desc" },
   });

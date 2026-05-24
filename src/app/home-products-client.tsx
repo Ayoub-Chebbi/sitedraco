@@ -7,7 +7,16 @@ import { useCart } from "@/lib/cart-store";
 import { useToast } from "@/lib/use-toast";
 import type { Product } from "@/types";
 
-type ExtProduct = Product & { availableKeys: number; soldCount?: number; rating?: number; reviewCount?: number };
+type ProductVariant = { id: string; name: string; price: number; discountPrice?: number | null; displayOrder: number };
+type ExtProduct = Product & {
+  availableKeys: number;
+  soldCount?: number;
+  rating?: number;
+  reviewCount?: number;
+  accountPrice?: number | null;
+  accountDiscountPrice?: number | null;
+  variants?: ProductVariant[];
+};
 
 export function HomeProductsClient({ products }: { products: ExtProduct[] }) {
   const [quickViewProduct, setQuickViewProduct] = useState<ExtProduct | null>(null);

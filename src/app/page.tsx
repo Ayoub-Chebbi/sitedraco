@@ -14,7 +14,9 @@ import { formatPrice } from "@/lib/utils";
 const productSelect = {
   id: true, name: true, slug: true, platform: true, category: true,
   price: true, discountPrice: true, imageUrl: true, soldCount: true, manualStock: true,
+  productType: true, accountPrice: true, accountDiscountPrice: true, rating: true, reviewCount: true,
   _count: { select: { keys: { where: { status: "available" } } } },
+  variants: { where: { isActive: true }, orderBy: { displayOrder: "asc" as const }, select: { id: true, name: true, price: true, discountPrice: true, displayOrder: true } },
 };
 
 function mapProduct(p: any) {
