@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft, CheckCircle, XCircle, Clock, Send, Loader2, Key, User, FileText
+  ArrowLeft, CheckCircle, XCircle, Clock, Send, Loader2, Key, User, FileText, Lock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,6 +30,7 @@ type OrderData = {
     quantity: number;
     unitPrice: number;
     hasKey: boolean;
+    productType: string;
     product: { id: string; name: string; platform: string; imageUrl: string | null };
   }[];
   auditLogs: {
@@ -43,18 +44,42 @@ type OrderData = {
 
 const ACTION_LABELS: Record<string, string> = {
   order_created: "Commande créée",
-  key_delivered: "Clé livrée",
+  key_delivered: "Livraison envoyée",
   mark_failed: "Marquée échouée",
   mark_processing: "Marquée en traitement",
   mark_refunded: "Remboursée",
 };
 
+type ItemDelivery = { keyValue: string; email: string; password: string };
+
 export function OrderDetailClient({ order }: { order: OrderData }) {
   const router = useRouter();
   const { toast } = useToast();
-  const [keyValue, setKeyValue] = useState("");
   const [notes, setNotes] = useState(order.notesInternal || "");
   const [loading, setLoading] = useState<string | null>(null);
+
+  const pendingItems = order.items.filter((i) => !i.hasKey);
+
+  const [deliveries, setDeliveries] = useState<Record<string, ItemDelivery>>(() => {
+    const init: Record<string, ItemDelivery> = {};
+    for (const item of order.items) {
+      if (!item.hasKey) init[item.id] = { keyValue: "", email: "", password: "" };
+    }
+    return init;
+  });
+
+  function setField(itemId: string, field: keyof ItemDelivery, value: string) {
+    setDeliveries((prev) => ({ ...prev, [itemId]: { ...prev[itemId], [field]: value } }));
+  }
+
+  function isDeliveryReady() {
+    return pendingItems.every((item) => {
+      const d = deliveries[item.id];
+      if (!d) return false;
+      if (item.productType === "account") return d.email.trim() !== "" && d.password.trim() !== "";
+      return d.keyValue.trim() !== "";
+    });
+  }
 
   async function callAPI(payload: object, loadingKey: string) {
     setLoading(loadingKey);
@@ -73,22 +98,27 @@ export function OrderDetailClient({ order }: { order: OrderData }) {
     }
   }
 
-  async function deliverKey() {
-    if (!keyValue.trim()) {
-      toast({ title: "Veuillez saisir une clé", variant: "error" });
-      return;
-    }
-    await callAPI({ action: "deliver", keyValue: keyValue.trim() }, "deliver");
-    setKeyValue("");
+  async function deliverAll() {
+    const items = pendingItems.map((item) => {
+      const d = deliveries[item.id];
+      return {
+        itemId: item.id,
+        productId: item.product.id,
+        type: item.productType === "account" ? "account" : "key",
+        keyValue: item.productType !== "account" ? d.keyValue.trim() : undefined,
+        email: item.productType === "account" ? d.email.trim() : undefined,
+        password: item.productType === "account" ? d.password.trim() : undefined,
+      };
+    });
+    await callAPI({ action: "deliver", items }, "deliver");
   }
 
-  const canDeliver = order.status === "processing" || order.status === "pending";
+  const canDeliver = (order.status === "processing" || order.status === "pending") && pendingItems.length > 0;
   const canFail = order.status !== "failed" && order.status !== "delivered" && order.status !== "refunded";
   const canProcess = order.status === "pending";
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
-      {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <Link href="/admin/commandes">
           <Button variant="ghost" size="sm" className="gap-1">
@@ -102,7 +132,6 @@ export function OrderDetailClient({ order }: { order: OrderData }) {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Left col: order + key delivery */}
         <div className="lg:col-span-2 space-y-6">
           {/* Order info */}
           <div className="rounded-xl border border-gray-800 bg-gray-900 p-5">
@@ -139,7 +168,6 @@ export function OrderDetailClient({ order }: { order: OrderData }) {
               )}
             </div>
 
-            {/* Products */}
             <div className="space-y-3">
               {order.items.map((item) => (
                 <div key={item.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-800/50 border border-gray-700/50">
@@ -147,9 +175,12 @@ export function OrderDetailClient({ order }: { order: OrderData }) {
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <PlatformBadge platform={item.product.platform} />
+                      <span className="text-xs text-gray-500 bg-gray-700/50 px-1.5 py-0.5 rounded">
+                        {item.productType === "account" ? "👤 Compte" : "🔑 Clé"}
+                      </span>
                       {item.hasKey && (
                         <span className="text-xs text-green-400 flex items-center gap-0.5">
-                          <Key className="h-3 w-3" /> Clé envoyée
+                          <CheckCircle className="h-3 w-3" /> Livré
                         </span>
                       )}
                     </div>
@@ -161,41 +192,81 @@ export function OrderDetailClient({ order }: { order: OrderData }) {
             </div>
           </div>
 
-          {/* Key delivery */}
+          {/* Delivery section — per item */}
           {canDeliver && (
-            <div className="rounded-xl border border-purple-800/50 bg-purple-900/10 p-5">
-              <h2 className="font-semibold text-white mb-4 flex items-center gap-2">
-                <Key className="h-4 w-4 text-purple-400" />
-                Livraison de la clé
+            <div className="rounded-xl border border-purple-800/50 bg-purple-900/10 p-5 space-y-5">
+              <h2 className="font-semibold text-white flex items-center gap-2">
+                <Send className="h-4 w-4 text-purple-400" />
+                Livraison
+                <span className="text-xs text-gray-500 font-normal">
+                  ({pendingItems.length} article{pendingItems.length > 1 ? "s" : ""} à livrer)
+                </span>
               </h2>
-              <div className="space-y-3">
-                <div>
-                  <label className="text-sm font-medium text-gray-300 mb-1.5 block">
-                    Clé d&apos;activation <span className="text-red-400">*</span>
-                  </label>
-                  <Input
-                    placeholder="XXXX-XXXX-XXXX-XXXX"
-                    value={keyValue}
-                    onChange={(e) => setKeyValue(e.target.value)}
-                    className="font-mono"
-                  />
-                </div>
-                <Button
-                  onClick={deliverKey}
-                  disabled={loading === "deliver" || !keyValue.trim()}
-                  className="w-full gap-2"
-                  size="lg"
-                >
-                  {loading === "deliver" ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+
+              {pendingItems.map((item) => (
+                <div key={item.id} className="space-y-3 pb-5 border-b border-gray-800 last:border-0 last:pb-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-300">{item.product.name}</span>
+                    <span className="text-xs text-gray-600">
+                      {item.productType === "account" ? "— Compte" : "— Clé d'activation"}
+                    </span>
+                  </div>
+
+                  {item.productType === "account" ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-medium text-gray-400 mb-1.5 flex items-center gap-1">
+                          <User className="h-3 w-3" /> Email du compte
+                        </label>
+                        <Input
+                          type="email"
+                          placeholder="compte@exemple.com"
+                          value={deliveries[item.id]?.email ?? ""}
+                          onChange={(e) => setField(item.id, "email", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-400 mb-1.5 flex items-center gap-1">
+                          <Lock className="h-3 w-3" /> Mot de passe
+                        </label>
+                        <Input
+                          placeholder="Mot de passe"
+                          value={deliveries[item.id]?.password ?? ""}
+                          onChange={(e) => setField(item.id, "password", e.target.value)}
+                        />
+                      </div>
+                    </div>
                   ) : (
-                    <><Send className="h-4 w-4" /> Envoyer la clé au client</>
+                    <div>
+                      <label className="text-xs font-medium text-gray-400 mb-1.5 flex items-center gap-1">
+                        <Key className="h-3 w-3" /> Clé d&apos;activation
+                      </label>
+                      <Input
+                        placeholder="XXXX-XXXX-XXXX-XXXX"
+                        value={deliveries[item.id]?.keyValue ?? ""}
+                        onChange={(e) => setField(item.id, "keyValue", e.target.value)}
+                        className="font-mono"
+                      />
+                    </div>
                   )}
-                </Button>
-                <p className="text-xs text-gray-600 text-center">
-                  La clé sera chiffrée et envoyée dans l&apos;espace client du customer
-                </p>
-              </div>
+                </div>
+              ))}
+
+              <Button
+                onClick={deliverAll}
+                disabled={loading === "deliver" || !isDeliveryReady()}
+                className="w-full gap-2"
+                size="lg"
+              >
+                {loading === "deliver" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <><Send className="h-4 w-4" /> Envoyer au client</>
+                )}
+              </Button>
+              <p className="text-xs text-gray-600 text-center">
+                Un seul email récapitulatif sera envoyé avec tous les accès.
+              </p>
             </div>
           )}
 
@@ -211,9 +282,8 @@ export function OrderDetailClient({ order }: { order: OrderData }) {
           </div>
         </div>
 
-        {/* Right col: customer + actions + audit */}
+        {/* Right col */}
         <div className="space-y-6">
-          {/* Customer */}
           <div className="rounded-xl border border-gray-800 bg-gray-900 p-5">
             <h2 className="font-semibold text-white mb-3 flex items-center gap-2">
               <User className="h-4 w-4 text-purple-400" />
@@ -224,7 +294,6 @@ export function OrderDetailClient({ order }: { order: OrderData }) {
             {order.customer.since && <p className="text-xs text-gray-600 mt-0.5">Client depuis {order.customer.since}</p>}
           </div>
 
-          {/* Actions */}
           <div className="rounded-xl border border-gray-800 bg-gray-900 p-5 space-y-3">
             <h2 className="font-semibold text-white">Actions</h2>
             {canProcess && (
@@ -262,7 +331,6 @@ export function OrderDetailClient({ order }: { order: OrderData }) {
             )}
           </div>
 
-          {/* Audit trail */}
           <div className="rounded-xl border border-gray-800 bg-gray-900 p-5">
             <h2 className="font-semibold text-white mb-3">Historique</h2>
             <div className="space-y-3">

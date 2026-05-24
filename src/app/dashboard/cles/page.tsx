@@ -25,14 +25,32 @@ export default async function ClesPage() {
   const keys = deliveredOrders.flatMap((order) =>
     order.items
       .filter((item) => item.key)
-      .map((item) => ({
-        id: item.id,
-        productName: item.product.name,
-        platform: item.product.platform,
-        orderNumber: order.orderNumber,
-        deliveredAt: order.updatedAt.toISOString(),
-        keyValue: (() => { try { return decryptKey(item.key!.keyValue) ?? ""; } catch { return ""; } })(),
-      }))
+      .map((item) => {
+        const raw = (() => { try { return decryptKey(item.key!.keyValue) ?? ""; } catch { return ""; } })();
+        const isAccount = raw.startsWith("ACCOUNT::");
+        let accountEmail = "";
+        let accountPassword = "";
+        let keyValue = raw;
+        if (isAccount) {
+          try {
+            const json = JSON.parse(raw.slice("ACCOUNT::".length));
+            accountEmail = json.email ?? "";
+            accountPassword = json.password ?? "";
+            keyValue = "";
+          } catch { /* leave empty */ }
+        }
+        return {
+          id: item.id,
+          productName: item.product.name,
+          platform: item.product.platform,
+          orderNumber: order.orderNumber,
+          deliveredAt: order.updatedAt.toISOString(),
+          type: isAccount ? ("account" as const) : ("key" as const),
+          keyValue,
+          accountEmail,
+          accountPassword,
+        };
+      })
   );
 
   return (

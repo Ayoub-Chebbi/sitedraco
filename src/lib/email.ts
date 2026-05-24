@@ -45,6 +45,61 @@ export async function sendWelcomeEmail(email: string, password: string, orderNum
   if (error) throw new Error(error.message);
 }
 
+type DeliveryItem = {
+  productName: string;
+  type: "key" | "account";
+  keyValue?: string;
+  email?: string;
+  password?: string;
+};
+
+export async function sendDeliveryEmail(to: string, orderNumber: string, items: DeliveryItem[]) {
+  const itemsHtml = items.map((item, i) => `
+    <div style="background:#1a1a2e;border:1px solid #2d2d4e;border-radius:10px;padding:20px;margin-bottom:16px">
+      <p style="margin:0 0 12px;font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:.5px">
+        Article ${i + 1} — ${item.productName}
+      </p>
+      ${item.type === "account" ? `
+        <p style="margin:0 0 8px">
+          <span style="color:#9ca3af;font-size:13px">👤 Email :</span>
+          <strong style="color:#fff;font-size:15px;margin-left:6px">${item.email}</strong>
+        </p>
+        <p style="margin:0">
+          <span style="color:#9ca3af;font-size:13px">🔒 Mot de passe :</span>
+          <strong style="color:#a78bfa;font-size:16px;letter-spacing:2px;margin-left:6px">${item.password}</strong>
+        </p>
+      ` : `
+        <p style="margin:0 0 6px;font-size:13px;color:#9ca3af">🔑 Clé d'activation</p>
+        <p style="margin:0;font-family:monospace;font-size:18px;letter-spacing:3px;color:#a78bfa;font-weight:700">${item.keyValue}</p>
+      `}
+    </div>
+  `).join("");
+
+  const html = `${base}
+    <h2 style="color:#fff;margin:0 0 8px">Votre commande est prête ! 🎮</h2>
+    <p style="color:#9ca3af;margin:0 0 24px">
+      Commande <strong style="color:#fff">#${orderNumber}</strong> — voici vos accès :
+    </p>
+    ${itemsHtml}
+    <a href="${process.env.SITE_URL ?? "https://loot.tn"}/dashboard/cles"
+       style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;margin-top:8px">
+      Voir mes accès →
+    </a>
+    <p style="color:#6b7280;font-size:12px;margin:20px 0 0">
+      Conservez ces informations en lieu sûr. Support disponible 7j/7 sur WhatsApp.
+    </p>
+  ${foot}`;
+
+  const { error } = await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `🎮 Votre commande LootStore #${orderNumber} est livrée`,
+    html,
+  });
+
+  if (error) throw new Error(error.message);
+}
+
 export async function sendPasswordResetEmail(email: string, resetUrl: string) {
   const html = `${base}
     <h2 style="color:#fff;margin:0 0 12px">Réinitialisation du mot de passe</h2>

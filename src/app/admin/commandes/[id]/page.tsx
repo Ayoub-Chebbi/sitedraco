@@ -43,6 +43,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
       quantity: item.quantity,
       unitPrice: item.unitPrice,
       hasKey: !!item.key,
+      productType: item.product.productType ?? "key",
       product: { id: item.product.id, name: item.product.name, platform: item.product.platform, imageUrl: item.product.imageUrl },
     })),
     auditLogs: order.auditLogs.map((log: typeof order.auditLogs[0]) => ({

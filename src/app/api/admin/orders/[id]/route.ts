@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { encryptKey } from "@/lib/crypto";
+import { sendDeliveryEmail } from "@/lib/email";
 import { z } from "zod";
 
 async function checkAdminOrSupport() {
@@ -14,7 +15,14 @@ async function checkAdminOrSupport() {
 
 const deliverSchema = z.object({
   action: z.literal("deliver"),
-  keyValue: z.string().min(1),
+  items: z.array(z.object({
+    itemId: z.string(),
+    productId: z.string(),
+    type: z.enum(["key", "account"]),
+    keyValue: z.string().optional(),
+    email: z.string().optional(),
+    password: z.string().optional(),
+  })).min(1),
 });
 
 const statusSchema = z.object({
@@ -54,27 +62,52 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const order = await prisma.order.findUnique({
       where: { id },
-      include: { items: true },
+      include: { user: { select: { email: true } } },
     });
     if (!order) return NextResponse.json({ error: "Commande introuvable" }, { status: 404 });
 
-    const encryptedKey = encryptKey(parsed.data.keyValue);
+    const emailItems: { productName: string; type: "key" | "account"; keyValue?: string; email?: string; password?: string }[] = [];
 
-    const productKey = await prisma.productKey.create({
-      data: {
-        productId: order.items[0].productId,
-        keyValue: encryptedKey,
-        status: "delivered",
-        orderId: order.id,
-        addedById: session.user.id,
-        deliveredAt: new Date(),
-      },
-    });
+    for (const item of parsed.data.items) {
+      let rawValue: string;
+      let emailItem: typeof emailItems[number];
 
-    await prisma.orderItem.update({
-      where: { id: order.items[0].id },
-      data: { keyId: productKey.id },
-    });
+      if (item.type === "account") {
+        const creds = JSON.stringify({ email: item.email, password: item.password });
+        rawValue = `ACCOUNT::${creds}`;
+        emailItem = { productName: "", type: "account", email: item.email, password: item.password };
+      } else {
+        rawValue = item.keyValue!;
+        emailItem = { productName: "", type: "key", keyValue: item.keyValue };
+      }
+
+      const encryptedValue = encryptKey(rawValue);
+
+      // Get product name for email
+      const orderItem = await prisma.orderItem.findUnique({
+        where: { id: item.itemId },
+        include: { product: { select: { name: true } } },
+      });
+      emailItem.productName = orderItem?.product.name ?? "Produit";
+
+      const productKey = await prisma.productKey.create({
+        data: {
+          productId: item.productId,
+          keyValue: encryptedValue,
+          status: "delivered",
+          orderId: id,
+          addedById: session.user.id,
+          deliveredAt: new Date(),
+        },
+      });
+
+      await prisma.orderItem.update({
+        where: { id: item.itemId },
+        data: { keyId: productKey.id },
+      });
+
+      emailItems.push(emailItem);
+    }
 
     await prisma.order.update({
       where: { id },
@@ -87,9 +120,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         action: "key_delivered",
         targetType: "order",
         targetId: id,
-        metadata: JSON.stringify({ agentEmail: session.user.email }),
+        metadata: JSON.stringify({ agentEmail: session.user.email, itemCount: parsed.data.items.length }),
       },
     });
+
+    // Send one consolidated delivery email
+    const customerEmail = order.user?.email ?? order.guestEmail;
+    if (customerEmail) {
+      sendDeliveryEmail(customerEmail, order.orderNumber, emailItems).catch((err) =>
+        console.error("[delivery] email failed:", err)
+      );
+    }
 
     return NextResponse.json({ success: true });
   }
