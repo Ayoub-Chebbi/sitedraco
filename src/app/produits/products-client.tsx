@@ -101,7 +101,7 @@ export function ProductsClient({ products, categories: propCategories, initialPl
     return list;
   }, [products, sort, onlyInStock, maxPrice]);
 
-  function handleAddToCart(product: Product, variant?: "key" | "account", variantId?: string, variantName?: string) {
+  function handleAddToCart(product: Product, variant?: "key" | "account", variantId?: string, variantName?: string, variantPrice?: number, variantDiscountPrice?: number | null) {
     const p = product as Product & { accountPrice?: number | null; accountDiscountPrice?: number | null };
     if (variantId && variantName) {
       addItem({
@@ -109,7 +109,8 @@ export function ProductsClient({ products, categories: propCategories, initialPl
         variantId,
         variantName,
         name: `${product.name} — ${variantName}`,
-        price: product.price,
+        price: variantPrice ?? product.price,
+        discountPrice: variantDiscountPrice,
         imageUrl: product.imageUrl,
         platform: product.platform,
         quantity: 1,

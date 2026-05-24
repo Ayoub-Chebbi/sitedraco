@@ -31,7 +31,7 @@ type ExtProduct = Product & {
 type Props = {
   product: ExtProduct | null;
   onClose: () => void;
-  onAddToCart: (product: Product, variant?: "key" | "account", variantId?: string, variantName?: string) => void;
+  onAddToCart: (product: Product, variant?: "key" | "account", variantId?: string, variantName?: string, variantPrice?: number, variantDiscountPrice?: number | null) => void;
 };
 
 export function QuickViewModal({ product, onClose, onAddToCart }: Props) {
@@ -222,7 +222,7 @@ export function QuickViewModal({ product, onClose, onAddToCart }: Props) {
                 disabled={!inStock || (hasVariants && !selectedVariant)}
                 onClick={() => {
                   if (hasVariants && selectedVariant) {
-                    onAddToCart(product, undefined, selectedVariant.id, selectedVariant.name);
+                    onAddToCart(product, undefined, selectedVariant.id, selectedVariant.name, selectedVariant.price, selectedVariant.discountPrice);
                   } else {
                     onAddToCart(product, hasBoth ? variant : undefined);
                   }

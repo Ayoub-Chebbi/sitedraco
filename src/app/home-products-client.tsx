@@ -23,7 +23,7 @@ export function HomeProductsClient({ products }: { products: ExtProduct[] }) {
   const addItem = useCart((s) => s.addItem);
   const { toast } = useToast();
 
-  function handleAddToCart(product: Product, variant?: "key" | "account", variantId?: string, variantName?: string) {
+  function handleAddToCart(product: Product, variant?: "key" | "account", variantId?: string, variantName?: string, variantPrice?: number, variantDiscountPrice?: number | null) {
     const p = product as ExtProduct;
     if (variantId && variantName) {
       addItem({
@@ -31,7 +31,8 @@ export function HomeProductsClient({ products }: { products: ExtProduct[] }) {
         variantId,
         variantName,
         name: `${product.name} — ${variantName}`,
-        price: product.price,
+        price: variantPrice ?? product.price,
+        discountPrice: variantDiscountPrice,
         imageUrl: product.imageUrl,
         platform: product.platform,
         quantity: 1,

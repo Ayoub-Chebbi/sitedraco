@@ -7,7 +7,16 @@ import { Zap, Eye, Star, ShoppingCart, X, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PlatformBadge } from "@/components/shared/platform-badge";
 import { formatPrice } from "@/lib/utils";
+import { useCart } from "@/lib/cart-store";
 import type { Product } from "@/types";
+
+type ProductVariant = {
+  id: string;
+  name: string;
+  price: number;
+  discountPrice?: number | null;
+  displayOrder: number;
+};
 
 type ExtProduct = Product & {
   availableKeys?: number;
@@ -17,6 +26,7 @@ type ExtProduct = Product & {
   productType?: string | null;
   accountPrice?: number | null;
   accountDiscountPrice?: number | null;
+  variants?: ProductVariant[];
 };
 
 type ProductCardProps = {
@@ -26,16 +36,21 @@ type ProductCardProps = {
 };
 
 export function ProductCard({ product, onAddToCart, onQuickView }: ProductCardProps) {
+  const addItem = useCart((s) => s.addItem);
   const productType = (product.productType ?? "key") as "key" | "account" | "both";
   const hasBoth = productType === "both";
+  const hasVariants = (product.variants?.length ?? 0) > 0;
 
   const hasDiscount = product.discountPrice && product.discountPrice < product.price;
   const displayPrice = product.discountPrice ?? product.price;
   const inStock = product.availableKeys === undefined || product.availableKeys > 0;
 
-  // popup: "closed" | "select" (variant picker for "both") | "added" (confirmation)
-  const [popup, setPopup] = useState<"closed" | "select" | "added">("closed");
+  // popup: "closed" | "variant" | "select" | "added"
+  const [popup, setPopup] = useState<"closed" | "variant" | "select" | "added">("closed");
   const [selectedVariant, setSelectedVariant] = useState<"key" | "account">("key");
+  const [selectedVariantId, setSelectedVariantId] = useState<string>(() => product.variants?.[0]?.id ?? "");
+
+  const selectedVariantObj = product.variants?.find((v) => v.id === selectedVariantId) ?? product.variants?.[0];
 
   const variantPrice = selectedVariant === "key"
     ? (product.discountPrice ?? product.price)
@@ -50,7 +65,9 @@ export function ProductCard({ product, onAddToCart, onQuickView }: ProductCardPr
     : product.accountDiscountPrice && product.accountPrice && product.accountDiscountPrice < product.accountPrice;
 
   function handleBuyNow() {
-    if (hasBoth) {
+    if (hasVariants) {
+      setPopup("variant");
+    } else if (hasBoth) {
       setPopup("select");
     } else {
       onAddToCart?.(product);
@@ -63,6 +80,22 @@ export function ProductCard({ product, onAddToCart, onQuickView }: ProductCardPr
     setPopup("added");
   }
 
+  function handleConfirmCustomVariant() {
+    if (!selectedVariantObj) return;
+    addItem({
+      productId: product.id,
+      variantId: selectedVariantObj.id,
+      variantName: selectedVariantObj.name,
+      name: `${product.name} — ${selectedVariantObj.name}`,
+      price: selectedVariantObj.price,
+      discountPrice: selectedVariantObj.discountPrice,
+      imageUrl: product.imageUrl,
+      platform: product.platform,
+      quantity: 1,
+    });
+    setPopup("added");
+  }
+
   function closePopup() {
     setPopup("closed");
     setSelectedVariant("key");
@@ -71,7 +104,7 @@ export function ProductCard({ product, onAddToCart, onQuickView }: ProductCardPr
   return (
     <>
       <div className="group relative flex flex-col rounded-xl border border-gray-800 bg-gray-900 overflow-hidden hover:border-purple-700/50 transition-all duration-200 hover:shadow-lg hover:shadow-purple-900/20">
-        {hasDiscount && (
+        {hasDiscount && !hasVariants && (
           <div className="absolute top-2 left-2 z-10 bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-md">
             -{Math.round(((product.price - displayPrice) / product.price) * 100)}%
           </div>
@@ -130,8 +163,21 @@ export function ProductCard({ product, onAddToCart, onQuickView }: ProductCardPr
             </h3>
           </Link>
 
-          {/* Badge shown when both key and account are available */}
-          {hasBoth && (
+          {/* Variant chips */}
+          {hasVariants && product.variants && (
+            <div className="flex flex-wrap gap-1">
+              {product.variants.slice(0, 3).map((v) => (
+                <span key={v.id} className="text-xs bg-purple-900/30 border border-purple-700/40 text-purple-300 px-1.5 py-0.5 rounded font-medium">
+                  {v.name}
+                </span>
+              ))}
+              {product.variants.length > 3 && (
+                <span className="text-xs text-gray-600">+{product.variants.length - 3}</span>
+              )}
+            </div>
+          )}
+
+          {!hasVariants && hasBoth && (
             <div className="flex items-center gap-1.5">
               <span className="text-xs bg-purple-900/40 border border-purple-700/50 text-purple-300 px-2 py-0.5 rounded-full font-medium">
                 🔑 Clé
@@ -157,11 +203,16 @@ export function ProductCard({ product, onAddToCart, onQuickView }: ProductCardPr
           )}
 
           <div className="flex items-center gap-2 mt-auto pt-1">
-            <span className="text-lg font-bold text-white">{formatPrice(displayPrice)}</span>
-            {hasDiscount && (
+            <span className="text-lg font-bold text-white">
+              {hasVariants
+                ? `À partir de ${formatPrice(Math.min(...(product.variants?.map((v) => v.discountPrice ?? v.price) ?? [product.price])))}`
+                : formatPrice(displayPrice)
+              }
+            </span>
+            {!hasVariants && hasDiscount && (
               <span className="text-sm text-gray-500 line-through">{formatPrice(product.price)}</span>
             )}
-            {hasBoth && product.accountPrice && (
+            {!hasVariants && hasBoth && product.accountPrice && (
               <span className="text-xs text-gray-600 ml-auto">
                 Compte: {formatPrice(product.accountDiscountPrice ?? product.accountPrice)}
               </span>
@@ -182,7 +233,7 @@ export function ProductCard({ product, onAddToCart, onQuickView }: ProductCardPr
         </div>
       </div>
 
-      {/* Popup — fixed so it's never clipped by the card's overflow-hidden */}
+      {/* Popup */}
       {popup !== "closed" && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
@@ -199,7 +250,51 @@ export function ProductCard({ product, onAddToCart, onQuickView }: ProductCardPr
               <X className="h-5 w-5" />
             </button>
 
-            {/* ── Variant selection step ── */}
+            {/* Custom variant selection (gift cards etc.) */}
+            {popup === "variant" && product.variants && (
+              <>
+                <div className="mb-5">
+                  <p className="text-white font-semibold text-sm mb-0.5">Choisissez un montant</p>
+                  <p className="text-gray-400 text-xs truncate">{product.name}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 mb-5">
+                  {product.variants.map((v) => {
+                    const display = v.discountPrice ?? v.price;
+                    const isSelected = selectedVariantId === v.id;
+                    return (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => setSelectedVariantId(v.id)}
+                        className={`rounded-xl border-2 p-3 text-center transition-all ${
+                          isSelected
+                            ? "border-purple-500 bg-purple-900/30"
+                            : "border-gray-700 bg-gray-800 hover:border-gray-600"
+                        }`}
+                      >
+                        <p className={`text-sm font-bold ${isSelected ? "text-white" : "text-gray-300"}`}>{v.name}</p>
+                        <p className="text-sm font-bold text-purple-300">{formatPrice(display)}</p>
+                        {v.discountPrice && v.discountPrice < v.price && (
+                          <p className="text-xs text-gray-500 line-through">{formatPrice(v.price)}</p>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <Button
+                  className="w-full gap-2"
+                  disabled={!selectedVariantObj}
+                  onClick={handleConfirmCustomVariant}
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                  Ajouter au panier
+                </Button>
+              </>
+            )}
+
+            {/* Key / account selection */}
             {popup === "select" && (
               <>
                 <div className="mb-5">
@@ -209,22 +304,8 @@ export function ProductCard({ product, onAddToCart, onQuickView }: ProductCardPr
 
                 <div className="flex flex-col gap-2 mb-5">
                   {([
-                    {
-                      value: "key" as const,
-                      emoji: "🔑",
-                      label: "Clé / Code",
-                      desc: "Clé d'activation numérique",
-                      price: product.price,
-                      discountPrice: product.discountPrice,
-                    },
-                    {
-                      value: "account" as const,
-                      emoji: "👤",
-                      label: "Compte",
-                      desc: "Accès à un compte existant",
-                      price: product.accountPrice ?? 0,
-                      discountPrice: product.accountDiscountPrice,
-                    },
+                    { value: "key" as const, emoji: "🔑", label: "Clé / Code", desc: "Clé d'activation numérique", price: product.price, discountPrice: product.discountPrice },
+                    { value: "account" as const, emoji: "👤", label: "Compte", desc: "Accès à un compte existant", price: product.accountPrice ?? 0, discountPrice: product.accountDiscountPrice },
                   ]).map(({ value, emoji, label, desc, price, discountPrice }) => {
                     const display = discountPrice ?? price;
                     const discounted = discountPrice && discountPrice < price;
@@ -242,17 +323,13 @@ export function ProductCard({ product, onAddToCart, onQuickView }: ProductCardPr
                         <div className="flex items-center gap-2.5">
                           <span className="text-lg">{emoji}</span>
                           <div>
-                            <p className={`text-sm font-semibold ${selectedVariant === value ? "text-white" : "text-gray-300"}`}>
-                              {label}
-                            </p>
+                            <p className={`text-sm font-semibold ${selectedVariant === value ? "text-white" : "text-gray-300"}`}>{label}</p>
                             <p className="text-xs text-gray-500">{desc}</p>
                           </div>
                         </div>
                         <div className="text-right shrink-0 ml-3">
                           <p className="text-sm font-bold text-white">{formatPrice(display)}</p>
-                          {discounted && (
-                            <p className="text-xs text-gray-500 line-through">{formatPrice(price)}</p>
-                          )}
+                          {discounted && <p className="text-xs text-gray-500 line-through">{formatPrice(price)}</p>}
                         </div>
                       </button>
                     );
@@ -266,7 +343,7 @@ export function ProductCard({ product, onAddToCart, onQuickView }: ProductCardPr
               </>
             )}
 
-            {/* ── Added confirmation step ── */}
+            {/* Added confirmation */}
             {popup === "added" && (
               <>
                 <div className="flex items-center gap-3 mb-5">
@@ -280,17 +357,31 @@ export function ProductCard({ product, onAddToCart, onQuickView }: ProductCardPr
                 </div>
 
                 <div className="flex items-center justify-between bg-gray-800/60 rounded-xl px-4 py-3 mb-5">
-                  {hasBoth && (
+                  {hasVariants && selectedVariantObj && (
+                    <span className="text-gray-400 text-sm">{selectedVariantObj.name}</span>
+                  )}
+                  {!hasVariants && hasBoth && (
                     <span className="text-gray-400 text-sm">
                       {selectedVariant === "key" ? "🔑 Clé / Code" : "👤 Compte"}
                     </span>
                   )}
-                  {!hasBoth && <span className="text-gray-400 text-sm">Prix</span>}
+                  {!hasVariants && !hasBoth && <span className="text-gray-400 text-sm">Prix</span>}
                   <div className="flex items-center gap-2 ml-auto">
-                    {variantHasDiscount && (
-                      <span className="text-gray-600 text-sm line-through">{formatPrice(variantOriginalPrice)}</span>
+                    {hasVariants && selectedVariantObj ? (
+                      <>
+                        {selectedVariantObj.discountPrice && selectedVariantObj.discountPrice < selectedVariantObj.price && (
+                          <span className="text-gray-600 text-sm line-through">{formatPrice(selectedVariantObj.price)}</span>
+                        )}
+                        <span className="text-white font-bold">{formatPrice(selectedVariantObj.discountPrice ?? selectedVariantObj.price)}</span>
+                      </>
+                    ) : (
+                      <>
+                        {variantHasDiscount && (
+                          <span className="text-gray-600 text-sm line-through">{formatPrice(variantOriginalPrice)}</span>
+                        )}
+                        <span className="text-white font-bold">{formatPrice(variantPrice)}</span>
+                      </>
                     )}
-                    <span className="text-white font-bold">{formatPrice(variantPrice)}</span>
                   </div>
                 </div>
 
