@@ -267,7 +267,7 @@ export function ProductForm({ initial, mode, productId }: Props) {
           <input
             ref={fileRef}
             type="file"
-            accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+            accept="image/jpeg,image/jpg,image/png,image/webp,image/gif,image/svg+xml"
             className="hidden"
             onChange={handleFileChange}
           />

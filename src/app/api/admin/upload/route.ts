@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { put } from "@vercel/blob";
 
-const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
+const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif", "image/svg+xml"];
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 
 async function requireAdmin(req: NextRequest) {
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
   }
   if (!ALLOWED_TYPES.includes(file.type)) {
     return NextResponse.json(
-      { error: "Type de fichier non autorisé (JPG, PNG, WebP, GIF uniquement)" },
+      { error: "Type de fichier non autorisé (JPG, PNG, WebP, GIF, SVG uniquement)" },
       { status: 415 }
     );
   }
