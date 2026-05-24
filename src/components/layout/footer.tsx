@@ -69,7 +69,7 @@ export function Footer({ siteName = "Loot", logoUrl = "" }: { siteName?: string;
               { label: "Mes commandes", href: "/dashboard/commandes" },
               { label: "Mes clés reçues", href: "/dashboard/cles" },
               { label: "Mon profil", href: "/dashboard/profil" },
-              { label: "Support", href: "/dashboard/tickets" },
+              { label: "Support", href: "/dashboard/support" },
             ].map((item) => (
               <li key={item.href}>
                 <Link href={item.href} className="text-sm text-gray-500 hover:text-gray-300 transition-colors">
