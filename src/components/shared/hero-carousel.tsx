@@ -88,46 +88,53 @@ export function HeroCarousel({ slides = DEFAULT_SLIDES }: { slides?: Slide[] }) 
   const slide = slides[current];
 
   return (
-    <section className="relative h-[75vh] min-h-135 max-h-195 overflow-hidden bg-gray-950">
+    <section className="relative h-[75vh] min-h-125 max-h-195 overflow-hidden bg-gray-950">
       {/* Background */}
       <div className={`absolute inset-0 bg-linear-to-br ${slide.gradient} transition-all duration-700`} key={slide.id}>
         {slide.imageUrl && (
           <>
-            <Image src={slide.imageUrl} alt={slide.title} fill className="object-cover" priority unoptimized />
-            <div className="absolute inset-0 bg-linear-to-r from-black/80 via-black/40 to-transparent" />
+            <Image
+              src={slide.imageUrl}
+              alt={slide.title}
+              fill
+              className="object-cover object-center"
+              priority
+              unoptimized
+            />
+            {/* Desktop: fade left so text is readable */}
+            <div className="absolute inset-0 hidden sm:block bg-linear-to-r from-black/80 via-black/40 to-transparent" />
+            {/* Mobile: uniform dark overlay so centered text is readable */}
+            <div className="absolute inset-0 sm:hidden bg-black/60" />
           </>
         )}
         <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent" />
       </div>
 
-      {/* Main content — absolutely positioned so it's always fully visible */}
+      {/* Main content */}
       <div className="absolute inset-0 flex items-center">
         <div className="w-full max-w-7xl mx-auto px-6 pb-16">
-          <div className="max-w-2xl">
-            {/* Badge */}
+          {/* Mobile: centered; Desktop: left-aligned */}
+          <div className="max-w-2xl mx-auto sm:mx-0 text-center sm:text-left">
             {slide.badge && (
-              <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-sm bg-white/10 backdrop-blur-sm border border-white/20 text-xs font-bold uppercase tracking-widest mb-5 ${slide.accentColor}`}>
+              <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-sm bg-white/10 backdrop-blur-sm border border-white/20 text-xs font-bold uppercase tracking-widest mb-4 sm:mb-5 ${slide.accentColor}`}>
                 <Zap className="h-3 w-3" />
                 {slide.badge}
               </div>
             )}
 
-            {/* Headline */}
             {slide.title && (
-              <h1 className="text-4xl md:text-5xl font-black text-white mb-4 leading-tight">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white mb-3 sm:mb-4 leading-tight">
                 {slide.title}
               </h1>
             )}
 
-            {/* Subtitle */}
             {slide.subtitle && (
-              <p className="text-gray-300 text-base md:text-lg mb-8 leading-relaxed max-w-xl">
+              <p className="text-gray-300 text-sm sm:text-base md:text-lg mb-6 sm:mb-8 leading-relaxed max-w-xl mx-auto sm:mx-0">
                 {slide.subtitle}
               </p>
             )}
 
-            {/* CTAs */}
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
               {slide.href && (
                 <Link href={slide.href}>
                   <Button size="lg" className="gap-2 bg-white text-black hover:bg-gray-100 font-bold shadow-xl">
@@ -145,44 +152,55 @@ export function HeroCarousel({ slides = DEFAULT_SLIDES }: { slides?: Slide[] }) 
         </div>
       </div>
 
-      {/* Trust strip — pinned to bottom of hero */}
+      {/* Trust strip — pinned to bottom */}
       <div className="absolute bottom-0 left-0 right-0 bg-black/50 backdrop-blur-sm border-t border-white/10">
-        <div className="max-w-7xl mx-auto px-6 py-3 flex flex-wrap items-center gap-6">
-          <div className="flex items-center gap-2 text-sm text-gray-300">
-            <Shield className="h-4 w-4 text-green-400 shrink-0" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 sm:py-3 flex items-center gap-4 sm:gap-6 overflow-x-auto scrollbar-none">
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-300 shrink-0">
+            <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-400 shrink-0" />
             Paiement sécurisé
           </div>
-          <div className="flex items-center gap-2 text-sm text-gray-300">
-            <Zap className="h-4 w-4 text-yellow-400 shrink-0" />
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-300 shrink-0">
+            <Zap className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-yellow-400 shrink-0" />
             Livraison instantanée
           </div>
-          <div className="flex items-center gap-2 text-sm text-gray-300">
-            <Headphones className="h-4 w-4 text-purple-400 shrink-0" />
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-300 shrink-0">
+            <Headphones className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-purple-400 shrink-0" />
             Support 7j/7
           </div>
-          <div className="flex items-center gap-2 text-sm text-gray-300 ml-auto">
-            <Star className="h-4 w-4 text-yellow-400 fill-yellow-400 shrink-0" />
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-300 shrink-0 sm:ml-auto">
+            <Star className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-yellow-400 fill-yellow-400 shrink-0" />
             <span><span className="text-white font-bold">4.9</span> / 5 · 2 300 avis</span>
           </div>
         </div>
       </div>
 
-      {/* Nav arrows */}
-      <button onClick={prev} className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white hover:bg-black/70 transition-colors" aria-label="Précédent">
+      {/* Nav arrows — desktop only */}
+      <button
+        onClick={prev}
+        className="hidden sm:flex absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 items-center justify-center text-white hover:bg-black/70 transition-colors"
+        aria-label="Précédent"
+      >
         <ChevronLeft className="h-5 w-5" />
       </button>
-      <button onClick={next} className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white hover:bg-black/70 transition-colors" aria-label="Suivant">
+      <button
+        onClick={next}
+        className="hidden sm:flex absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 items-center justify-center text-white hover:bg-black/70 transition-colors"
+        aria-label="Suivant"
+      >
         <ChevronRight className="h-5 w-5" />
       </button>
 
-      {/* Dots */}
-      <div className="absolute bottom-14 left-1/2 -translate-x-1/2 flex items-center gap-2">
+      {/* Dots — positioned above trust strip */}
+      <div className="absolute bottom-11 sm:bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-2">
         {slides.map((_, i) => (
-          <button key={i} onClick={() => goTo(i)} className={`transition-all rounded-full ${i === current ? "w-6 h-2 bg-white" : "w-2 h-2 bg-white/30 hover:bg-white/50"}`} aria-label={`Slide ${i + 1}`} />
+          <button
+            key={i}
+            onClick={() => goTo(i)}
+            className={`transition-all rounded-full ${i === current ? "w-6 h-2 bg-white" : "w-2 h-2 bg-white/30 hover:bg-white/50"}`}
+            aria-label={`Slide ${i + 1}`}
+          />
         ))}
       </div>
-
-      <style>{`@keyframes progress { from { width: 0% } to { width: 100% } }`}</style>
     </section>
   );
 }
