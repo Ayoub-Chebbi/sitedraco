@@ -1,9 +1,5 @@
 const FLOUCI_BASE = "https://developers.flouci.com/api";
 
-export function getFlouciBase(): string {
-  return process.env.SITE_URL ?? process.env.NEXTAUTH_URL ?? "https://loot.tn";
-}
-
 export async function initiateFlouciPayment({
   amount,
   orderId,
@@ -19,23 +15,33 @@ export async function initiateFlouciPayment({
   const secret = process.env.FLOUCI_APP_SECRET;
   if (!token || !secret) throw new Error("Flouci credentials not configured");
 
+  const payload = {
+    app_token: token,
+    app_secret: secret,
+    amount: Math.round(amount * 1000), // TND → millimes
+    accept_card: "true",
+    session_timeout_secs: 1200,
+    success_link: successLink,
+    fail_link: failLink,
+  };
+
+  console.log("[flouci] sending payload:", JSON.stringify({ ...payload, app_token: "***", app_secret: "***" }));
+
   const res = await fetch(`${FLOUCI_BASE}/generate_payment`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      app_token: token,
-      app_secret: secret,
-      amount: Math.round(amount * 1000), // TND → millimes
-      accept_card: "true",
-      session_timeout_secs: 1200,
-      success_link: successLink,
-      fail_link: failLink,
-    }),
+    body: JSON.stringify(payload),
   });
 
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(`Flouci HTTP ${res.status}: ${JSON.stringify(data)}`);
-  if (!data.result?.success) throw new Error(`Flouci error: ${data.result?.message ?? JSON.stringify(data)}`);
+  console.log("[flouci] raw response:", JSON.stringify(data));
+
+  if (!res.ok) {
+    throw new Error(`Flouci HTTP ${res.status}: ${JSON.stringify(data)}`);
+  }
+  if (!data.result?.success) {
+    throw new Error(`Flouci rejected: ${JSON.stringify(data.result ?? data)}`);
+  }
 
   return {
     paymentUrl: data.result.link as string,
@@ -67,7 +73,7 @@ export async function verifyFlouciPayment(paymentId: string): Promise<boolean> {
 
   const status = data.result?.status;
   if (status !== "SUCCESS") {
-    console.error(`[flouci] verify status not SUCCESS:`, JSON.stringify(data));
+    console.error("[flouci] verify not SUCCESS:", JSON.stringify(data));
   }
   return status === "SUCCESS";
 }
