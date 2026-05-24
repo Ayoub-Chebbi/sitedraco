@@ -2,7 +2,7 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const FROM = process.env.EMAIL_FROM || "LootStore <onboarding@resend.dev>";
+const FROM = process.env.EMAIL_FROM ?? "noreply@loot.tn";
 
 const base = `
   <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;background:#0d0d14;color:#e5e7eb;border-radius:12px;overflow:hidden">
@@ -35,12 +35,14 @@ export async function sendWelcomeEmail(email: string, password: string, orderNum
     </a>
   ${foot}`;
 
-  await resend.emails.send({
+  const { error } = await resend.emails.send({
     from: FROM,
     to: email,
     subject: `🎮 Votre commande LootStore #${orderNumber} + vos accès`,
     html,
   });
+
+  if (error) throw new Error(error.message);
 }
 
 export async function sendPasswordResetEmail(email: string, resetUrl: string) {
@@ -53,10 +55,12 @@ export async function sendPasswordResetEmail(email: string, resetUrl: string) {
     <p style="color:#6b7280;font-size:12px;margin:20px 0 0">Si vous n'avez pas fait cette demande, ignorez cet email.</p>
   ${foot}`;
 
-  await resend.emails.send({
+  const { error } = await resend.emails.send({
     from: FROM,
     to: email,
     subject: "Réinitialisation de votre mot de passe LootStore",
     html,
   });
+
+  if (error) throw new Error(error.message);
 }

@@ -42,10 +42,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session: sessionData }) {
       if (user) {
         token.id = user.id;
         token.role = (user as { role?: string }).role;
+      }
+      if (trigger === "update" && sessionData?.name !== undefined) {
+        token.name = sessionData.name;
       }
       return token;
     },

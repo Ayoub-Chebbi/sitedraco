@@ -104,7 +104,9 @@ export async function POST(req: NextRequest) {
   });
 
   if (autoCreated) {
-    sendWelcomeEmail(email, plainPassword, orderNumber).catch(console.error);
+    sendWelcomeEmail(email, plainPassword, orderNumber).catch((err) =>
+      console.error("Welcome email failed:", err)
+    );
   }
 
   notifyAdminsNewOrder({
