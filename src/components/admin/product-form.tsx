@@ -234,7 +234,7 @@ export function ProductForm({ initial, mode, productId }: Props) {
               alt="Aperçu"
               fill
               className="object-cover"
-              unoptimized={form.imageUrl.startsWith("/uploads")}
+              unoptimized
             />
             <button
               type="button"
