@@ -34,7 +34,17 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const session = await auth();
-  if (!session || !session.user.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session || !session.user.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const userId = session.user.id;
+
+  // Verify user exists in DB — stale session after account deletion would cause FK failure
+  const userExists = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+  if (!userExists) {
+    return NextResponse.json({ error: "Utilisateur introuvable." }, { status: 404 });
+  }
 
   let body: unknown;
   try {
@@ -44,30 +54,36 @@ export async function POST(req: NextRequest) {
   }
 
   const parsed = CreateSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
+  }
 
   const { subject, message, category, priority, orderId } = parsed.data;
 
   try {
+    // Two separate queries — avoids nested write issues with the Neon HTTP adapter
     const ticket = await prisma.supportTicket.create({
       data: {
         subject,
         category,
         priority,
-        userId: session.user.id,
+        userId,
         orderId: orderId || null,
-        messages: {
-          create: {
-            message,
-            senderId: session.user.id,
-          },
-        },
       },
-      include: { messages: true },
     });
-    return NextResponse.json(ticket, { status: 201 });
+
+    const ticketMessage = await prisma.ticketMessage.create({
+      data: {
+        ticketId: ticket.id,
+        senderId: userId,
+        message,
+      },
+    });
+
+    return NextResponse.json({ ...ticket, messages: [ticketMessage] }, { status: 201 });
   } catch (err) {
-    console.error("Ticket creation error:", err);
-    return NextResponse.json({ error: "Impossible de créer le ticket." }, { status: 500 });
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error("Ticket creation error:", detail);
+    return NextResponse.json({ error: detail }, { status: 500 });
   }
 }
