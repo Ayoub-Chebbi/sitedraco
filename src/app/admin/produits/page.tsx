@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/utils";
 import { PlatformBadge } from "@/components/shared/platform-badge";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Package, Plus, Edit2 } from "lucide-react";
+import { Sparkles, Package, Plus, Edit2, Archive } from "lucide-react";
 
 export default async function AdminProductsPage() {
   const session = await auth();
@@ -51,7 +51,7 @@ export default async function AdminProductsPage() {
               <th className="text-left px-4 py-3 text-gray-500 font-medium">Prix</th>
               <th className="text-center px-4 py-3 text-gray-500 font-medium">Stock</th>
               <th className="text-center px-4 py-3 text-gray-500 font-medium">Upsells</th>
-              <th className="text-right px-4 py-3 text-gray-500 font-medium" colSpan={2}>Actions</th>
+              <th className="text-right px-4 py-3 text-gray-500 font-medium" colSpan={3}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -96,6 +96,21 @@ export default async function AdminProductsPage() {
                   >
                     <Edit2 className="h-3 w-3" />
                     Modifier
+                  </Link>
+                </td>
+                <td className="px-2 py-3 text-right">
+                  <Link
+                    href={`/admin/produits/${product.id}/stock`}
+                    className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+                      product._count.keys === 0
+                        ? "text-red-400 hover:text-red-300 bg-red-900/20 hover:bg-red-900/40"
+                        : product._count.keys <= product.lowStockAlert
+                        ? "text-yellow-400 hover:text-yellow-300 bg-yellow-900/20 hover:bg-yellow-900/40"
+                        : "text-green-400 hover:text-green-300 bg-green-900/20 hover:bg-green-900/40"
+                    }`}
+                  >
+                    <Archive className="h-3 w-3" />
+                    Stock
                   </Link>
                 </td>
                 <td className="px-2 py-3 text-right">
