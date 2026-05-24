@@ -24,7 +24,13 @@ export async function GET() {
   });
 
   if (categories.length === 0) {
-    await prisma.category.createMany({ data: DEFAULTS, skipDuplicates: true });
+    try {
+      for (const d of DEFAULTS) {
+        await prisma.category.upsert({ where: { slug: d.slug }, create: d, update: {} });
+      }
+    } catch {
+      // seeding failed — return empty list
+    }
     categories = await prisma.category.findMany({
       orderBy: [{ displayOrder: "asc" }, { label: "asc" }],
     });
