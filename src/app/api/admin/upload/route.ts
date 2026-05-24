@@ -17,7 +17,13 @@ export async function POST(req: NextRequest) {
   const guard = await requireAdmin(req);
   if (guard) return guard;
 
-  const formData = await req.formData();
+  let formData: FormData;
+  try {
+    formData = await req.formData();
+  } catch {
+    return NextResponse.json({ error: "Requête invalide" }, { status: 400 });
+  }
+
   const file = formData.get("file");
   const folder = (formData.get("folder") as string) || "products";
 
@@ -34,13 +40,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Fichier trop volumineux (max 5 Mo)" }, { status: 413 });
   }
 
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    return NextResponse.json(
+      { error: "Stockage non configuré — ajoutez BLOB_READ_WRITE_TOKEN dans les variables d'environnement Vercel" },
+      { status: 500 }
+    );
+  }
+
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
   const filename = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
-  const blob = await put(filename, file, {
-    access: "public",
-    contentType: file.type,
-  });
-
-  return NextResponse.json({ url: blob.url }, { status: 201 });
+  try {
+    const blob = await put(filename, file, {
+      access: "public",
+      contentType: file.type,
+    });
+    return NextResponse.json({ url: blob.url }, { status: 201 });
+  } catch (err) {
+    console.error("Blob upload error:", err);
+    return NextResponse.json(
+      { error: "Échec de l'upload. Vérifiez la configuration du Blob store." },
+      { status: 500 }
+    );
+  }
 }

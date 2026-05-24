@@ -93,8 +93,14 @@ export function ProductForm({ initial, mode, productId }: Props) {
       fd.append("file", file);
       fd.append("folder", "products");
       const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload échoué");
+      let data: { url?: string; error?: string } = {};
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error(`Erreur serveur (${res.status})`);
+      }
+      if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
+      if (!data.url) throw new Error("URL manquante dans la réponse");
       set("imageUrl", data.url);
       toast({ title: "Image uploadée", variant: "success" });
     } catch (err) {
