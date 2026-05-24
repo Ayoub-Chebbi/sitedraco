@@ -6,7 +6,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
 
   const product = await prisma.product.findUnique({
     where: { slug, isActive: true },
-    include: { _count: { select: { keys: { where: { status: "available" } } } } },
+    include: {
+      _count: { select: { keys: { where: { status: "available" } } } },
+      variants: { where: { isActive: true }, orderBy: { displayOrder: "asc" } },
+    },
   });
 
   if (!product) return NextResponse.json({ error: "Produit introuvable." }, { status: 404 });

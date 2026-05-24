@@ -37,15 +37,32 @@ type Props = {
 export function QuickViewModal({ product, onClose, onAddToCart }: Props) {
   const productType = (product?.productType ?? "key") as "key" | "account" | "both";
   const hasBoth = productType === "both";
-  const hasVariants = (product?.variants?.length ?? 0) > 0;
 
   const [variant, setVariant] = useState<"key" | "account">("key");
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+  const [liveVariants, setLiveVariants] = useState<ProductVariant[]>([]);
 
   useEffect(() => {
-    if (!product) return;
+    if (!product) { setLiveVariants([]); return; }
     setVariant(product.productType === "account" ? "account" : "key");
-    setSelectedVariantId(product.variants?.[0]?.id ?? null);
+
+    if ((product.variants?.length ?? 0) > 0) {
+      setLiveVariants(product.variants!);
+      setSelectedVariantId(product.variants![0].id);
+      return;
+    }
+
+    setLiveVariants([]);
+    setSelectedVariantId(null);
+    fetch(`/api/products/${product.slug}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.variants?.length > 0) {
+          setLiveVariants(data.variants);
+          setSelectedVariantId(data.variants[0].id);
+        }
+      })
+      .catch(() => {});
   }, [product]);
 
   useEffect(() => {
@@ -61,8 +78,9 @@ export function QuickViewModal({ product, onClose, onAddToCart }: Props) {
 
   if (!product) return null;
 
+  const hasVariants = liveVariants.length > 0;
   const inStock = product.availableKeys === undefined || product.availableKeys > 0;
-  const selectedVariant = product.variants?.find((v) => v.id === selectedVariantId) ?? product.variants?.[0];
+  const selectedVariant = liveVariants.find((v) => v.id === selectedVariantId) ?? liveVariants[0];
 
   let displayPrice: number;
   let originalPrice: number;
@@ -142,11 +160,11 @@ export function QuickViewModal({ product, onClose, onAddToCart }: Props) {
             )}
 
             {/* Custom variant selector (gift cards / denominations) */}
-            {hasVariants && product.variants && (
+            {hasVariants && (
               <div>
                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Choisir un montant</p>
                 <div className="grid grid-cols-2 gap-2">
-                  {product.variants.map((v) => {
+                  {liveVariants.map((v) => {
                     const display = v.discountPrice ?? v.price;
                     const isSelected = selectedVariantId === v.id;
                     return (
