@@ -14,6 +14,14 @@ import { useCart } from "@/lib/cart-store";
 import { useToast } from "@/lib/use-toast";
 import type { Product } from "@/types";
 
+type ProductVariant = {
+  id: string;
+  name: string;
+  price: number;
+  discountPrice?: number | null;
+  displayOrder: number;
+};
+
 type UpsellProduct = Pick<Product, "id" | "name" | "slug" | "price" | "discountPrice" | "imageUrl" | "platform" | "category">;
 
 type ExtProduct = Product & {
@@ -26,6 +34,7 @@ type ExtProduct = Product & {
   accountPrice?: number | null;
   accountDiscountPrice?: number | null;
   accountDescription?: string | null;
+  variants?: ProductVariant[];
 };
 
 type Props = {
@@ -48,35 +57,75 @@ export function ProductDetailClient({ product, upsells }: Props) {
 
   const productType = (product.productType ?? "key") as "key" | "account" | "both";
   const hasBoth = productType === "both";
+  const hasVariants = (product.variants?.length ?? 0) > 0;
+
+  // Key/account selector (only when no custom variants)
   const [variant, setVariant] = useState<"key" | "account">(
     productType === "account" ? "account" : "key"
   );
 
-  const isKeyVariant = variant === "key";
-  const variantPrice = isKeyVariant
-    ? product.price
-    : (product.accountPrice ?? product.price);
-  const variantDiscountPrice = isKeyVariant
-    ? product.discountPrice
-    : (product.accountDiscountPrice ?? null);
+  // Custom variant selector (gift cards etc.)
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
+    product.variants?.[0]?.id ?? null
+  );
+  const selectedVariant = product.variants?.find((v) => v.id === selectedVariantId) ?? product.variants?.[0];
 
-  const displayPrice = variantDiscountPrice ?? variantPrice;
-  const hasDiscount = variantDiscountPrice && variantDiscountPrice < variantPrice;
+  // Price calculation
+  let displayPrice: number;
+  let originalPrice: number;
+  let hasDiscount: boolean;
+
+  if (hasVariants && selectedVariant) {
+    originalPrice = selectedVariant.price;
+    displayPrice = selectedVariant.discountPrice ?? selectedVariant.price;
+    hasDiscount = !!(selectedVariant.discountPrice && selectedVariant.discountPrice < selectedVariant.price);
+  } else {
+    const isKeyVariant = variant === "key";
+    originalPrice = isKeyVariant ? product.price : (product.accountPrice ?? product.price);
+    const variantDiscountPrice = isKeyVariant
+      ? product.discountPrice
+      : (product.accountDiscountPrice ?? null);
+    displayPrice = variantDiscountPrice ?? originalPrice;
+    hasDiscount = !!(variantDiscountPrice && variantDiscountPrice < originalPrice);
+  }
+
+  const description = hasVariants
+    ? product.description
+    : variant === "key"
+      ? product.description
+      : (product.accountDescription ?? product.description);
 
   function handleAddToCart() {
     for (let i = 0; i < qty; i++) {
-      addItem({
-        productId: product.id,
-        variant: hasBoth ? variant : undefined,
-        name: hasBoth ? `${product.name} (${variant === "key" ? "Clé" : "Compte"})` : product.name,
-        price: variantPrice,
-        discountPrice: variantDiscountPrice,
-        imageUrl: product.imageUrl,
-        platform: product.platform,
-        quantity: 1,
-      });
+      if (hasVariants && selectedVariant) {
+        addItem({
+          productId: product.id,
+          variantId: selectedVariant.id,
+          variantName: selectedVariant.name,
+          name: `${product.name} — ${selectedVariant.name}`,
+          price: selectedVariant.price,
+          discountPrice: selectedVariant.discountPrice,
+          imageUrl: product.imageUrl,
+          platform: product.platform,
+          quantity: 1,
+        });
+      } else {
+        addItem({
+          productId: product.id,
+          variant: hasBoth ? variant : undefined,
+          name: hasBoth ? `${product.name} (${variant === "key" ? "Clé" : "Compte"})` : product.name,
+          price: originalPrice,
+          discountPrice: hasDiscount ? displayPrice : undefined,
+          imageUrl: product.imageUrl,
+          platform: product.platform,
+          quantity: 1,
+        });
+      }
     }
-    toast({ title: "Ajouté au panier !", description: `${qty}x ${product.name}`, variant: "success" });
+    const label = hasVariants && selectedVariant
+      ? `${qty}x ${product.name} — ${selectedVariant.name}`
+      : `${qty}x ${product.name}`;
+    toast({ title: "Ajouté au panier !", description: label, variant: "success" });
   }
 
   return (
@@ -87,7 +136,7 @@ export function ProductDetailClient({ product, upsells }: Props) {
         <ChevronRight className="h-3 w-3" />
         <Link href="/produits" className="hover:text-gray-300">Catalogue</Link>
         <ChevronRight className="h-3 w-3" />
-        <span className="text-gray-300 truncate max-w-[200px]">{product.name}</span>
+        <span className="text-gray-300 truncate max-w-50">{product.name}</span>
       </nav>
 
       <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
@@ -100,7 +149,7 @@ export function ProductDetailClient({ product, upsells }: Props) {
           )}
           {hasDiscount && (
             <div className="absolute top-4 left-4 bg-red-600 text-white text-sm font-bold px-3 py-1 rounded-lg">
-              -{Math.round(((product.price - displayPrice) / product.price) * 100)}%
+              -{Math.round(((originalPrice - displayPrice) / originalPrice) * 100)}%
             </div>
           )}
         </div>
@@ -118,15 +167,45 @@ export function ProductDetailClient({ product, upsells }: Props) {
 
           <h1 className="text-2xl md:text-3xl font-bold text-white">{product.name}</h1>
 
-          {/* Social proof */}
           <SocialProof
             rating={product.rating}
             reviewCount={product.reviewCount}
             soldCount={product.soldCount}
           />
 
-          {/* Variant selector — only shown when both key and account are available */}
-          {hasBoth && (
+          {/* Custom variant selector (gift cards / denominations) */}
+          {hasVariants && product.variants && (
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Choisir un montant</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {product.variants.map((v) => {
+                  const display = v.discountPrice ?? v.price;
+                  const isSelected = selectedVariantId === v.id;
+                  return (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => setSelectedVariantId(v.id)}
+                      className={`rounded-xl border-2 p-3 text-center transition-all ${
+                        isSelected
+                          ? "border-purple-500 bg-purple-900/30"
+                          : "border-gray-700 bg-gray-800 hover:border-gray-600"
+                      }`}
+                    >
+                      <p className={`text-sm font-bold ${isSelected ? "text-white" : "text-gray-300"}`}>{v.name}</p>
+                      <p className="text-base font-bold text-purple-300 mt-0.5">{formatPrice(display)}</p>
+                      {v.discountPrice && v.discountPrice < v.price && (
+                        <p className="text-xs text-gray-500 line-through">{formatPrice(v.price)}</p>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Key/account selector — only when no custom variants */}
+          {!hasVariants && hasBoth && (
             <div>
               <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Type de produit</p>
               <div className="flex gap-2">
@@ -165,23 +244,16 @@ export function ProductDetailClient({ product, upsells }: Props) {
           <div className="flex items-center gap-3">
             <span className="text-3xl font-bold text-white">{formatPrice(displayPrice)}</span>
             {hasDiscount && (
-              <span className="text-lg text-gray-500 line-through">{formatPrice(variantPrice)}</span>
+              <span className="text-lg text-gray-500 line-through">{formatPrice(originalPrice)}</span>
             )}
           </div>
 
-          {(() => {
-            const desc = isKeyVariant
-              ? product.description
-              : (product.accountDescription ?? product.description);
-            return desc ? <p className="text-gray-400 text-sm leading-relaxed">{desc}</p> : null;
-          })()}
+          {description && <p className="text-gray-400 text-sm leading-relaxed">{description}</p>}
 
-          {/* Urgency timer */}
           {inStock && (product.urgencyHours ?? 4) > 0 && (
             <UrgencyTimer hours={product.urgencyHours ?? 4} label="Prix spécial expire dans" />
           )}
 
-          {/* Trust badges */}
           <div className="grid grid-cols-3 gap-2">
             {[
               { icon: "⚡", label: "15–60 min" },
@@ -213,31 +285,32 @@ export function ProductDetailClient({ product, upsells }: Props) {
                 <Plus className="h-4 w-4" />
               </button>
             </div>
-            <Button size="lg" className="flex-1 gap-2" onClick={handleAddToCart} disabled={!inStock}>
+            <Button
+              size="lg"
+              className="flex-1 gap-2"
+              onClick={handleAddToCart}
+              disabled={!inStock || (hasVariants && !selectedVariant)}
+            >
               <ShoppingCart className="h-5 w-5" />
               Ajouter au panier
             </Button>
           </div>
 
           <Link href="/checkout" onClick={handleAddToCart}>
-            <Button size="lg" variant="outline" className="w-full gap-2" disabled={!inStock}>
+            <Button size="lg" variant="outline" className="w-full gap-2" disabled={!inStock || (hasVariants && !selectedVariant)}>
               <Zap className="h-5 w-5 text-yellow-400" />
               Acheter maintenant
             </Button>
           </Link>
 
           <p className="text-xs text-gray-600 pt-1">
-            {productType === "account"
-              ? "✓ Accès compte envoyé par email + espace client · ✓ Support 7j/7 · ✓ Paiement vérifié avant envoi"
-              : "✓ Clé envoyée par email + espace client · ✓ Support 7j/7 · ✓ Paiement vérifié avant envoi"}
+            ✓ Clé envoyée par email + espace client · ✓ Support 7j/7 · ✓ Paiement vérifié avant envoi
           </p>
         </div>
       </div>
 
-      {/* Upsells */}
       {upsells.length > 0 && <UpsellSection products={upsells} />}
 
-      {/* Reviews */}
       <div className="mt-10 pt-8 border-t border-gray-800">
         <div className="flex items-center justify-between mb-5">
           <div>

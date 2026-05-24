@@ -19,6 +19,8 @@ export type ProductWithKeyCount = Product & {
 export type CartItem = {
   productId: string;
   variant?: "key" | "account";
+  variantId?: string;
+  variantName?: string;
   name: string;
   price: number;
   discountPrice?: number | null;

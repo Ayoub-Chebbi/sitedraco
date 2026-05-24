@@ -37,8 +37,9 @@ export default function PanierPage() {
         <div className="md:col-span-2 space-y-3">
           {items.map((item) => {
             const price = item.discountPrice ?? item.price;
+            const itemKey = `${item.productId}:${item.variantId ?? ""}:${item.variant ?? ""}`;
             return (
-              <div key={item.productId} className="flex gap-4 p-4 rounded-xl border border-gray-800 bg-gray-900">
+              <div key={itemKey} className="flex gap-4 p-4 rounded-xl border border-gray-800 bg-gray-900">
                 <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-gray-800 shrink-0">
                   {item.imageUrl ? (
                     <Image src={item.imageUrl} alt={item.name} fill className="object-cover" />
@@ -52,14 +53,14 @@ export default function PanierPage() {
                   <div className="flex items-center justify-between mt-3">
                     <div className="flex items-center gap-2 border border-gray-700 rounded-lg p-0.5">
                       <button
-                        onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                        onClick={() => updateQuantity(item.productId, item.quantity - 1, item.variantId)}
                         className="p-1 rounded hover:bg-gray-800 text-gray-400 hover:text-white"
                       >
                         <Minus className="h-3 w-3" />
                       </button>
                       <span className="w-6 text-center text-sm text-white">{item.quantity}</span>
                       <button
-                        onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                        onClick={() => updateQuantity(item.productId, item.quantity + 1, item.variantId)}
                         className="p-1 rounded hover:bg-gray-800 text-gray-400 hover:text-white"
                       >
                         <Plus className="h-3 w-3" />
@@ -68,7 +69,7 @@ export default function PanierPage() {
                     <div className="flex items-center gap-3">
                       <span className="font-bold text-white">{formatPrice(price * item.quantity)}</span>
                       <button
-                        onClick={() => removeItem(item.productId)}
+                        onClick={() => removeItem(item.productId, item.variantId)}
                         className="text-gray-600 hover:text-red-400 transition-colors"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -87,7 +88,7 @@ export default function PanierPage() {
             <h2 className="font-semibold text-white">Récapitulatif</h2>
             <div className="space-y-2">
               {items.map((item) => (
-                <div key={item.productId} className="flex justify-between text-sm">
+                <div key={`${item.productId}:${item.variantId ?? ""}:${item.variant ?? ""}`} className="flex justify-between text-sm">
                   <span className="text-gray-400 truncate max-w-[160px]">{item.name} x{item.quantity}</span>
                   <span className="text-gray-300 shrink-0">{formatPrice((item.discountPrice ?? item.price) * item.quantity)}</span>
                 </div>

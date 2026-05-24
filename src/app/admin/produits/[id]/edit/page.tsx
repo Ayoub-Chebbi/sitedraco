@@ -3,7 +3,7 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ProductForm } from "@/components/admin/product-form";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Layers, Sparkles, Archive } from "lucide-react";
 
 export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -46,7 +46,32 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
         <span className="text-gray-300 truncate max-w-[160px]">{product.name}</span>
       </nav>
 
-      <h1 className="text-2xl font-bold text-white mb-6">Modifier le produit</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-white">Modifier le produit</h1>
+        <div className="flex gap-2">
+          <Link
+            href={`/admin/produits/${product.id}/stock`}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-green-400 hover:text-green-300 bg-green-900/20 hover:bg-green-900/40 px-3 py-1.5 rounded-lg transition-colors"
+          >
+            <Archive className="h-3 w-3" />
+            Stock
+          </Link>
+          <Link
+            href={`/admin/produits/${product.id}/variants`}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-400 hover:text-blue-300 bg-blue-900/20 hover:bg-blue-900/40 px-3 py-1.5 rounded-lg transition-colors"
+          >
+            <Layers className="h-3 w-3" />
+            Variantes
+          </Link>
+          <Link
+            href={`/admin/produits/${product.id}/upsells`}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-purple-400 hover:text-purple-300 bg-purple-900/20 hover:bg-purple-900/40 px-3 py-1.5 rounded-lg transition-colors"
+          >
+            <Sparkles className="h-3 w-3" />
+            Upsells
+          </Link>
+        </div>
+      </div>
       <ProductForm mode="edit" productId={product.id} initial={initial} />
     </div>
   );

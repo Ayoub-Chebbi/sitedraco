@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/utils";
 import { PlatformBadge } from "@/components/shared/platform-badge";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Package, Plus, Edit2, Archive } from "lucide-react";
+import { Sparkles, Package, Plus, Edit2, Archive, Layers } from "lucide-react";
 
 export default async function AdminProductsPage() {
   const session = await auth();
@@ -125,6 +125,15 @@ export default async function AdminProductsPage() {
                   >
                     <Sparkles className="h-3 w-3" />
                     Upsells
+                  </Link>
+                </td>
+                <td className="px-2 py-3 text-right">
+                  <Link
+                    href={`/admin/produits/${product.id}/variants`}
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-400 hover:text-blue-300 bg-blue-900/20 hover:bg-blue-900/40 px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    <Layers className="h-3 w-3" />
+                    Variantes
                   </Link>
                 </td>
               </tr>

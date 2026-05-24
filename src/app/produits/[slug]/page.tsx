@@ -41,6 +41,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     where: { slug, isActive: true },
     include: {
       _count: { select: { keys: { where: { status: "available" } } } },
+      variants: { where: { isActive: true }, orderBy: { displayOrder: "asc" } },
       upsells: {
         orderBy: { displayOrder: "asc" },
         include: {

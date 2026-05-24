@@ -92,21 +92,34 @@ export function ProductsClient({ products, categories: propCategories, initialPl
     return list;
   }, [products, sort, onlyInStock, maxPrice]);
 
-  function handleAddToCart(product: Product, variant?: "key" | "account") {
+  function handleAddToCart(product: Product, variant?: "key" | "account", variantId?: string, variantName?: string) {
     const p = product as Product & { accountPrice?: number | null; accountDiscountPrice?: number | null };
-    const isAccount = variant === "account";
-    const price = isAccount ? (p.accountPrice ?? product.price) : product.price;
-    const discountPrice = isAccount ? (p.accountDiscountPrice ?? null) : product.discountPrice;
-    addItem({
-      productId: product.id,
-      variant,
-      name: variant ? `${product.name} (${variant === "key" ? "Clé" : "Compte"})` : product.name,
-      price,
-      discountPrice,
-      imageUrl: product.imageUrl,
-      platform: product.platform,
-      quantity: 1,
-    });
+    if (variantId && variantName) {
+      addItem({
+        productId: product.id,
+        variantId,
+        variantName,
+        name: `${product.name} — ${variantName}`,
+        price: product.price,
+        imageUrl: product.imageUrl,
+        platform: product.platform,
+        quantity: 1,
+      });
+    } else {
+      const isAccount = variant === "account";
+      const price = isAccount ? (p.accountPrice ?? product.price) : product.price;
+      const discountPrice = isAccount ? (p.accountDiscountPrice ?? null) : product.discountPrice;
+      addItem({
+        productId: product.id,
+        variant,
+        name: variant ? `${product.name} (${variant === "key" ? "Clé" : "Compte"})` : product.name,
+        price,
+        discountPrice,
+        imageUrl: product.imageUrl,
+        platform: product.platform,
+        quantity: 1,
+      });
+    }
     toast({ title: "Ajouté au panier", description: product.name, variant: "success" });
   }
 
