@@ -40,5 +40,10 @@ export async function GET(req: NextRequest) {
     prisma.product.count({ where }),
   ]);
 
-  return NextResponse.json({ products, total, page, limit });
+  const productsWithStock = products.map((p) => ({
+    ...p,
+    availableKeys: p._count.keys + (p.manualStock ?? 0),
+  }));
+
+  return NextResponse.json({ products: productsWithStock, total, page, limit });
 }

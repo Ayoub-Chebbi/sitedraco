@@ -22,7 +22,7 @@ export default async function ProduitsPage({
 }) {
   const params = await searchParams;
   const products = await getProducts(params.platform, params.category);
-  const productsWithStock = products.map((p) => ({ ...p, availableKeys: p._count.keys }));
+  const productsWithStock = products.map((p) => ({ ...p, availableKeys: p._count.keys + (p.manualStock ?? 0) }));
 
   return <ProductsClient products={productsWithStock} initialPlatform={params.platform} initialCategory={params.category} />;
 }

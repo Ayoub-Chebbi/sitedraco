@@ -24,11 +24,14 @@ export async function GET(req: NextRequest) {
       discountPrice: true,
       imageUrl: true,
       category: true,
+      manualStock: true,
       _count: { select: { keys: { where: { status: "available" } } } },
     },
     take: 8,
     orderBy: { soldCount: "desc" },
   });
 
-  return NextResponse.json(products);
+  return NextResponse.json(
+    products.map((p) => ({ ...p, availableKeys: p._count.keys + (p.manualStock ?? 0) }))
+  );
 }

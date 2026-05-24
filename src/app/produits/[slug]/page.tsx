@@ -56,12 +56,12 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   const upsellProducts = product.upsells.map((u) => ({
     ...u.upsellProduct,
-    availableKeys: u.upsellProduct._count.keys,
+    availableKeys: u.upsellProduct._count.keys + (u.upsellProduct.manualStock ?? 0),
   }));
 
   return (
     <ProductDetailClient
-      product={{ ...product, availableKeys: product._count.keys }}
+      product={{ ...product, availableKeys: product._count.keys + (product.manualStock ?? 0) }}
       upsells={upsellProducts}
     />
   );

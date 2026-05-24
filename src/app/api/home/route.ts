@@ -21,8 +21,16 @@ export async function GET() {
     ),
   ]);
 
-  const platformKeys = Object.keys(PLATFORMS);
-  const platforms = Object.fromEntries(platformKeys.map((name, i) => [name, platformProducts[i]]));
+  const addStock = (p: any) => ({ ...p, availableKeys: p._count.keys + (p.manualStock ?? 0) });
 
-  return NextResponse.json({ newArrivals, deals, platforms });
+  const platformKeys = Object.keys(PLATFORMS);
+  const platforms = Object.fromEntries(
+    platformKeys.map((name, i) => [name, platformProducts[i].map(addStock)])
+  );
+
+  return NextResponse.json({
+    newArrivals: newArrivals.map(addStock),
+    deals: deals.map(addStock),
+    platforms,
+  });
 }

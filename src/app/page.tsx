@@ -13,12 +13,12 @@ import { formatPrice } from "@/lib/utils";
 
 const productSelect = {
   id: true, name: true, slug: true, platform: true, category: true,
-  price: true, discountPrice: true, imageUrl: true, soldCount: true,
+  price: true, discountPrice: true, imageUrl: true, soldCount: true, manualStock: true,
   _count: { select: { keys: { where: { status: "available" } } } },
 };
 
 function mapProduct(p: any) {
-  return { ...p, availableKeys: p._count?.keys ?? 0 };
+  return { ...p, availableKeys: (p._count?.keys ?? 0) + (p.manualStock ?? 0) };
 }
 
 async function getHeroSlides() {
