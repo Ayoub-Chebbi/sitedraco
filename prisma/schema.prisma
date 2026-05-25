@@ -254,3 +254,11 @@ model SiteSettings {
   value     String
   updatedAt DateTime @updatedAt
 }
+
+model Platform {
+  id           String   @id @default(cuid())
+  value        String   @unique
+  label        String
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+}

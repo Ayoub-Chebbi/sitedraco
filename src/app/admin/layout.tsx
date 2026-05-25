@@ -1,16 +1,17 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth";
-import { LayoutDashboard, ShoppingBag, Package, Users, ImageIcon, Ticket, Sparkles, Settings, Tag } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, Package, Users, ImageIcon, Ticket, Settings, Tag, Monitor, Sparkles } from "lucide-react";
 
 const ADMIN_NAV = [
-  { href: "/admin",             label: "Dashboard",      icon: LayoutDashboard },
-  { href: "/admin/commandes",   label: "Commandes",      icon: ShoppingBag },
-  { href: "/admin/tickets",     label: "Tickets",        icon: Ticket },
-  { href: "/admin/produits",    label: "Produits",       icon: Package },
-  { href: "/admin/utilisateurs",label: "Clients",        icon: Users },
+  { href: "/admin",              label: "Dashboard",      icon: LayoutDashboard },
+  { href: "/admin/commandes",    label: "Commandes",      icon: ShoppingBag },
+  { href: "/admin/tickets",      label: "Tickets",        icon: Ticket },
+  { href: "/admin/produits",     label: "Produits",       icon: Package },
+  { href: "/admin/utilisateurs", label: "Clients",        icon: Users },
   { href: "/admin/categories",   label: "Catégories",     icon: Tag },
-  { href: "/admin/hero",        label: "Hero Carrousel", icon: ImageIcon },
-  { href: "/admin/settings",    label: "Paramètres",     icon: Settings },
+  { href: "/admin/platforms",    label: "Plateformes",    icon: Monitor },
+  { href: "/admin/hero",         label: "Hero Carrousel", icon: ImageIcon },
+  { href: "/admin/settings",     label: "Paramètres",     icon: Settings },
 ];
 
 const SUPPORT_NAV = [

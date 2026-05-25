@@ -10,7 +10,7 @@ import { useCart } from "@/lib/cart-store";
 import { useToast } from "@/lib/use-toast";
 import type { Product } from "@/types";
 
-const PLATFORMS = [
+const STATIC_PLATFORMS = [
   { value: "", label: "Toutes" },
   { value: "ps5", label: "PS5" },
   { value: "ps4", label: "PS4" },
@@ -51,12 +51,13 @@ type Props = {
   products: ExtProduct[];
   categories?: { slug: string; label: string }[];
   giftcardBrands?: string[];
+  platforms?: { value: string; label: string }[];
   initialPlatform?: string;
   initialCategory?: string;
   initialBrand?: string;
 };
 
-export function ProductsClient({ products, categories: propCategories, giftcardBrands = [], initialPlatform = "", initialCategory = "", initialBrand = "" }: Props) {
+export function ProductsClient({ products, categories: propCategories, giftcardBrands = [], platforms: propPlatforms, initialPlatform = "", initialCategory = "", initialBrand = "" }: Props) {
   const categoryList = propCategories ?? DEFAULT_CATEGORIES;
   const router = useRouter();
   const addItem = useCart((s) => s.addItem);
@@ -143,7 +144,7 @@ export function ProductsClient({ products, categories: propCategories, giftcardB
       <div>
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Plateforme</p>
         <div className="flex flex-wrap gap-1.5">
-          {PLATFORMS.map((p) => (
+          {[{ value: "", label: "Toutes" }, ...(propPlatforms ?? STATIC_PLATFORMS.slice(1))].map((p) => (
             <button
               key={p.value}
               onClick={() => navigate(p.value, category, brand)}

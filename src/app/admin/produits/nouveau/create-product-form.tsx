@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/lib/use-toast";
-import { PLATFORMS, CATEGORIES } from "@/lib/utils";
+import { PLATFORMS as STATIC_PLATFORMS, CATEGORIES } from "@/lib/utils";
 
 function slugify(str: string) {
   return str
@@ -57,6 +57,11 @@ export function CreateProductForm() {
   const [isPending, startTransition] = useTransition();
   const [form, setForm] = useState<Field>(INITIAL);
   const [slugEdited, setSlugEdited] = useState(false);
+  const [platforms, setPlatforms] = useState<{ value: string; label: string }[]>([]);
+
+  useEffect(() => {
+    fetch("/api/platforms").then((r) => r.json()).then(setPlatforms).catch(() => {});
+  }, []);
 
   function set(key: keyof Field, value: string | boolean) {
     setForm((prev) => {
@@ -157,7 +162,7 @@ export function CreateProductForm() {
               onChange={(e) => set("platform", e.target.value)}
               className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
             >
-              {PLATFORMS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+              {(platforms.length > 0 ? platforms : STATIC_PLATFORMS).map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
             </select>
           </div>
           <div>

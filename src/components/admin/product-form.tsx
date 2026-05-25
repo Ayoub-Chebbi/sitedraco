@@ -6,7 +6,7 @@ import Image from "next/image";
 import { Upload, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/lib/use-toast";
-import { PLATFORMS } from "@/lib/utils";
+import { PLATFORMS as STATIC_PLATFORMS } from "@/lib/utils";
 
 function slugify(str: string) {
   return str
@@ -77,13 +77,12 @@ export function ProductForm({ initial, mode, productId }: Props) {
   const [form, setForm] = useState<ProductFormValues>({ ...DEFAULTS, ...initial });
   const [slugEdited, setSlugEdited] = useState(mode === "edit");
   const [categories, setCategories] = useState<{ id: string; slug: string; label: string }[]>([]);
+  const [platforms, setPlatforms] = useState<{ id: string; value: string; label: string }[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetch("/api/categories")
-      .then((r) => r.json())
-      .then(setCategories)
-      .catch(() => {});
+    fetch("/api/categories").then((r) => r.json()).then(setCategories).catch(() => {});
+    fetch("/api/platforms").then((r) => r.json()).then(setPlatforms).catch(() => {});
   }, []);
 
   function set(key: keyof ProductFormValues, value: string | boolean) {
@@ -219,7 +218,7 @@ export function ProductForm({ initial, mode, productId }: Props) {
               onChange={(e) => set("platform", e.target.value)}
               className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
             >
-              {PLATFORMS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+              {(platforms.length > 0 ? platforms : STATIC_PLATFORMS).map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
             </select>
           </div>
           <div>
