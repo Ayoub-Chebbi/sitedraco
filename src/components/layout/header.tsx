@@ -277,7 +277,7 @@ export function Header({ siteName = "Loot", logoUrl = "" }: { siteName?: string;
                   </Link>
                 )}
                 <button
-                  onClick={() => signOut({ callbackUrl: "/" })}
+                  onClick={() => signOut({ callbackUrl: window.location.origin })}
                   className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-900/20 transition-colors"
                 >
                   <LogOut className="h-4 w-4" />
@@ -440,7 +440,7 @@ export function Header({ siteName = "Loot", logoUrl = "" }: { siteName?: string;
                   </Button>
                 </Link>
                 <Button variant="ghost" className="w-full gap-2 text-red-400"
-                  onClick={() => { setMobileOpen(false); signOut({ callbackUrl: "/" }); }}>
+                  onClick={() => { setMobileOpen(false); signOut({ callbackUrl: window.location.origin }); }}>
                   <LogOut className="h-4 w-4" />Se déconnecter
                 </Button>
               </>
