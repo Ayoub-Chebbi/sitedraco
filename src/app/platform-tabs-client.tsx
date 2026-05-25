@@ -6,26 +6,17 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import type { ProductWithKeyCount } from "@/types";
 
-const TABS = [
-  { key: "ps5",      label: "PlayStation 5", emoji: "🎮" },
-  { key: "ps4",      label: "PlayStation 4", emoji: "🕹️" },
-  { key: "xbox",     label: "Xbox",          emoji: "🟢" },
-  { key: "nintendo", label: "Nintendo",      emoji: "🔴" },
-  { key: "pc",       label: "PC",            emoji: "🖥️" },
-  { key: "steam",    label: "Steam",         emoji: "💻" },
-  { key: "mobile",   label: "Mobile",        emoji: "📱" },
-];
-
+type Tab = { key: string; label: string; emoji: string };
 type ExtProduct = ProductWithKeyCount & { availableKeys: number; soldCount?: number };
 
-export function PlatformTabsClient({ platforms }: { platforms: Record<string, ExtProduct[]> }) {
-  const available = TABS.filter((t) => (platforms[t.key]?.length ?? 0) > 0);
-  const [active, setActive] = useState(available[0]?.key ?? "ps5");
+export function PlatformTabsClient({ platforms, tabs }: { platforms: Record<string, ExtProduct[]>; tabs: Tab[] }) {
+  const available = tabs.filter((t) => (platforms[t.key]?.length ?? 0) > 0);
+  const [active, setActive] = useState(available[0]?.key ?? "");
 
   if (available.length === 0) return null;
 
   const products = platforms[active] ?? [];
-  const activeTab = TABS.find((t) => t.key === active);
+  const activeTab = available.find((t) => t.key === active);
 
   return (
     <div>

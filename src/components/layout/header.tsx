@@ -21,75 +21,48 @@ type NavItem = {
   dropdown?: SubItem[];
 };
 
-const NAV_ITEMS: NavItem[] = [
-  {
-    label: "PC / Steam", href: "/produits?platform=steam", emoji: "💻",
-    hover: "hover:bg-sky-950/60 hover:text-sky-300", activeColor: "text-sky-300 bg-sky-950/60",
-    dropdown: [
-      { label: "Jeux PC",         href: "/produits?platform=steam&category=game",     emoji: "🎮", desc: "Tous les jeux Steam" },
-      { label: "DLC & Extensions",href: "/produits?platform=steam&category=dlc",      emoji: "🧩", desc: "Contenus additionnels" },
-      { label: "Crédits Steam",   href: "/produits?platform=steam&category=credit",   emoji: "💳", desc: "Solde Steam Wallet" },
-      { label: "Cartes cadeaux",  href: "/produits?platform=steam&category=giftcard", emoji: "🎁", desc: "Gift cards Steam" },
-    ],
-  },
-  {
-    label: "PlayStation", href: "/produits?platform=ps5", emoji: "🎮",
-    hover: "hover:bg-blue-950/60 hover:text-blue-300", activeColor: "text-blue-300 bg-blue-950/60",
-    dropdown: [
-      { label: "PS5 — Jeux",   href: "/produits?platform=ps5&category=game",         emoji: "🎮", desc: "Exclusivités & multi" },
-      { label: "PS5 — DLC",    href: "/produits?platform=ps5&category=dlc",          emoji: "🧩", desc: "Extensions & pass" },
-      { label: "PS4 — Jeux",   href: "/produits?platform=ps4&category=game",         emoji: "🕹️", desc: "Bibliothèque PS4" },
-      { label: "PS4 — DLC",    href: "/produits?platform=ps4&category=dlc",          emoji: "🧩", desc: "Contenus additionnels" },
-      { label: "PS Plus",      href: "/produits?platform=ps5&category=subscription", emoji: "⭐", desc: "Essential, Extra, Premium" },
-      { label: "Cartes PSN",   href: "/produits?platform=ps5&category=giftcard",     emoji: "🎁", desc: "Crédit PlayStation Store" },
-    ],
-  },
-  {
-    label: "Xbox", href: "/produits?platform=xbox", emoji: "🟢",
-    hover: "hover:bg-green-950/60 hover:text-green-300", activeColor: "text-green-300 bg-green-950/60",
-    dropdown: [
-      { label: "Jeux Xbox",    href: "/produits?platform=xbox&category=game",         emoji: "🎮", desc: "Xbox Series & One" },
-      { label: "DLC Xbox",     href: "/produits?platform=xbox&category=dlc",          emoji: "🧩", desc: "Extensions de jeux" },
-      { label: "Game Pass",    href: "/produits?platform=xbox&category=subscription", emoji: "⭐", desc: "Core, PC & Ultimate" },
-      { label: "Cartes Xbox",  href: "/produits?platform=xbox&category=giftcard",     emoji: "🎁", desc: "Crédit Microsoft Store" },
-    ],
-  },
-  {
-    label: "Nintendo", href: "/produits?platform=nintendo", emoji: "🔴",
-    hover: "hover:bg-red-950/60 hover:text-red-300", activeColor: "text-red-300 bg-red-950/60",
-    dropdown: [
-      { label: "Jeux Nintendo",    href: "/produits?platform=nintendo&category=game",         emoji: "🎮", desc: "Switch & eShop" },
-      { label: "DLC Nintendo",     href: "/produits?platform=nintendo&category=dlc",          emoji: "🧩", desc: "DLC & Expansion Pass" },
-      { label: "Nintendo Online",  href: "/produits?platform=nintendo&category=subscription", emoji: "⭐", desc: "Individuel & Famille" },
-    ],
-  },
-  {
-    label: "Mobile", href: "/produits?platform=mobile", emoji: "📱",
-    hover: "hover:bg-orange-950/60 hover:text-orange-300", activeColor: "text-orange-300 bg-orange-950/60",
-    dropdown: [
-      { label: "Jeux Mobile", href: "/produits?platform=mobile&category=game",   emoji: "🎮", desc: "Android & iOS" },
-      { label: "Crédits",     href: "/produits?platform=mobile&category=credit", emoji: "💳", desc: "Top-up & recharges" },
-    ],
-  },
+const PLATFORM_META: Record<string, { emoji: string; hover: string; activeColor: string }> = {
+  ps5:      { emoji: "🎮", hover: "hover:bg-blue-950/60 hover:text-blue-300",     activeColor: "text-blue-300 bg-blue-950/60" },
+  ps4:      { emoji: "🕹️", hover: "hover:bg-blue-950/60 hover:text-blue-300",     activeColor: "text-blue-300 bg-blue-950/60" },
+  xbox:     { emoji: "🟢", hover: "hover:bg-green-950/60 hover:text-green-300",   activeColor: "text-green-300 bg-green-950/60" },
+  pc:       { emoji: "🖥️", hover: "hover:bg-sky-950/60 hover:text-sky-300",       activeColor: "text-sky-300 bg-sky-950/60" },
+  steam:    { emoji: "💻", hover: "hover:bg-sky-950/60 hover:text-sky-300",       activeColor: "text-sky-300 bg-sky-950/60" },
+  nintendo: { emoji: "🔴", hover: "hover:bg-red-950/60 hover:text-red-300",       activeColor: "text-red-300 bg-red-950/60" },
+  mobile:   { emoji: "📱", hover: "hover:bg-orange-950/60 hover:text-orange-300", activeColor: "text-orange-300 bg-orange-950/60" },
+};
+const DEFAULT_PLATFORM_META = { emoji: "🎮", hover: "hover:bg-purple-950/60 hover:text-purple-300", activeColor: "text-purple-300 bg-purple-950/60" };
+
+function buildPlatformNavItems(platforms: { value: string; label: string }[]): NavItem[] {
+  return platforms.map(({ value, label }) => {
+    const meta = PLATFORM_META[value] ?? DEFAULT_PLATFORM_META;
+    const base = `/produits?platform=${value}`;
+    return {
+      label,
+      href: base,
+      emoji: meta.emoji,
+      hover: meta.hover,
+      activeColor: meta.activeColor,
+      dropdown: [
+        { label: "Jeux",          href: `${base}&category=game`,         emoji: "🎮" },
+        { label: "DLC",           href: `${base}&category=dlc`,          emoji: "🧩" },
+        { label: "Abonnements",   href: `${base}&category=subscription`, emoji: "⭐" },
+        { label: "Cartes cadeaux",href: `${base}&category=giftcard`,     emoji: "🎁" },
+        { label: "Crédits",       href: `${base}&category=credit`,       emoji: "💳" },
+      ],
+    };
+  });
+}
+
+const STATIC_navItems: NavItem[] = [
   {
     label: "Cartes cadeaux", href: "/produits?category=giftcard", emoji: "🎁",
     hover: "hover:bg-purple-950/60 hover:text-purple-300", activeColor: "text-purple-300 bg-purple-950/60",
-    dropdown: [
-      { label: "Steam",        href: "/produits?platform=steam&category=giftcard",     emoji: "💻" },
-      { label: "PlayStation",  href: "/produits?platform=ps5&category=giftcard",       emoji: "🎮" },
-      { label: "Xbox",         href: "/produits?platform=xbox&category=giftcard",      emoji: "🟢" },
-      { label: "Nintendo",     href: "/produits?platform=nintendo&category=giftcard",  emoji: "🔴" },
-      { label: "Mobile",       href: "/produits?platform=mobile&category=giftcard",    emoji: "📱" },
-    ],
+    dropdown: [], // filled dynamically in Header
   },
   {
     label: "Abonnements", href: "/produits?category=subscription", emoji: "⭐",
     hover: "hover:bg-yellow-950/60 hover:text-yellow-300", activeColor: "text-yellow-300 bg-yellow-950/60",
-    dropdown: [
-      { label: "PS Plus",         href: "/produits?platform=ps5&category=subscription",      emoji: "🎮", desc: "Essential, Extra, Premium" },
-      { label: "Xbox Game Pass",  href: "/produits?platform=xbox&category=subscription",     emoji: "🟢", desc: "Core, PC & Ultimate" },
-      { label: "Nintendo Online", href: "/produits?platform=nintendo&category=subscription", emoji: "🔴", desc: "Individuel & Famille" },
-    ],
+    dropdown: [], // filled dynamically in Header
   },
 ];
 
@@ -108,7 +81,26 @@ function useDebounce<T>(value: T, delay: number): T {
   return debounced;
 }
 
-export function Header({ siteName = "Loot", logoUrl = "" }: { siteName?: string; logoUrl?: string }) {
+export function Header({ siteName = "Loot", logoUrl = "", platforms = [] }: { siteName?: string; logoUrl?: string; platforms?: { value: string; label: string }[] }) {
+  const navItems: NavItem[] = [
+    ...buildPlatformNavItems(platforms),
+    {
+      ...STATIC_navItems[0],
+      dropdown: platforms.map(({ value, label }) => ({
+        label,
+        href: `/produits?platform=${value}&category=giftcard`,
+        emoji: (PLATFORM_META[value] ?? DEFAULT_PLATFORM_META).emoji,
+      })),
+    },
+    {
+      ...STATIC_navItems[1],
+      dropdown: platforms.map(({ value, label }) => ({
+        label,
+        href: `/produits?platform=${value}&category=subscription`,
+        emoji: (PLATFORM_META[value] ?? DEFAULT_PLATFORM_META).emoji,
+      })),
+    },
+  ];
   const router = useRouter();
   const { data: session } = useSession();
   const count = useCart((s) => s.count());
@@ -359,7 +351,7 @@ export function Header({ siteName = "Loot", logoUrl = "" }: { siteName?: string;
       <div className="border-t border-gray-800/80 bg-gray-900/60 overflow-visible">
         <div className="max-w-7xl mx-auto px-4 overflow-visible">
           <nav className="hidden md:flex items-center gap-0.5 py-1.5">
-            {NAV_ITEMS.map((item) => {
+            {navItems.map((item) => {
               const isOpen = activeDropdown === item.label;
               return (
                 <div
@@ -426,7 +418,7 @@ export function Header({ siteName = "Loot", logoUrl = "" }: { siteName?: string;
       {mobileOpen && (
         <div className="md:hidden border-t border-gray-800 bg-gray-950 px-4 py-4 space-y-4">
           <nav className="grid grid-cols-2 gap-1.5">
-            {NAV_ITEMS.map((c) => (
+            {navItems.map((c) => (
               <Link key={c.href} href={c.href} onClick={() => setMobileOpen(false)}
                 className="flex items-center gap-2 px-3 py-2.5 text-sm text-gray-300 hover:bg-gray-800 rounded-lg transition-colors">
                 <span>{c.emoji}</span>{c.label}

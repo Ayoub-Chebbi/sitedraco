@@ -1,31 +1,35 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// Keys are display names shown in the app; values are DB platform slugs.
-const PLATFORMS: Record<string, string> = {
-  PlayStation: "ps5",
-  Xbox: "xbox",
-  PC: "pc",
-  Steam: "steam",
-  Mobile: "mobile",
-};
+const FALLBACK_PLATFORMS = [
+  { value: "ps5", label: "PlayStation 5" },
+  { value: "xbox", label: "Xbox" },
+  { value: "pc", label: "PC" },
+  { value: "steam", label: "Steam" },
+  { value: "mobile", label: "Mobile" },
+];
 
 export async function GET() {
   const include = { _count: { select: { keys: { where: { status: "available" } } } } } as const;
 
+  const dbPlatforms = await prisma.platform.findMany({
+    orderBy: [{ displayOrder: "asc" }, { label: "asc" }],
+    select: { value: true, label: true },
+  });
+  const platformList = dbPlatforms.length > 0 ? dbPlatforms : FALLBACK_PLATFORMS;
+
   const [newArrivals, deals, ...platformProducts] = await Promise.all([
     prisma.product.findMany({ where: { isActive: true }, orderBy: { createdAt: "desc" }, take: 10, include }),
     prisma.product.findMany({ where: { isActive: true, discountPrice: { not: null } }, orderBy: { soldCount: "desc" }, take: 10, include }),
-    ...Object.values(PLATFORMS).map((slug) =>
-      prisma.product.findMany({ where: { isActive: true, platform: slug }, orderBy: { soldCount: "desc" }, take: 8, include })
+    ...platformList.map(({ value }) =>
+      prisma.product.findMany({ where: { isActive: true, platform: value }, orderBy: { soldCount: "desc" }, take: 8, include })
     ),
   ]);
 
   const addStock = (p: any) => ({ ...p, availableKeys: p._count.keys + (p.manualStock ?? 0) });
 
-  const platformKeys = Object.keys(PLATFORMS);
   const platforms = Object.fromEntries(
-    platformKeys.map((name, i) => [name, platformProducts[i].map(addStock)])
+    platformList.map(({ value }, i) => [value, platformProducts[i].map(addStock)])
   );
 
   return NextResponse.json({

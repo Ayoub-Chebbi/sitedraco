@@ -50,6 +50,20 @@ async function getByPlatform(platform: string) {
   return rows.map(mapProduct);
 }
 
+async function getPlatforms() {
+  const rows = await prisma.platform.findMany({
+    orderBy: [{ displayOrder: "asc" }, { label: "asc" }],
+    select: { value: true, label: true },
+  });
+  if (rows.length > 0) return rows;
+  return [
+    { value: "ps5", label: "PS5" }, { value: "ps4", label: "PS4" },
+    { value: "xbox", label: "Xbox" }, { value: "pc", label: "PC" },
+    { value: "steam", label: "Steam" }, { value: "nintendo", label: "Nintendo" },
+    { value: "mobile", label: "Mobile" },
+  ];
+}
+
 async function getGiftCards() {
   const rows = await prisma.product.findMany({
     where: { isActive: true, category: "giftcard" },
@@ -65,11 +79,18 @@ const SERVICES = [
   { icon: Headphones,   color: "text-purple-400 bg-purple-900/20 border-purple-800/40", title: "Support 7j/7",         desc: "On répond vite sur WhatsApp" },
 ];
 
-const CATEGORIES = [
-  { label: "Jeux PS5",        href: "/produits?platform=ps5",          emoji: "🎮", bg: "from-blue-900/60 to-blue-950/80 border-blue-800/50 hover:border-blue-600/70" },
-  { label: "PC / Steam",      href: "/produits?platform=steam",        emoji: "💻", bg: "from-sky-900/60 to-sky-950/80 border-sky-800/50 hover:border-sky-600/70" },
-  { label: "Xbox",            href: "/produits?platform=xbox",         emoji: "🟢", bg: "from-green-900/60 to-green-950/80 border-green-800/50 hover:border-green-600/70" },
-  { label: "Nintendo",        href: "/produits?platform=nintendo",     emoji: "🔴", bg: "from-red-900/60 to-red-950/80 border-red-800/50 hover:border-red-600/70" },
+const PLATFORM_META: Record<string, { emoji: string; bg: string }> = {
+  ps5:      { emoji: "🎮", bg: "from-blue-900/60 to-blue-950/80 border-blue-800/50 hover:border-blue-600/70" },
+  ps4:      { emoji: "🕹️", bg: "from-blue-900/60 to-blue-950/80 border-blue-800/50 hover:border-blue-600/70" },
+  xbox:     { emoji: "🟢", bg: "from-green-900/60 to-green-950/80 border-green-800/50 hover:border-green-600/70" },
+  pc:       { emoji: "🖥️", bg: "from-sky-900/60 to-sky-950/80 border-sky-800/50 hover:border-sky-600/70" },
+  steam:    { emoji: "💻", bg: "from-sky-900/60 to-sky-950/80 border-sky-800/50 hover:border-sky-600/70" },
+  nintendo: { emoji: "🔴", bg: "from-red-900/60 to-red-950/80 border-red-800/50 hover:border-red-600/70" },
+  mobile:   { emoji: "📱", bg: "from-orange-900/60 to-orange-950/80 border-orange-800/50 hover:border-orange-600/70" },
+};
+const DEFAULT_PLATFORM_META = { emoji: "🎮", bg: "from-purple-900/60 to-purple-950/80 border-purple-800/50 hover:border-purple-600/70" };
+
+const STATIC_CATEGORIES = [
   { label: "Cartes Cadeaux",  href: "/produits?category=giftcard",     emoji: "🎁", bg: "from-purple-900/60 to-purple-950/80 border-purple-800/50 hover:border-purple-600/70" },
   { label: "Abonnements",     href: "/produits?category=subscription", emoji: "⭐", bg: "from-yellow-900/60 to-yellow-950/80 border-yellow-800/50 hover:border-yellow-600/70" },
 ];
@@ -102,23 +123,29 @@ function SectionHeader({ title, icon: Icon, iconColor, href, linkLabel = "Voir t
 }
 
 export default async function HomePage() {
-  const [heroSlides, newArrivals, deals, ps5, ps4, xbox, nintendo, pc, steam, mobile, giftCards] =
-    await Promise.all([
-      getHeroSlides(),
-      getNewArrivals(),
-      getDeals(),
-      getByPlatform("ps5"),
-      getByPlatform("ps4"),
-      getByPlatform("xbox"),
-      getByPlatform("nintendo"),
-      getByPlatform("pc"),
-      getByPlatform("steam"),
-      getByPlatform("mobile"),
-      getGiftCards(),
-    ]);
+  const [heroSlides, newArrivals, deals, dbPlatforms, giftCards] = await Promise.all([
+    getHeroSlides(),
+    getNewArrivals(),
+    getDeals(),
+    getPlatforms(),
+    getGiftCards(),
+  ]);
 
-  const platforms = { ps5, ps4, xbox, nintendo, pc, steam, mobile };
-  const hasPlatformProducts = Object.values(platforms).some((arr) => arr.length > 0);
+  const platformProducts = await Promise.all(dbPlatforms.map((p) => getByPlatform(p.value)));
+  const platformMap = Object.fromEntries(dbPlatforms.map((p, i) => [p.value, platformProducts[i]]));
+  const platformTabs = dbPlatforms.map((p) => ({
+    key: p.value,
+    label: p.label,
+    emoji: (PLATFORM_META[p.value] ?? DEFAULT_PLATFORM_META).emoji,
+  }));
+  const hasPlatformProducts = platformProducts.some((arr) => arr.length > 0);
+
+  const platformCategoryCards = dbPlatforms.map((p) => ({
+    label: p.label,
+    href: `/produits?platform=${p.value}`,
+    ...(PLATFORM_META[p.value] ?? DEFAULT_PLATFORM_META),
+  }));
+  const allCategoryCards = [...platformCategoryCards, ...STATIC_CATEGORIES];
 
   return (
     <div className="min-h-screen bg-gray-950">
@@ -183,7 +210,7 @@ export default async function HomePage() {
         <section className="py-10">
           <div className="max-w-7xl mx-auto px-4">
             <SectionHeader title="Jeux par Plateforme" icon={Sparkles} iconColor="text-purple-400" />
-            <PlatformTabsClient platforms={platforms} />
+            <PlatformTabsClient platforms={platformMap} tabs={platformTabs} />
           </div>
         </section>
       )}
@@ -220,7 +247,7 @@ export default async function HomePage() {
         <div className="max-w-7xl mx-auto px-4">
           <SectionHeader title="Explorer par catégorie" />
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-            {CATEGORIES.map((c) => (
+            {allCategoryCards.map((c) => (
               <Link
                 key={c.href}
                 href={c.href}
