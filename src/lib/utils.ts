@@ -59,5 +59,5 @@ export const ORDER_STATUS_LABELS: Record<string, { label: string; color: string 
 };
 
 export const PAYMENT_METHODS = [
-  { value: "flouci", label: "Carte bancaire", description: "Visa, Mastercard — Paiement sécurisé via Flouci" },
+  { value: "flouci", label: "Carte bancaire", description: "Visa, Mastercard — Paiement sécurisé" },
 ] as const;

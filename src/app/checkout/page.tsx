@@ -89,14 +89,8 @@ export default function CheckoutPage() {
               </div>
               <div>
                 <p className="font-semibold text-white text-sm">Carte bancaire</p>
-                <p className="text-xs text-gray-400">Visa, Mastercard — Paiement via Flouci</p>
+                <p className="text-xs text-gray-400">Visa, Mastercard — Paiement sécurisé</p>
               </div>
-              <img
-                src="https://flouci.com/favicon.ico"
-                alt="Flouci"
-                className="ml-auto h-6 w-6 rounded"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-              />
             </div>
 
             {error && (
@@ -110,7 +104,7 @@ export default function CheckoutPage() {
               disabled={loading || !email.includes("@")}
             >
               {loading ? (
-                <><Loader2 className="h-4 w-4 animate-spin" /> Redirection vers Flouci…</>
+                <><Loader2 className="h-4 w-4 animate-spin" /> Redirection vers le paiement…</>
               ) : (
                 <><Lock className="h-4 w-4" /> Payer {formatPrice(total())} · Carte bancaire</>
               )}

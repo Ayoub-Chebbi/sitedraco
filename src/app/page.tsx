@@ -74,7 +74,7 @@ async function getGiftCards() {
 
 const SERVICES = [
   { icon: Zap,          color: "text-yellow-400 bg-yellow-900/20 border-yellow-800/40", title: "Livraison rapide",     desc: "Clés livrées en 1 à 6h" },
-  { icon: Lock,         color: "text-green-400 bg-green-900/20 border-green-800/40",    title: "Paiement sécurisé",    desc: "D17, Flouci, virement" },
+  { icon: Lock,         color: "text-green-400 bg-green-900/20 border-green-800/40",    title: "Paiement sécurisé",    desc: "Carte bancaire" },
   { icon: CheckCircle,  color: "text-blue-400 bg-blue-900/20 border-blue-800/40",       title: "Satisfaction garantie",desc: "Remboursement si problème" },
   { icon: Headphones,   color: "text-purple-400 bg-purple-900/20 border-purple-800/40", title: "Support 7j/7",         desc: "On répond vite sur WhatsApp" },
 ];
@@ -294,7 +294,7 @@ export default async function HomePage() {
           <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { step: "01", emoji: "🛒", title: "Choisissez",       desc: "Parcourez le catalogue et ajoutez au panier" },
-              { step: "02", emoji: "💳", title: "Payez",            desc: "D17, Flouci, Paymee ou virement bancaire" },
+              { step: "02", emoji: "💳", title: "Payez",            desc: "Paiement par carte bancaire" },
               { step: "03", emoji: "⚡", title: "On traite",        desc: "Vérification du paiement en quelques minutes" },
               { step: "04", emoji: "🔑", title: "Recevez votre clé",desc: "Dans votre espace client et par email" },
             ].map((item) => (

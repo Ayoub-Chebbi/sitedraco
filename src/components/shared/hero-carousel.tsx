@@ -34,7 +34,7 @@ const DEFAULT_SLIDES: Slide[] = [
   {
     id: "2",
     title: "Steam — Recharge rapide",
-    subtitle: "Rechargez votre Steam Wallet en quelques minutes. Paiement sécurisé via D17 ou Flouci.",
+    subtitle: "Rechargez votre Steam Wallet en quelques minutes. Paiement sécurisé par carte bancaire.",
     badge: "💻 PC Gaming",
     price: 0,
     href: "/produits?platform=steam",
