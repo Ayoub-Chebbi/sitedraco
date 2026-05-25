@@ -161,7 +161,7 @@ export function HeroCarousel({ slides = DEFAULT_SLIDES }: { slides?: Slide[] }) 
           </div>
           <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-300 shrink-0">
             <Zap className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-yellow-400 shrink-0" />
-            Livraison instantanée
+            Livraison en 1 à 6h
           </div>
           <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-300 shrink-0">
             <Headphones className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-purple-400 shrink-0" />

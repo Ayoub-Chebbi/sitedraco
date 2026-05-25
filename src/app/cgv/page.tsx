@@ -29,7 +29,7 @@ export default function CgvPage() {
 
         <section>
           <h2 className="text-lg font-semibold text-white mb-3">4. Livraison</h2>
-          <p>Les produits numériques sont livrés immédiatement après confirmation du paiement, directement dans l&apos;espace client de l&apos;acheteur. Un email de confirmation est également envoyé. Le délai de livraison est généralement compris entre 1 et 60 minutes.</p>
+          <p>Les produits numériques sont livrés après confirmation du paiement, directement dans l&apos;espace client de l&apos;acheteur. Un email de confirmation est également envoyé. Le délai de livraison est généralement compris entre 1 et 6 heures.</p>
         </section>
 
         <section>
