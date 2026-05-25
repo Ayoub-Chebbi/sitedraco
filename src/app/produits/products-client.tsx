@@ -50,11 +50,13 @@ type ExtProduct = Product & {
 type Props = {
   products: ExtProduct[];
   categories?: { slug: string; label: string }[];
+  giftcardBrands?: string[];
   initialPlatform?: string;
   initialCategory?: string;
+  initialBrand?: string;
 };
 
-export function ProductsClient({ products, categories: propCategories, initialPlatform = "", initialCategory = "" }: Props) {
+export function ProductsClient({ products, categories: propCategories, giftcardBrands = [], initialPlatform = "", initialCategory = "", initialBrand = "" }: Props) {
   const categoryList = propCategories ?? DEFAULT_CATEGORIES;
   const router = useRouter();
   const addItem = useCart((s) => s.addItem);
@@ -62,6 +64,7 @@ export function ProductsClient({ products, categories: propCategories, initialPl
 
   const platform = initialPlatform;
   const category = initialCategory;
+  const brand = initialBrand;
 
   const [sort, setSort] = useState("newest");
   const [onlyInStock, setOnlyInStock] = useState(false);
@@ -72,14 +75,16 @@ export function ProductsClient({ products, categories: propCategories, initialPl
   const activeFilterCount = [
     platform !== "",
     category !== "",
+    brand !== "",
     onlyInStock,
     maxPrice < 500,
   ].filter(Boolean).length;
 
-  function navigate(nextPlatform: string, nextCategory: string) {
+  function navigate(nextPlatform: string, nextCategory: string, nextBrand = "") {
     const params = new URLSearchParams();
     if (nextPlatform) params.set("platform", nextPlatform);
     if (nextCategory) params.set("category", nextCategory);
+    if (nextBrand) params.set("brand", nextBrand);
     const qs = params.toString();
     router.push(`/produits${qs ? `?${qs}` : ""}`);
   }
@@ -141,7 +146,7 @@ export function ProductsClient({ products, categories: propCategories, initialPl
           {PLATFORMS.map((p) => (
             <button
               key={p.value}
-              onClick={() => navigate(p.value, category)}
+              onClick={() => navigate(p.value, category, brand)}
               className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${platform === p.value ? "bg-purple-600 text-white" : "bg-gray-800 text-gray-400 hover:bg-gray-700"}`}
             >
               {p.label}
@@ -154,7 +159,7 @@ export function ProductsClient({ products, categories: propCategories, initialPl
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Catégorie</p>
         <div className="flex flex-col gap-1">
           <button
-            onClick={() => navigate(platform, "")}
+            onClick={() => navigate(platform, "", "")}
             className={`px-3 py-1.5 rounded-lg text-sm text-left transition-colors ${category === "" ? "bg-purple-600/20 text-purple-300 border border-purple-600/40" : "text-gray-400 hover:bg-gray-800"}`}
           >
             Tous
@@ -162,7 +167,7 @@ export function ProductsClient({ products, categories: propCategories, initialPl
           {categoryList.map((c) => (
             <button
               key={c.slug}
-              onClick={() => navigate(platform, c.slug)}
+              onClick={() => navigate(platform, c.slug, "")}
               className={`px-3 py-1.5 rounded-lg text-sm text-left transition-colors ${category === c.slug ? "bg-purple-600/20 text-purple-300 border border-purple-600/40" : "text-gray-400 hover:bg-gray-800"}`}
             >
               {c.label}
@@ -170,6 +175,29 @@ export function ProductsClient({ products, categories: propCategories, initialPl
           ))}
         </div>
       </div>
+
+      {category === "giftcard" && giftcardBrands.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Marque</p>
+          <div className="flex flex-col gap-1">
+            <button
+              onClick={() => navigate(platform, category, "")}
+              className={`px-3 py-1.5 rounded-lg text-sm text-left transition-colors ${brand === "" ? "bg-purple-600/20 text-purple-300 border border-purple-600/40" : "text-gray-400 hover:bg-gray-800"}`}
+            >
+              Toutes
+            </button>
+            {giftcardBrands.map((b) => (
+              <button
+                key={b}
+                onClick={() => navigate(platform, category, b)}
+                className={`px-3 py-1.5 rounded-lg text-sm text-left transition-colors ${brand === b ? "bg-purple-600/20 text-purple-300 border border-purple-600/40" : "text-gray-400 hover:bg-gray-800"}`}
+              >
+                {b}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div>
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Prix max : {maxPrice} TND</p>

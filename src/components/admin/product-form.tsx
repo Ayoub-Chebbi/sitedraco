@@ -30,6 +30,7 @@ export type ProductFormValues = {
   accountDescription: string;
   platform: string;
   category: string;
+  brand: string;
   productType: "key" | "account" | "both";
   imageUrl: string;
   isActive: boolean;
@@ -51,6 +52,7 @@ const DEFAULTS: ProductFormValues = {
   accountDescription: "",
   platform: "steam",
   category: "game",
+  brand: "",
   productType: "key",
   imageUrl: "",
   isActive: true,
@@ -134,6 +136,7 @@ export function ProductForm({ initial, mode, productId }: Props) {
         accountDescription: (hasAccount && form.accountDescription.trim()) ? form.accountDescription.trim() : null,
         platform: form.platform,
         category: form.category,
+        brand: form.brand.trim() || null,
         productType: form.productType,
         price: parseFloat(form.price),
         discountPrice: hasKey && form.discountPrice ? parseFloat(form.discountPrice) : null,
@@ -231,6 +234,19 @@ export function ProductForm({ initial, mode, productId }: Props) {
             </select>
           </div>
         </div>
+
+        {form.category === "giftcard" && (
+          <div>
+            <label className="block text-sm text-gray-300 mb-1.5">Marque / Jeu</label>
+            <input
+              value={form.brand}
+              onChange={(e) => set("brand", e.target.value)}
+              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500"
+              placeholder="ex: Valorant, PlayStation, Xbox, Netflix…"
+            />
+            <p className="text-xs text-gray-600 mt-1">Utilisé pour filtrer les cartes cadeaux par marque</p>
+          </div>
+        )}
       </div>
 
       {/* Image upload */}

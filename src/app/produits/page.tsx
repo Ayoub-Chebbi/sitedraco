@@ -9,12 +9,13 @@ const FALLBACK_CATEGORIES = [
   { slug: "giftcard",     label: "Carte cadeau" },
 ];
 
-async function getProducts(platform?: string, category?: string) {
+async function getProducts(platform?: string, category?: string, brand?: string) {
   return prisma.product.findMany({
     where: {
       isActive: true,
       ...(platform && { platform }),
       ...(category && { category }),
+      ...(brand && { brand }),
     },
     include: {
       _count: { select: { keys: { where: { status: "available" } } } },
@@ -32,15 +33,26 @@ async function getCategories() {
   return cats.length > 0 ? cats : FALLBACK_CATEGORIES;
 }
 
+async function getGiftcardBrands(): Promise<string[]> {
+  const rows = await prisma.product.findMany({
+    where: { isActive: true, category: "giftcard", brand: { not: null } },
+    select: { brand: true },
+    distinct: ["brand"],
+    orderBy: { brand: "asc" },
+  });
+  return rows.map((r) => r.brand!).filter(Boolean);
+}
+
 export default async function ProduitsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ platform?: string; category?: string }>;
+  searchParams: Promise<{ platform?: string; category?: string; brand?: string }>;
 }) {
   const params = await searchParams;
-  const [products, categories] = await Promise.all([
-    getProducts(params.platform, params.category),
+  const [products, categories, giftcardBrands] = await Promise.all([
+    getProducts(params.platform, params.category, params.brand),
     getCategories(),
+    getGiftcardBrands(),
   ]);
   const productsWithStock = products.map((p) => ({ ...p, availableKeys: p._count.keys + (p.manualStock ?? 0) }));
 
@@ -48,8 +60,10 @@ export default async function ProduitsPage({
     <ProductsClient
       products={productsWithStock}
       categories={categories}
+      giftcardBrands={giftcardBrands}
       initialPlatform={params.platform}
       initialCategory={params.category}
+      initialBrand={params.brand}
     />
   );
 }

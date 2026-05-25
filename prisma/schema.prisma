@@ -73,6 +73,7 @@ model Product {
   accountDescription   String?
   platform             String
   category             String
+  brand                String?
   productType          String   @default("key")
   price                Float
   discountPrice        Float?

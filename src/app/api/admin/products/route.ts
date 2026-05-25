@@ -14,6 +14,7 @@ const CreateSchema = z.object({
   accountDescription: z.string().max(2000).optional().nullable(),
   platform: z.enum(["ps4", "ps5", "xbox", "pc", "steam", "nintendo", "mobile", "other"]),
   category: z.string().min(1).max(50),
+  brand: z.string().max(80).optional().nullable(),
   productType: z.enum(["key", "account", "both"]).optional().default("key"),
   price: z.number().positive(),
   discountPrice: z.number().positive().optional().nullable(),
