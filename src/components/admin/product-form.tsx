@@ -235,18 +235,16 @@ export function ProductForm({ initial, mode, productId }: Props) {
           </div>
         </div>
 
-        {form.category === "giftcard" && (
-          <div>
-            <label className="block text-sm text-gray-300 mb-1.5">Marque / Jeu</label>
-            <input
-              value={form.brand}
-              onChange={(e) => set("brand", e.target.value)}
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500"
-              placeholder="ex: Valorant, PlayStation, Xbox, Netflix…"
-            />
-            <p className="text-xs text-gray-600 mt-1">Utilisé pour filtrer les cartes cadeaux par marque</p>
-          </div>
-        )}
+        <div>
+          <label className="block text-sm text-gray-300 mb-1.5">Marque / Jeu <span className="text-gray-600 text-xs">(optionnel)</span></label>
+          <input
+            value={form.brand}
+            onChange={(e) => set("brand", e.target.value)}
+            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500"
+            placeholder="ex: Valorant, PlayStation, Xbox, Netflix…"
+          />
+          <p className="text-xs text-gray-600 mt-1">Utilisé pour filtrer les cartes cadeaux par marque</p>
+        </div>
       </div>
 
       {/* Image upload */}
