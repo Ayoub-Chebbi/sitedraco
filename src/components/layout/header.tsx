@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
   ShoppingCart, LogOut, LayoutDashboard, Search, Shield,
@@ -108,6 +109,7 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 export function Header({ siteName = "Loot", logoUrl = "" }: { siteName?: string; logoUrl?: string }) {
+  const router = useRouter();
   const { data: session } = useSession();
   const count = useCart((s) => s.count());
   const [mounted, setMounted] = useState(false);
@@ -277,7 +279,7 @@ export function Header({ siteName = "Loot", logoUrl = "" }: { siteName?: string;
                   </Link>
                 )}
                 <button
-                  onClick={() => signOut({ callbackUrl: window.location.origin })}
+                  onClick={() => signOut({ redirect: false }).then(() => router.push("/"))}
                   className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-900/20 transition-colors"
                 >
                   <LogOut className="h-4 w-4" />
@@ -440,7 +442,7 @@ export function Header({ siteName = "Loot", logoUrl = "" }: { siteName?: string;
                   </Button>
                 </Link>
                 <Button variant="ghost" className="w-full gap-2 text-red-400"
-                  onClick={() => { setMobileOpen(false); signOut({ callbackUrl: window.location.origin }); }}>
+                  onClick={() => { setMobileOpen(false); signOut({ redirect: false }).then(() => router.push("/")); }}>
                   <LogOut className="h-4 w-4" />Se déconnecter
                 </Button>
               </>
