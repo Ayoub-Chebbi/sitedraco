@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { generateOrderNumber } from "@/lib/utils";
 import { initiateFlouciPayment } from "@/lib/flouci";
+import { sendWelcomeEmail } from "@/lib/email";
+
+function generatePassword(len = 10) {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+  return Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}
 
 const schema = z.object({
   email: z.string().email(),
@@ -44,10 +51,22 @@ export async function POST(req: NextRequest) {
 
     const orderNumber = generateOrderNumber();
     let userId = session?.user?.id ?? null;
+    let autoCreated = false;
+    let plainPassword = "";
 
     if (!userId) {
       const existing = await prisma.user.findUnique({ where: { email } });
-      if (existing) userId = existing.id;
+      if (existing) {
+        userId = existing.id;
+      } else {
+        plainPassword = generatePassword();
+        const passwordHash = await bcrypt.hash(plainPassword, 12);
+        const newUser = await prisma.user.create({
+          data: { email, passwordHash, role: "customer" },
+        });
+        userId = newUser.id;
+        autoCreated = true;
+      }
     }
 
     const order = await prisma.order.create({
@@ -84,6 +103,12 @@ export async function POST(req: NextRequest) {
     });
 
     await prisma.order.update({ where: { id: order.id }, data: { paymentRef: paymentId } });
+
+    if (autoCreated) {
+      sendWelcomeEmail(email, plainPassword, orderNumber).catch((err) =>
+        console.error("[flouci] welcome email failed:", err)
+      );
+    }
 
     return NextResponse.json({ paymentUrl, orderId: order.id });
 
