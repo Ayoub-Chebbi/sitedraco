@@ -36,6 +36,7 @@ declare module "next-auth" {
       email: string;
       name?: string | null;
       role: string;
+      avatarUrl?: string | null;
     };
   }
 }

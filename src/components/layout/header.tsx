@@ -248,8 +248,12 @@ export function Header({ siteName = "Loot", logoUrl = "", platforms = [] }: { si
               <div className="hidden md:flex items-center gap-1">
                 <Link href="/dashboard">
                   <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
-                    <div className="w-7 h-7 rounded-full bg-linear-to-br from-purple-600 to-pink-600 flex items-center justify-center text-white text-xs font-bold shadow-md">
-                      {(session.user.name ?? session.user.email ?? "U")[0].toUpperCase()}
+                    <div className="w-7 h-7 rounded-full bg-linear-to-br from-purple-600 to-pink-600 flex items-center justify-center text-white text-xs font-bold shadow-md overflow-hidden shrink-0">
+                      {session.user.avatarUrl ? (
+                        <Image src={session.user.avatarUrl} alt="Avatar" width={28} height={28} className="object-cover w-full h-full" unoptimized />
+                      ) : (
+                        (session.user.name ?? session.user.email ?? "U")[0].toUpperCase()
+                      )}
                     </div>
                     <span className="max-w-20 truncate">{session.user.name ?? session.user.email}</span>
                   </button>
@@ -419,7 +423,14 @@ export function Header({ siteName = "Loot", logoUrl = "", platforms = [] }: { si
               <>
                 <Link href="/dashboard" onClick={() => setMobileOpen(false)}>
                   <Button variant="outline" className="w-full gap-2">
-                    <LayoutDashboard className="h-4 w-4" />Mon espace
+                    <div className="w-5 h-5 rounded-full bg-linear-to-br from-purple-600 to-pink-600 flex items-center justify-center text-white text-[10px] font-bold overflow-hidden shrink-0">
+                      {session.user.avatarUrl ? (
+                        <Image src={session.user.avatarUrl} alt="Avatar" width={20} height={20} className="object-cover w-full h-full" unoptimized />
+                      ) : (
+                        (session.user.name ?? session.user.email ?? "U")[0].toUpperCase()
+                      )}
+                    </div>
+                    Mon espace
                   </Button>
                 </Link>
                 {(session.user.role === "admin" || session.user.role === "support") && (

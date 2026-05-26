@@ -38,6 +38,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           name: user.name,
           role: user.role,
+          avatarUrl: user.avatarUrl,
         };
       },
     }),
@@ -47,9 +48,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.id = user.id;
         token.role = (user as { role?: string }).role;
+        token.avatarUrl = (user as { avatarUrl?: string | null }).avatarUrl;
       }
-      if (trigger === "update" && sessionData?.name !== undefined) {
-        token.name = sessionData.name;
+      if (trigger === "update") {
+        if (sessionData?.name !== undefined) token.name = sessionData.name;
+        if (sessionData?.avatarUrl !== undefined) token.avatarUrl = sessionData.avatarUrl;
       }
       return token;
     },
@@ -57,6 +60,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (session.user) {
         session.user.id = (token.id ?? token.sub) as string;
         session.user.role = token.role as string;
+        session.user.avatarUrl = token.avatarUrl as string | null | undefined;
       }
       return session;
     },

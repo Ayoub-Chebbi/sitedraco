@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { Loader2, CheckCircle, Eye, EyeOff } from "lucide-react";
+import Image from "next/image";
+import { Loader2, CheckCircle, Eye, EyeOff, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -22,6 +23,10 @@ export default function ProfilPage() {
   const [pwLoading, setPwLoading] = useState(false);
   const [pwSuccess, setPwSuccess] = useState(false);
   const [pwError, setPwError] = useState("");
+
+  const [avatarLoading, setAvatarLoading] = useState(false);
+  const [avatarError, setAvatarError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (session?.user?.name) setName(session.user.name);
@@ -44,6 +49,24 @@ export default function ProfilPage() {
     } else {
       setNameError("Erreur lors de la mise à jour.");
     }
+  }
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarError("");
+    setAvatarLoading(true);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/profile/avatar", { method: "POST", body: fd });
+    const data = await res.json();
+    setAvatarLoading(false);
+    if (res.ok) {
+      await update({ avatarUrl: data.avatarUrl });
+    } else {
+      setAvatarError(data.error || "Échec de l'upload.");
+    }
+    e.target.value = "";
   }
 
   async function handleChangePassword(e: React.FormEvent) {
@@ -76,12 +99,65 @@ export default function ProfilPage() {
     }
   }
 
+  const avatarUrl = session?.user?.avatarUrl;
+  const initials = (session?.user?.name ?? session?.user?.email ?? "U")[0].toUpperCase();
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
       <div className="flex items-center gap-3 mb-2">
         <Link href="/dashboard" className="text-gray-500 hover:text-gray-300 text-sm">Dashboard</Link>
         <span className="text-gray-700">/</span>
         <h1 className="text-xl font-bold text-white">Mon profil</h1>
+      </div>
+
+      {/* Avatar */}
+      <div className="rounded-xl border border-gray-800 bg-gray-900 p-6">
+        <h2 className="text-sm font-semibold text-white mb-5">Photo de profil</h2>
+        <div className="flex items-center gap-5">
+          <div className="relative shrink-0">
+            <div className="w-20 h-20 rounded-full overflow-hidden bg-linear-to-br from-purple-600 to-pink-600 flex items-center justify-center shadow-lg">
+              {avatarUrl ? (
+                <Image src={avatarUrl} alt="Avatar" fill className="object-cover" unoptimized />
+              ) : (
+                <span className="text-white text-2xl font-bold">{initials}</span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={avatarLoading}
+              className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-purple-600 hover:bg-purple-500 border-2 border-gray-900 flex items-center justify-center transition-colors disabled:opacity-50"
+            >
+              {avatarLoading ? (
+                <Loader2 className="h-3.5 w-3.5 text-white animate-spin" />
+              ) : (
+                <Camera className="h-3.5 w-3.5 text-white" />
+              )}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleAvatarChange}
+            />
+          </div>
+          <div>
+            <p className="text-sm text-gray-300 font-medium">Changer la photo</p>
+            <p className="text-xs text-gray-500 mt-0.5">JPG, PNG ou WebP · max 2 Mo</p>
+            {avatarError && <p className="text-xs text-red-400 mt-1">{avatarError}</p>}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={avatarLoading}
+            >
+              {avatarLoading ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />Envoi...</> : "Choisir une photo"}
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Profile info */}
