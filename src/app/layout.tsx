@@ -6,6 +6,7 @@ import { Footer } from "@/components/layout/footer";
 import { Toaster } from "@/components/ui/toaster";
 import { SupportFab } from "@/components/shared/support-fab";
 import { LiveActivityWrapper } from "@/components/shared/live-activity-wrapper";
+import { MetaPixel } from "@/components/shared/meta-pixel";
 import { auth } from "@/lib/auth";
 import { getSiteSettings } from "@/lib/site-settings";
 import { prisma } from "@/lib/prisma";
@@ -57,6 +58,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <Footer siteName={settings.siteName} logoUrl={settings.logoUrl} />
           <SupportFab />
           <LiveActivityWrapper />
+          <MetaPixel />
           <Toaster />
         </SessionProvider>
       </body>
