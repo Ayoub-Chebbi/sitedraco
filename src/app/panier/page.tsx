@@ -1,21 +1,38 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Trash2, Plus, Minus, ShoppingCart, ArrowRight } from "lucide-react";
+import { Trash2, Plus, Minus, ShoppingCart, ArrowRight, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/lib/cart-store";
 import { formatPrice } from "@/lib/utils";
 
-export default function PanierPage() {
-  const { items, removeItem, updateQuantity, total } = useCart();
+type TrendingProduct = {
+  id: string; name: string; slug: string; platform: string;
+  price: number; discountPrice: number | null; imageUrl: string | null;
+  availableKeys: number;
+};
 
-  if (items.length === 0) {
-    return (
-      <div className="max-w-2xl mx-auto px-4 py-24 text-center">
-        <ShoppingCart className="h-16 w-16 text-gray-700 mx-auto mb-6" />
+function EmptyCart() {
+  const [trending, setTrending] = useState<TrendingProduct[]>([]);
+
+  useEffect(() => {
+    fetch("/api/home")
+      .then((r) => r.json())
+      .then((data) => {
+        const deals: TrendingProduct[] = data.deals ?? [];
+        setTrending(deals.slice(0, 4));
+      })
+      .catch(() => {});
+  }, []);
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-16">
+      <div className="text-center mb-12">
+        <ShoppingCart className="h-14 w-14 text-gray-700 mx-auto mb-4" />
         <h1 className="text-2xl font-bold text-white mb-2">Votre panier est vide</h1>
-        <p className="text-gray-500 mb-8">Parcourez notre catalogue pour trouver vos prochains jeux.</p>
+        <p className="text-gray-500 mb-6">Parcourez notre catalogue pour trouver vos prochains jeux.</p>
         <Link href="/produits">
           <Button size="lg" className="gap-2">
             Parcourir le catalogue
@@ -23,8 +40,58 @@ export default function PanierPage() {
           </Button>
         </Link>
       </div>
-    );
-  }
+
+      {trending.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <Flame className="h-4 w-4 text-orange-400" />
+            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Meilleures ventes</h2>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {trending.map((p) => {
+              const price = p.discountPrice ?? p.price;
+              const hasDiscount = p.discountPrice !== null;
+              return (
+                <Link
+                  key={p.id}
+                  href={`/produits/${p.slug}`}
+                  className="group rounded-xl border border-gray-800 bg-gray-900 overflow-hidden hover:border-purple-700/50 transition-colors"
+                >
+                  <div className="relative aspect-4/3 bg-gray-800">
+                    {p.imageUrl ? (
+                      <Image src={p.imageUrl} alt={p.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-3xl">🎮</div>
+                    )}
+                    {hasDiscount && (
+                      <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">
+                        -{Math.round((1 - p.discountPrice! / p.price) * 100)}%
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <p className="text-xs text-white font-semibold truncate mb-1">{p.name}</p>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-sm font-bold text-purple-400">{formatPrice(price)}</span>
+                      {hasDiscount && (
+                        <span className="text-xs text-gray-600 line-through">{formatPrice(p.price)}</span>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function PanierPage() {
+  const { items, removeItem, updateQuantity, total } = useCart();
+
+  if (items.length === 0) return <EmptyCart />;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -89,7 +156,7 @@ export default function PanierPage() {
             <div className="space-y-2">
               {items.map((item) => (
                 <div key={`${item.productId}:${item.variantId ?? ""}:${item.variant ?? ""}`} className="flex justify-between text-sm">
-                  <span className="text-gray-400 truncate max-w-[160px]">{item.name} x{item.quantity}</span>
+                  <span className="text-gray-400 truncate max-w-40">{item.name} x{item.quantity}</span>
                   <span className="text-gray-300 shrink-0">{formatPrice((item.discountPrice ?? item.price) * item.quantity)}</span>
                 </div>
               ))}
@@ -104,7 +171,7 @@ export default function PanierPage() {
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
-            <p className="text-xs text-gray-600 text-center">Paiement sécurisé · Livraison rapide</p>
+            <p className="text-xs text-gray-600 text-center">Paiement sécurisé · Livraison en 1 à 6h</p>
           </div>
         </div>
       </div>

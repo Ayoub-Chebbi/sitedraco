@@ -106,10 +106,10 @@ export function Footer({ siteName = "Loot", logoUrl = "" }: { siteName?: string;
           </div>
           <div className="mt-4">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Paiement accepté</p>
-            <div className="flex items-center gap-2">
-              <span className="text-xs bg-gray-800 border border-gray-700 text-gray-400 px-2 py-1 rounded-md font-medium">💳 Carte bancaire</span>
-              <span className="text-xs bg-gray-800 border border-gray-700 text-gray-400 px-2 py-1 rounded-md font-medium">Visa</span>
-              <span className="text-xs bg-gray-800 border border-gray-700 text-gray-400 px-2 py-1 rounded-md font-medium">Mastercard</span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs bg-gray-800 border border-gray-700 text-gray-400 px-2 py-1 rounded-md font-medium whitespace-nowrap">💳 Carte bancaire</span>
+              <span className="text-xs bg-gray-800 border border-gray-700 text-gray-400 px-2 py-1 rounded-md font-medium whitespace-nowrap">Visa</span>
+              <span className="text-xs bg-gray-800 border border-gray-700 text-gray-400 px-2 py-1 rounded-md font-medium whitespace-nowrap">Mastercard</span>
             </div>
           </div>
         </div>
