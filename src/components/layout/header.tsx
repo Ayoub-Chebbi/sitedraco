@@ -48,7 +48,7 @@ function buildPlatformNavItems(platforms: { value: string; label: string; emoji?
         { label: "Jeux",          href: `${base}&category=game`,         emoji: "🎮" },
         { label: "DLC",           href: `${base}&category=dlc`,          emoji: "🧩" },
         { label: "Abonnements",   href: `${base}&category=subscription`, emoji: "⭐" },
-        { label: "Cartes cadeaux",href: `${base}&category=giftcard`,     emoji: "🎁" },
+        { label: "Cartes cadeaux",href: `${base}&category=carte-cadeau`, emoji: "🎁" },
         { label: "Crédits",       href: `${base}&category=credit`,       emoji: "💳" },
       ],
     };
@@ -57,7 +57,7 @@ function buildPlatformNavItems(platforms: { value: string; label: string; emoji?
 
 const STATIC_navItems: NavItem[] = [
   {
-    label: "Cartes cadeaux", href: "/produits?category=giftcard", emoji: "🎁",
+    label: "Cartes cadeaux", href: "/produits?category=carte-cadeau", emoji: "🎁",
     hover: "hover:bg-purple-950/60 hover:text-purple-300", activeColor: "text-purple-300 bg-purple-950/60",
     dropdown: [], // filled dynamically in Header
   },
@@ -85,7 +85,7 @@ export function Header({ siteName = "Loot", logoUrl = "", platforms = [] }: { si
       ...STATIC_navItems[0],
       dropdown: platforms.map(({ value, label }) => ({
         label,
-        href: `/produits?platform=${value}&category=giftcard`,
+        href: `/produits?platform=${value}&category=carte-cadeau`,
         emoji: (PLATFORM_META[value] ?? DEFAULT_PLATFORM_META).emoji,
       })),
     },

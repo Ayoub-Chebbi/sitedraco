@@ -26,7 +26,7 @@ const DEFAULT_CATEGORIES = [
   { slug: "dlc",          label: "DLC" },
   { slug: "subscription", label: "Abonnement" },
   { slug: "credit",       label: "Crédit" },
-  { slug: "giftcard",     label: "Carte cadeau" },
+  { slug: "carte-cadeau", label: "Carte cadeau" },
 ];
 
 const SORTS = [
