@@ -18,6 +18,7 @@ const schema = z.object({
     productId: z.string(),
     quantity: z.number().int().positive(),
   })).min(1),
+  couponCode: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Données invalides.", detail: parsed.error.flatten() }, { status: 400 });
     }
 
-    const { email, items } = parsed.data;
+    const { email, items, couponCode } = parsed.data;
 
     const products = await prisma.product.findMany({
       where: { id: { in: items.map((i) => i.productId) }, isActive: true },
@@ -44,10 +45,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Un ou plusieurs produits introuvables." }, { status: 400 });
     }
 
-    const totalAmount = items.reduce((sum, item) => {
+    const subtotal = items.reduce((sum, item) => {
       const p = products.find((p) => p.id === item.productId)!;
       return sum + (p.discountPrice ?? p.price) * item.quantity;
     }, 0);
+
+    // Validate and apply coupon
+    let discountAmount = 0;
+    let appliedCouponId: string | null = null;
+
+    if (couponCode) {
+      const coupon = await prisma.coupon.findUnique({ where: { code: couponCode.toUpperCase().trim() } });
+      if (
+        coupon &&
+        coupon.isActive &&
+        (!coupon.expiresAt || coupon.expiresAt > new Date()) &&
+        (coupon.maxUses === null || coupon.usedCount < coupon.maxUses) &&
+        (!coupon.minAmount || subtotal >= coupon.minAmount)
+      ) {
+        discountAmount =
+          coupon.type === "percentage"
+            ? Math.min(subtotal, (subtotal * coupon.value) / 100)
+            : Math.min(subtotal, coupon.value);
+        discountAmount = Math.round(discountAmount * 100) / 100;
+        appliedCouponId = coupon.id;
+      }
+    }
+
+    const totalAmount = Math.max(0, subtotal - discountAmount);
 
     const orderNumber = generateOrderNumber();
     let userId = session?.user?.id ?? null;
@@ -77,6 +102,8 @@ export async function POST(req: NextRequest) {
         paymentMethod: "flouci",
         paymentStatus: "awaiting_payment",
         totalAmount,
+        discountAmount,
+        ...(appliedCouponId && { couponId: appliedCouponId }),
       },
     });
 
@@ -103,6 +130,13 @@ export async function POST(req: NextRequest) {
     });
 
     await prisma.order.update({ where: { id: order.id }, data: { paymentRef: paymentId } });
+
+    if (appliedCouponId) {
+      await prisma.coupon.update({
+        where: { id: appliedCouponId },
+        data: { usedCount: { increment: 1 } },
+      });
+    }
 
     if (autoCreated) {
       sendWelcomeEmail(email, plainPassword, orderNumber).catch((err) =>

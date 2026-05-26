@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { LayoutDashboard, ShoppingBag, Package, Users, ImageIcon, Ticket, Settings, Tag, Monitor, Sparkles } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, Package, Users, ImageIcon, Ticket, Settings, Tag, Monitor, Sparkles, BadgePercent } from "lucide-react";
 
 const ADMIN_NAV = [
   { href: "/admin",              label: "Dashboard",      icon: LayoutDashboard },
@@ -9,6 +9,7 @@ const ADMIN_NAV = [
   { href: "/admin/tickets",      label: "Tickets",        icon: Ticket },
   { href: "/admin/produits",     label: "Produits",       icon: Package },
   { href: "/admin/utilisateurs", label: "Clients",        icon: Users },
+  { href: "/admin/coupons",       label: "Coupons",        icon: BadgePercent },
   { href: "/admin/categories",   label: "Catégories",     icon: Tag },
   { href: "/admin/platforms",    label: "Plateformes",    icon: Monitor },
   { href: "/admin/hero",         label: "Hero Carrousel", icon: ImageIcon },

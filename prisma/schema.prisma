@@ -163,23 +163,41 @@ model ProductKey {
   orderItem OrderItem?
 }
 
+model Coupon {
+  id            String    @id @default(cuid())
+  code          String    @unique
+  type          String    // "percentage" | "fixed"
+  value         Float
+  minAmount     Float?
+  maxUses       Int?
+  usedCount     Int       @default(0)
+  isActive      Boolean   @default(true)
+  expiresAt     DateTime?
+  createdAt     DateTime  @default(now())
+
+  orders        Order[]
+}
+
 model Order {
-  id            String   @id @default(cuid())
-  orderNumber   String   @unique
-  userId        String?
-  guestEmail    String?
-  status        String   @default("pending")
-  paymentMethod String?
-  paymentStatus String   @default("pending")
-  paymentRef    String?
-  totalAmount   Float
-  notesInternal String?
-  agentId       String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id             String   @id @default(cuid())
+  orderNumber    String   @unique
+  userId         String?
+  guestEmail     String?
+  status         String   @default("pending")
+  paymentMethod  String?
+  paymentStatus  String   @default("pending")
+  paymentRef     String?
+  totalAmount    Float
+  discountAmount Float    @default(0)
+  couponId       String?
+  notesInternal  String?
+  agentId        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   user      User?          @relation(fields: [userId], references: [id])
   agent     User?          @relation("AgentOrders", fields: [agentId], references: [id])
+  coupon    Coupon?        @relation(fields: [couponId], references: [id])
   items     OrderItem[]
   keys      ProductKey[]
   tickets   SupportTicket[]
