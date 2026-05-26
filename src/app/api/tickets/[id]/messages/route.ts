@@ -27,9 +27,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Create message
-  const message = await prisma.ticketMessage.create({
+  // Neon HTTP adapter doesn't support transactions, so create then fetch separately
+  const created = await prisma.ticketMessage.create({
     data: { ticketId: id, senderId: session.user.id, message: parsed.data.message },
+  });
+  const message = await prisma.ticketMessage.findUnique({
+    where: { id: created.id },
     include: { sender: { select: { id: true, name: true, email: true, role: true } } },
   });
 
@@ -43,5 +46,5 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     });
   }
 
-  return NextResponse.json(message, { status: 201 });
+  return NextResponse.json(message!, { status: 201 });
 }
