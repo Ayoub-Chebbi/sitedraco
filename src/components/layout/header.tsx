@@ -61,11 +61,6 @@ const STATIC_navItems: NavItem[] = [
     hover: "hover:bg-purple-950/60 hover:text-purple-300", activeColor: "text-purple-300 bg-purple-950/60",
     dropdown: [], // filled dynamically in Header
   },
-  {
-    label: "Abonnements", href: "/produits?category=subscription", emoji: "⭐",
-    hover: "hover:bg-yellow-950/60 hover:text-yellow-300", activeColor: "text-yellow-300 bg-yellow-950/60",
-    dropdown: [], // filled dynamically in Header
-  },
 ];
 
 type SearchResult = {
@@ -91,14 +86,6 @@ export function Header({ siteName = "Loot", logoUrl = "", platforms = [] }: { si
       dropdown: platforms.map(({ value, label }) => ({
         label,
         href: `/produits?platform=${value}&category=giftcard`,
-        emoji: (PLATFORM_META[value] ?? DEFAULT_PLATFORM_META).emoji,
-      })),
-    },
-    {
-      ...STATIC_navItems[1],
-      dropdown: platforms.map(({ value, label }) => ({
-        label,
-        href: `/produits?platform=${value}&category=subscription`,
         emoji: (PLATFORM_META[value] ?? DEFAULT_PLATFORM_META).emoji,
       })),
     },
