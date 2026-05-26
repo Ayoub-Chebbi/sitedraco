@@ -6,6 +6,8 @@ import { z } from "zod";
 const Schema = z.object({
   value: z.string().min(1).max(50).regex(/^[a-z0-9_-]+$/, "Valeur invalide"),
   label: z.string().min(1).max(100),
+  emoji: z.string().max(8).optional().default("🎮"),
+  showInHeader: z.boolean().optional().default(true),
   displayOrder: z.number().int().min(0).optional().default(0),
 });
 

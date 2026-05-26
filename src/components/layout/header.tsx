@@ -32,14 +32,16 @@ const PLATFORM_META: Record<string, { emoji: string; hover: string; activeColor:
 };
 const DEFAULT_PLATFORM_META = { emoji: "🎮", hover: "hover:bg-purple-950/60 hover:text-purple-300", activeColor: "text-purple-300 bg-purple-950/60" };
 
-function buildPlatformNavItems(platforms: { value: string; label: string }[]): NavItem[] {
-  return platforms.map(({ value, label }) => {
+function buildPlatformNavItems(platforms: { value: string; label: string; emoji?: string; showInHeader?: boolean }[]): NavItem[] {
+  return platforms
+    .filter((p) => p.showInHeader !== false)
+    .map(({ value, label, emoji }) => {
     const meta = PLATFORM_META[value] ?? DEFAULT_PLATFORM_META;
     const base = `/produits?platform=${value}`;
     return {
       label,
       href: base,
-      emoji: meta.emoji,
+      emoji: emoji ?? meta.emoji,
       hover: meta.hover,
       activeColor: meta.activeColor,
       dropdown: [
@@ -81,7 +83,7 @@ function useDebounce<T>(value: T, delay: number): T {
   return debounced;
 }
 
-export function Header({ siteName = "Loot", logoUrl = "", platforms = [] }: { siteName?: string; logoUrl?: string; platforms?: { value: string; label: string }[] }) {
+export function Header({ siteName = "Loot", logoUrl = "", platforms = [] }: { siteName?: string; logoUrl?: string; platforms?: { value: string; label: string; emoji?: string; showInHeader?: boolean }[] }) {
   const navItems: NavItem[] = [
     ...buildPlatformNavItems(platforms),
     {

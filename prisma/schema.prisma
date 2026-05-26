@@ -259,6 +259,8 @@ model Platform {
   id           String   @id @default(cuid())
   value        String   @unique
   label        String
+  emoji        String   @default("🎮")
+  showInHeader Boolean  @default(true)
   displayOrder Int      @default(0)
   createdAt    DateTime @default(now())
 }

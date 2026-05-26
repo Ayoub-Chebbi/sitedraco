@@ -45,7 +45,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const [session, settings, dbPlatforms] = await Promise.all([
     auth(),
     getSiteSettings(),
-    prisma.platform.findMany({ orderBy: [{ displayOrder: "asc" }, { label: "asc" }], select: { value: true, label: true } }),
+    prisma.platform.findMany({ orderBy: [{ displayOrder: "asc" }, { label: "asc" }], select: { value: true, label: true, emoji: true, showInHeader: true } }),
   ]);
   const platforms = dbPlatforms.length > 0 ? dbPlatforms : FALLBACK_PLATFORMS;
 

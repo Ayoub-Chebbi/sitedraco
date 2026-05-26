@@ -2,14 +2,14 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 const DEFAULTS = [
-  { value: "ps5",      label: "PS5",      displayOrder: 0 },
-  { value: "ps4",      label: "PS4",      displayOrder: 1 },
-  { value: "xbox",     label: "Xbox",     displayOrder: 2 },
-  { value: "pc",       label: "PC",       displayOrder: 3 },
-  { value: "steam",    label: "Steam",    displayOrder: 4 },
-  { value: "nintendo", label: "Nintendo", displayOrder: 5 },
-  { value: "mobile",   label: "Mobile",   displayOrder: 6 },
-  { value: "other",    label: "Autre",    displayOrder: 7 },
+  { value: "ps5",      label: "PS5",      emoji: "🎮", showInHeader: true, displayOrder: 0 },
+  { value: "ps4",      label: "PS4",      emoji: "🕹️", showInHeader: true, displayOrder: 1 },
+  { value: "xbox",     label: "Xbox",     emoji: "🟢", showInHeader: true, displayOrder: 2 },
+  { value: "pc",       label: "PC",       emoji: "🖥️", showInHeader: true, displayOrder: 3 },
+  { value: "steam",    label: "Steam",    emoji: "💻", showInHeader: true, displayOrder: 4 },
+  { value: "nintendo", label: "Nintendo", emoji: "🔴", showInHeader: true, displayOrder: 5 },
+  { value: "mobile",   label: "Mobile",   emoji: "📱", showInHeader: true, displayOrder: 6 },
+  { value: "other",    label: "Autre",    emoji: "🎮", showInHeader: false, displayOrder: 7 },
 ];
 
 export async function GET() {
