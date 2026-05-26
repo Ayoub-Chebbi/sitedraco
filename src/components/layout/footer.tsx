@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MessageCircle, Mail, Clock, Shield, Zap, RefreshCw } from "lucide-react";
+import { MessageCircle, Clock, Shield, Zap, RefreshCw } from "lucide-react";
 
 export function Footer({ siteName = "Loot", logoUrl = "" }: { siteName?: string; logoUrl?: string }) {
   return (
@@ -40,11 +40,10 @@ export function Footer({ siteName = "Loot", logoUrl = "" }: { siteName?: string;
             Votre boutique de confiance pour les jeux numériques, cartes prépayées et abonnements gaming.
           </p>
           <div className="flex items-center gap-3 mt-4">
-            <a href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP ?? "21600000000"}`} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm text-green-400 hover:text-green-300 transition-colors">
+            <Link href="/contact" className="flex items-center gap-2 text-sm text-purple-400 hover:text-purple-300 transition-colors">
               <MessageCircle className="h-4 w-4" />
-              WhatsApp Support
-            </a>
+              Support tickets
+            </Link>
           </div>
         </div>
 
@@ -99,10 +98,6 @@ export function Footer({ siteName = "Loot", logoUrl = "" }: { siteName?: string;
           <div className="mt-4 flex items-center gap-2 text-xs text-gray-600">
             <Clock className="h-3 w-3" />
             <span>Support : 9h–22h, 7j/7</span>
-          </div>
-          <div className="mt-2 flex items-center gap-2 text-xs text-gray-600">
-            <Mail className="h-3 w-3" />
-            <span>support@lootstore.tn</span>
           </div>
           <div className="mt-4">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Paiement accepté</p>

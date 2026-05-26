@@ -36,7 +36,7 @@ const faqs = [
   },
   {
     q: "Que faire si ma clé ne fonctionne pas ?",
-    a: "Contactez notre support via WhatsApp ou ouvrez un ticket dans votre espace client. Nous résolvons chaque problème sous 24h.",
+    a: "Ouvrez un ticket depuis votre espace client. Notre équipe résout chaque problème sous 24h.",
   },
   {
     q: "Les produits sont-ils originaux ?",

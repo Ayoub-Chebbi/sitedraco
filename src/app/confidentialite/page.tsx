@@ -40,7 +40,7 @@ export default function ConfidentialitePage() {
 
         <section>
           <h2 className="text-lg font-semibold text-white mb-3">5. Vos droits</h2>
-          <p>Vous disposez d&apos;un droit d&apos;accès, de rectification et de suppression de vos données personnelles. Pour exercer ces droits, contactez-nous à support@lootstore.tn.</p>
+          <p>Vous disposez d&apos;un droit d&apos;accès, de rectification et de suppression de vos données personnelles. Pour exercer ces droits, ouvrez un ticket depuis votre espace client.</p>
         </section>
 
         <section>
@@ -50,7 +50,7 @@ export default function ConfidentialitePage() {
 
         <section>
           <h2 className="text-lg font-semibold text-white mb-3">7. Contact</h2>
-          <p>Pour toute question relative à vos données personnelles : support@lootstore.tn</p>
+          <p>Pour toute question relative à vos données personnelles, contactez-nous via notre système de tickets depuis votre espace client.</p>
         </section>
       </div>
     </div>

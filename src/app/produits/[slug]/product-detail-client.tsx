@@ -44,7 +44,7 @@ type Props = {
 
 const STATIC_REVIEWS = [
   { name: "Ahmed B.", rating: 5, text: "Clé reçue en moins de 20 minutes. Produit authentique, je recommande vivement !", date: "Il y a 2 jours", platform: "LootStore" },
-  { name: "Rania M.", rating: 5, text: "Parfait ! Aucun problème d'activation. Le support répond rapidement sur WhatsApp.", date: "Il y a 5 jours", platform: "LootStore" },
+  { name: "Rania M.", rating: 5, text: "Parfait ! Aucun problème d'activation. Le support a traité mon ticket en moins d'une heure.", date: "Il y a 5 jours", platform: "LootStore" },
   { name: "Karim T.", rating: 4, text: "Très bon service. La clé a fonctionné du premier coup. Livraison rapide.", date: "Il y a 1 semaine", platform: "LootStore" },
 ];
 

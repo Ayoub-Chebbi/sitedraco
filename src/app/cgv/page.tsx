@@ -49,7 +49,7 @@ export default function CgvPage() {
 
         <section>
           <h2 className="text-lg font-semibold text-white mb-3">8. Contact</h2>
-          <p>Pour toute question relative à une commande, contactez notre service client via WhatsApp ou par email à support@lootstore.tn.</p>
+          <p>Pour toute question relative à une commande, contactez notre service client via le système de tickets dans votre espace client.</p>
         </section>
       </div>
     </div>
