@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { LayoutDashboard, ShoppingBag, Package, Users, ImageIcon, Ticket, Settings, Tag, Monitor, Sparkles } from "lucide-react";
 
@@ -22,10 +23,9 @@ const SUPPORT_NAV = [
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
   if (!session || !["admin", "support"].includes(session.user.role ?? "")) {
-    const { redirect } = await import("next/navigation");
     redirect("/connexion");
   }
-  const isAdmin = session.user.role === "admin";
+  const isAdmin = session!.user.role === "admin";
   const nav = isAdmin ? ADMIN_NAV : SUPPORT_NAV;
 
   return (
