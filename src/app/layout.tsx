@@ -39,7 +39,7 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     robots: { index: true, follow: true },
     icons: s.logoUrl
-      ? { icon: [{ url: s.logoUrl }], apple: [{ url: s.logoUrl }] }
+      ? { icon: [{ url: "/api/favicon" }], apple: [{ url: s.logoUrl }] }
       : undefined,
   };
 }
