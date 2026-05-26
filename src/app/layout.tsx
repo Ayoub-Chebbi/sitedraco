@@ -38,9 +38,6 @@ export async function generateMetadata(): Promise<Metadata> {
       description: `Achetez vos jeux numériques, cartes Steam, PS Plus, Xbox Game Pass en toute sécurité.`,
     },
     robots: { index: true, follow: true },
-    icons: s.logoUrl
-      ? { icon: s.logoUrl, apple: s.logoUrl }
-      : undefined,
   };
 }
 
