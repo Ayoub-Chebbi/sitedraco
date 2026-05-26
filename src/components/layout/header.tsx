@@ -422,6 +422,13 @@ export function Header({ siteName = "Loot", logoUrl = "", platforms = [] }: { si
                     <LayoutDashboard className="h-4 w-4" />Mon espace
                   </Button>
                 </Link>
+                {(session.user.role === "admin" || session.user.role === "support") && (
+                  <Link href={session.user.role === "support" ? "/admin/commandes" : "/admin"} onClick={() => setMobileOpen(false)}>
+                    <Button variant="outline" className="w-full gap-2 border-purple-700/50 text-purple-400 hover:bg-purple-900/20">
+                      <Shield className="h-4 w-4" />Administration
+                    </Button>
+                  </Link>
+                )}
                 <Button variant="ghost" className="w-full gap-2 text-red-400"
                   onClick={() => { setMobileOpen(false); signOut({ redirect: false }).then(() => router.push("/")); }}>
                   <LogOut className="h-4 w-4" />Se déconnecter
