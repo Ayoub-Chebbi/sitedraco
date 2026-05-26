@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { put } from "@vercel/blob";
 
-const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif", "image/svg+xml"];
-const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
+const ALLOWED_FOLDERS = ["products", "hero", "logo", "logos", "categories"];
+const MAX_BYTES = 5 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -19,14 +20,15 @@ export async function POST(req: NextRequest) {
   }
 
   const file = formData.get("file");
-  const folder = (formData.get("folder") as string) || "products";
+  const rawFolder = (formData.get("folder") as string) || "products";
+  const folder = ALLOWED_FOLDERS.includes(rawFolder) ? rawFolder : "products";
 
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "Aucun fichier reçu" }, { status: 400 });
   }
   if (!ALLOWED_TYPES.includes(file.type)) {
     return NextResponse.json(
-      { error: "Type de fichier non autorisé (JPG, PNG, WebP, GIF, SVG uniquement)" },
+      { error: "Type de fichier non autorisé (JPG, PNG, WebP, GIF uniquement)" },
       { status: 415 }
     );
   }

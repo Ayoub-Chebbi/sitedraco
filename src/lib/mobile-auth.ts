@@ -2,7 +2,9 @@ import jwt from "jsonwebtoken";
 import { NextRequest } from "next/server";
 import { prisma } from "./prisma";
 
-const SECRET = process.env.MOBILE_JWT_SECRET ?? process.env.NEXTAUTH_SECRET ?? "mobile-secret";
+const raw = process.env.MOBILE_JWT_SECRET ?? process.env.NEXTAUTH_SECRET;
+if (!raw) throw new Error("MOBILE_JWT_SECRET or NEXTAUTH_SECRET must be set");
+const JWT_SECRET: string = raw;
 const EXPIRY = "30d";
 
 export interface MobileJwtPayload {
@@ -12,11 +14,11 @@ export interface MobileJwtPayload {
 }
 
 export function signMobileToken(payload: MobileJwtPayload): string {
-  return jwt.sign(payload, SECRET, { expiresIn: EXPIRY });
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: EXPIRY });
 }
 
 export function verifyMobileToken(token: string): MobileJwtPayload {
-  return jwt.verify(token, SECRET) as MobileJwtPayload;
+  return jwt.verify(token, JWT_SECRET) as MobileJwtPayload;
 }
 
 export async function getMobileUser(req: NextRequest) {

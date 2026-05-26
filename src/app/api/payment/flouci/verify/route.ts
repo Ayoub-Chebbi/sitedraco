@@ -32,6 +32,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Statut de commande inattendu." }, { status: 409 });
   }
 
+  // Prevent payment injection: verify the paymentId matches what we stored
+  if (order.paymentRef && order.paymentRef !== paymentId) {
+    return NextResponse.json({ error: "Référence de paiement invalide." }, { status: 400 });
+  }
+
   const success = await verifyFlouciPayment(paymentId);
   if (!success) {
     return NextResponse.json({ error: "Paiement non confirmé par Flouci." }, { status: 402 });

@@ -1,7 +1,11 @@
 import crypto from "crypto";
 
 const ALGORITHM = "aes-256-gcm";
-const KEY = Buffer.from(process.env.ENCRYPTION_KEY || "0".repeat(32), "utf8").slice(0, 32);
+
+if (!process.env.ENCRYPTION_KEY || process.env.ENCRYPTION_KEY.length < 32) {
+  throw new Error("ENCRYPTION_KEY env var must be set and at least 32 characters");
+}
+const KEY = Buffer.from(process.env.ENCRYPTION_KEY, "utf8").subarray(0, 32);
 
 export function encryptKey(plaintext: string): string {
   const iv = crypto.randomBytes(12);

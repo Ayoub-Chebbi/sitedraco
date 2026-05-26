@@ -82,8 +82,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ...ticket, messages: [ticketMessage] }, { status: 201 });
   } catch (err) {
-    const detail = err instanceof Error ? err.message : String(err);
-    console.error("Ticket creation error:", detail);
-    return NextResponse.json({ error: detail }, { status: 500 });
+    console.error("Ticket creation error:", err instanceof Error ? err.message : String(err));
+    return NextResponse.json({ error: "Une erreur est survenue. Réessayez." }, { status: 500 });
   }
 }

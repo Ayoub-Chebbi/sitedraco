@@ -21,7 +21,11 @@ const SUPPORT_NAV = [
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
-  const isAdmin = session?.user.role === "admin";
+  if (!session || !["admin", "support"].includes(session.user.role ?? "")) {
+    const { redirect } = await import("next/navigation");
+    redirect("/connexion");
+  }
+  const isAdmin = session.user.role === "admin";
   const nav = isAdmin ? ADMIN_NAV : SUPPORT_NAV;
 
   return (

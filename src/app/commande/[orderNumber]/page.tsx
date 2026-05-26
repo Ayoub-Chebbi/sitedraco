@@ -1,4 +1,5 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { OrderTrackingClient } from "./order-tracking-client";
 import { decryptKey } from "@/lib/crypto";
@@ -8,6 +9,9 @@ export default async function OrderTrackingPage({
 }: {
   params: Promise<{ orderNumber: string }>;
 }) {
+  const session = await auth();
+  if (!session) redirect("/connexion");
+
   const { orderNumber } = await params;
 
   const order = await prisma.order.findUnique({
@@ -23,6 +27,11 @@ export default async function OrderTrackingPage({
   });
 
   if (!order) notFound();
+
+  // Enforce ownership: only the order owner can view it
+  if (order.userId && order.userId !== session.user.id && session.user.role !== "admin" && session.user.role !== "support") {
+    notFound();
+  }
 
   const safeOrder = {
     id: order.id,

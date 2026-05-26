@@ -48,8 +48,10 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string; variantId: string }> }
 ) {
-  const denied = await requireAdmin(req);
-  if (denied) return denied;
+  const session = await auth();
+  if (!session || session.user.role !== "admin") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const { variantId } = await params;
   await prisma.productVariant.delete({ where: { id: variantId } });

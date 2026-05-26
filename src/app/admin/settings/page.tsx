@@ -1,9 +1,14 @@
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
 import { getSiteSettings } from "@/lib/site-settings";
 import { SettingsClient } from "./settings-client";
 
 export const metadata = { title: "Paramètres — Admin" };
 
 export default async function SettingsPage() {
+  const session = await auth();
+  if (!session || session.user.role !== "admin") redirect("/");
+
   const settings = await getSiteSettings();
   return (
     <div className="p-6 max-w-4xl mx-auto">

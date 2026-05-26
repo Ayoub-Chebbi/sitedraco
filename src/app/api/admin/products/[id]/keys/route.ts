@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { encryptKey } from "@/lib/crypto";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const created = await prisma.productKey.createMany({
     data: values.map((keyValue: string) => ({
       productId: id,
-      keyValue,
+      keyValue: encryptKey(keyValue),
       status: "available",
       addedById: session.user.id,
     })),
