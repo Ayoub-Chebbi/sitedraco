@@ -147,7 +147,7 @@ export function ProductsClient({ products, categories: propCategories, giftcardB
           {[{ value: "", label: "Toutes" }, ...(propPlatforms ?? STATIC_PLATFORMS.slice(1))].map((p) => (
             <button
               key={p.value}
-              onClick={() => navigate(p.value, category, brand)}
+              onClick={() => p.value === "" ? navigate("", category, brand) : navigate(p.value, "", "")}
               className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${platform === p.value ? "bg-purple-600 text-white" : "bg-gray-800 text-gray-400 hover:bg-gray-700"}`}
             >
               {p.label}
@@ -168,7 +168,7 @@ export function ProductsClient({ products, categories: propCategories, giftcardB
           {categoryList.map((c) => (
             <button
               key={c.slug}
-              onClick={() => navigate(platform, c.slug, "")}
+              onClick={() => navigate("", c.slug, "")}
               className={`px-3 py-1.5 rounded-lg text-sm text-left transition-colors ${category === c.slug ? "bg-purple-600/20 text-purple-300 border border-purple-600/40" : "text-gray-400 hover:bg-gray-800"}`}
             >
               {c.label}
