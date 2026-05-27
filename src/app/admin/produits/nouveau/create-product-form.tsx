@@ -27,6 +27,7 @@ type Field = {
   category: string;
   imageUrl: string;
   isActive: boolean;
+  requiresSteamUsername: boolean;
   lowStockAlert: string;
   soldCount: string;
   rating: string;
@@ -44,6 +45,7 @@ const INITIAL: Field = {
   category: "game",
   imageUrl: "",
   isActive: true,
+  requiresSteamUsername: false,
   lowStockAlert: "5",
   soldCount: "0",
   rating: "4.8",
@@ -86,6 +88,7 @@ export function CreateProductForm() {
         discountPrice: form.discountPrice ? parseFloat(form.discountPrice) : null,
         imageUrl: form.imageUrl.trim() || null,
         isActive: form.isActive,
+        requiresSteamUsername: form.requiresSteamUsername,
         lowStockAlert: parseInt(form.lowStockAlert) || 5,
         soldCount: parseInt(form.soldCount) || 0,
         rating: parseFloat(form.rating) || 4.8,
@@ -261,6 +264,26 @@ export function CreateProductForm() {
             </label>
           </div>
         </div>
+      </div>
+
+      <div className="rounded-xl border border-gray-800 bg-gray-900 p-5">
+        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Options de livraison</h2>
+        <label className="flex items-start gap-3 cursor-pointer group">
+          <input
+            type="checkbox"
+            checked={form.requiresSteamUsername}
+            onChange={(e) => set("requiresSteamUsername", e.target.checked)}
+            className="mt-0.5 rounded border-gray-600 bg-gray-800 text-purple-600 focus:ring-purple-500"
+          />
+          <div>
+            <p className="text-sm font-medium text-gray-200 group-hover:text-white transition-colors">
+              Requiert un pseudo Steam
+            </p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Le client devra saisir son pseudo Steam lors du paiement pour que vous puissiez l&apos;ajouter en ami et lui offrir le jeu.
+            </p>
+          </div>
+        </label>
       </div>
 
       <div className="flex gap-3">
