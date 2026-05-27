@@ -86,7 +86,7 @@ export async function sendDeliveryEmail(to: string, orderNumber: string, items: 
       Voir mes accès →
     </a>
     <p style="color:#6b7280;font-size:12px;margin:20px 0 0">
-      Conservez ces informations en lieu sûr. Support disponible 7j/7 sur WhatsApp.
+      Conservez ces informations en lieu sûr. Support disponible 7j/7 via votre espace client.
     </p>
   ${foot}`;
 
@@ -94,6 +94,99 @@ export async function sendDeliveryEmail(to: string, orderNumber: string, items: 
     from: FROM,
     to,
     subject: `🎮 Votre commande LootStore #${orderNumber} est livrée`,
+    html,
+  });
+
+  if (error) throw new Error(error.message);
+}
+
+type TicketMessage = {
+  message: string;
+  senderName: string;
+  senderRole: string;
+  createdAt: string;
+};
+
+export async function sendTicketReplyEmail({
+  to,
+  clientName,
+  ticketId,
+  ticketSubject,
+  agentName,
+  newMessage,
+  recentMessages,
+}: {
+  to: string;
+  clientName: string | null;
+  ticketId: string;
+  ticketSubject: string;
+  agentName: string;
+  newMessage: string;
+  recentMessages: TicketMessage[];
+}) {
+  const siteUrl = process.env.SITE_URL ?? process.env.NEXTAUTH_URL ?? "https://loot.tn";
+  const ticketUrl = `${siteUrl}/dashboard/support/${ticketId}`;
+
+  const historyHtml = recentMessages
+    .slice(-5) // show last 5 messages for context
+    .map((m) => {
+      const isStaff = ["admin", "support"].includes(m.senderRole);
+      const bg = isStaff ? "#1e1b4b" : "#1a1a2e";
+      const border = isStaff ? "#4c1d95" : "#2d2d4e";
+      const nameColor = isStaff ? "#a78bfa" : "#9ca3af";
+      const align = isStaff ? "right" : "left";
+      return `
+        <div style="text-align:${align};margin-bottom:12px">
+          <div style="display:inline-block;max-width:80%;background:${bg};border:1px solid ${border};border-radius:12px;padding:10px 14px;text-align:left">
+            <p style="margin:0 0 4px;font-size:11px;color:${nameColor};font-weight:600">
+              ${isStaff ? "🛡️ Support" : "👤 " + m.senderName}
+            </p>
+            <p style="margin:0;font-size:13px;color:#e5e7eb;line-height:1.5">${m.message.replace(/\n/g, "<br>")}</p>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+
+  const html = `${base}
+    <h2 style="color:#fff;margin:0 0 6px">Nouvelle réponse à votre ticket 💬</h2>
+    <p style="color:#9ca3af;margin:0 0 20px;font-size:14px">
+      Bonjour ${clientName ?? ""},<br>
+      <strong style="color:#a78bfa">${agentName}</strong> a répondu à votre demande :
+      <em style="color:#d1d5db">${ticketSubject}</em>
+    </p>
+
+    <!-- New message highlight -->
+    <div style="background:#1e1b4b;border:1px solid #4c1d95;border-left:4px solid #7c3aed;border-radius:10px;padding:16px 18px;margin-bottom:24px">
+      <p style="margin:0 0 6px;font-size:11px;color:#a78bfa;font-weight:700;text-transform:uppercase;letter-spacing:.5px">
+        🛡️ ${agentName} (Support)
+      </p>
+      <p style="margin:0;font-size:14px;color:#e5e7eb;line-height:1.6">${newMessage.replace(/\n/g, "<br>")}</p>
+    </div>
+
+    <!-- Conversation history -->
+    ${recentMessages.length > 1 ? `
+    <div style="margin-bottom:24px">
+      <p style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin:0 0 12px">Historique récent</p>
+      ${historyHtml}
+    </div>
+    ` : ""}
+
+    <!-- CTA -->
+    <a href="${ticketUrl}"
+       style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;padding:13px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">
+      Voir la conversation →
+    </a>
+
+    <p style="color:#6b7280;font-size:12px;margin:20px 0 0">
+      Ticket #${ticketId.slice(-8).toUpperCase()} · Vous pouvez répondre directement sur le site.
+    </p>
+  ${foot}`;
+
+  const { error } = await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `💬 Réponse à votre ticket — ${ticketSubject}`,
     html,
   });
 
