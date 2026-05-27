@@ -125,68 +125,140 @@ export async function sendTicketReplyEmail({
   recentMessages: TicketMessage[];
 }) {
   const siteUrl = process.env.SITE_URL ?? process.env.NEXTAUTH_URL ?? "https://loot.tn";
+  const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? "LootStore";
   const ticketUrl = `${siteUrl}/dashboard/support/${ticketId}`;
+  const ref = ticketId.slice(-8).toUpperCase();
 
-  const historyHtml = recentMessages
-    .slice(-5) // show last 5 messages for context
+  // Build conversation history rows (last 5 messages, oldest first)
+  const historyRows = recentMessages
+    .slice(-5)
     .map((m) => {
       const isStaff = ["admin", "support"].includes(m.senderRole);
-      const bg = isStaff ? "#1e1b4b" : "#1a1a2e";
-      const border = isStaff ? "#4c1d95" : "#2d2d4e";
-      const nameColor = isStaff ? "#a78bfa" : "#9ca3af";
-      const align = isStaff ? "right" : "left";
+      const bubbleBg   = isStaff ? "#f3f0ff" : "#f9fafb";
+      const bubbleBorder = isStaff ? "#ddd6fe" : "#e5e7eb";
+      const labelColor = isStaff ? "#7c3aed" : "#6b7280";
+      const label      = isStaff ? `🛡️ Support` : `👤 ${m.senderName}`;
+      const align      = isStaff ? "right" : "left";
       return `
-        <div style="text-align:${align};margin-bottom:12px">
-          <div style="display:inline-block;max-width:80%;background:${bg};border:1px solid ${border};border-radius:12px;padding:10px 14px;text-align:left">
-            <p style="margin:0 0 4px;font-size:11px;color:${nameColor};font-weight:600">
-              ${isStaff ? "🛡️ Support" : "👤 " + m.senderName}
-            </p>
-            <p style="margin:0;font-size:13px;color:#e5e7eb;line-height:1.5">${m.message.replace(/\n/g, "<br>")}</p>
-          </div>
-        </div>
+        <tr><td style="padding:0 0 10px">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td style="text-align:${align}">
+                <div style="display:inline-block;max-width:82%;background:${bubbleBg};border:1px solid ${bubbleBorder};border-radius:12px;padding:10px 14px;text-align:left">
+                  <p style="margin:0 0 3px;font-size:11px;font-weight:700;color:${labelColor}">${label}</p>
+                  <p style="margin:0;font-size:13px;color:#374151;line-height:1.55">${m.message.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>")}</p>
+                </div>
+              </td>
+            </tr>
+          </table>
+        </td></tr>
       `;
     })
     .join("");
 
-  const html = `${base}
-    <h2 style="color:#fff;margin:0 0 6px">Nouvelle réponse à votre ticket 💬</h2>
-    <p style="color:#9ca3af;margin:0 0 20px;font-size:14px">
-      Bonjour ${clientName ?? ""},<br>
-      <strong style="color:#a78bfa">${agentName}</strong> a répondu à votre demande :
-      <em style="color:#d1d5db">${ticketSubject}</em>
-    </p>
+  const html = `<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f6;font-family:Arial,Helvetica,sans-serif">
 
-    <!-- New message highlight -->
-    <div style="background:#1e1b4b;border:1px solid #4c1d95;border-left:4px solid #7c3aed;border-radius:10px;padding:16px 18px;margin-bottom:24px">
-      <p style="margin:0 0 6px;font-size:11px;color:#a78bfa;font-weight:700;text-transform:uppercase;letter-spacing:.5px">
-        🛡️ ${agentName} (Support)
-      </p>
-      <p style="margin:0;font-size:14px;color:#e5e7eb;line-height:1.6">${newMessage.replace(/\n/g, "<br>")}</p>
-    </div>
+  <!-- Outer wrapper -->
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f4f6;padding:32px 0">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%">
 
-    <!-- Conversation history -->
-    ${recentMessages.length > 1 ? `
-    <div style="margin-bottom:24px">
-      <p style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin:0 0 12px">Historique récent</p>
-      ${historyHtml}
-    </div>
-    ` : ""}
+        <!-- Logo header -->
+        <tr>
+          <td align="center" style="background:#ffffff;border-radius:12px 12px 0 0;padding:28px 40px 24px;border-bottom:1px solid #e5e7eb">
+            <p style="margin:0;font-size:24px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:#111827">${siteName}</p>
+            <p style="margin:4px 0 0;font-size:11px;color:#9ca3af;letter-spacing:.5px">Jeux numériques · Cartes prépayées</p>
+          </td>
+        </tr>
 
-    <!-- CTA -->
-    <a href="${ticketUrl}"
-       style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;padding:13px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">
-      Voir la conversation →
-    </a>
+        <!-- White card body -->
+        <tr>
+          <td style="background:#ffffff;padding:36px 40px 32px">
 
-    <p style="color:#6b7280;font-size:12px;margin:20px 0 0">
-      Ticket #${ticketId.slice(-8).toUpperCase()} · Vous pouvez répondre directement sur le site.
-    </p>
-  ${foot}`;
+            <!-- Heading -->
+            <p style="margin:0 0 8px;font-size:22px;font-weight:800;color:#111827;line-height:1.3">
+              Vous avez reçu une réponse
+            </p>
+            <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6">
+              Bonjour ${clientName ? `<strong style="color:#111827">${clientName}</strong>` : ""},
+              notre équipe support a répondu à votre demande
+              <strong style="color:#111827">#${ref}</strong>.
+            </p>
+
+            <!-- Subject chip -->
+            <p style="margin:0 0 20px">
+              <span style="display:inline-block;background:#f3f0ff;border:1px solid #ddd6fe;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;color:#7c3aed">
+                📋 ${ticketSubject}
+              </span>
+            </p>
+
+            <!-- Latest support message -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px">
+              <tr>
+                <td style="background:#faf5ff;border:1px solid #ddd6fe;border-left:4px solid #7c3aed;border-radius:10px;padding:16px 18px">
+                  <p style="margin:0 0 6px;font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px">
+                    🛡️ ${agentName} · Support
+                  </p>
+                  <p style="margin:0;font-size:14px;color:#1f2937;line-height:1.65">${newMessage.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>")}</p>
+                </td>
+              </tr>
+            </table>
+
+            <!-- CTA button -->
+            <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px">
+              <tr>
+                <td style="border-radius:8px;background:linear-gradient(135deg,#7c3aed,#db2777)">
+                  <a href="${ticketUrl}"
+                     style="display:inline-block;padding:14px 32px;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;letter-spacing:.3px;border-radius:8px">
+                    Voir ma demande de support →
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Conversation history -->
+            ${recentMessages.length > 1 ? `
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #e5e7eb;padding-top:24px;margin-top:4px">
+              <tr>
+                <td>
+                  <p style="margin:0 0 16px;font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px">
+                    Historique de la conversation
+                  </p>
+                  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                    ${historyRows}
+                  </table>
+                </td>
+              </tr>
+            </table>
+            ` : ""}
+
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background:#7c3aed;border-radius:0 0 12px 12px;padding:20px 40px;text-align:center">
+            <p style="margin:0 0 4px;font-size:13px;font-weight:800;color:#ffffff;letter-spacing:1.5px;text-transform:uppercase">${siteName}</p>
+            <p style="margin:0;font-size:11px;color:rgba(255,255,255,.65)">
+              © ${new Date().getFullYear()} ${siteName} · Tunisie · Support 7j/7
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+
+</body>
+</html>`;
 
   const { error } = await resend.emails.send({
     from: FROM,
     to,
-    subject: `💬 Réponse à votre ticket — ${ticketSubject}`,
+    subject: `Réponse à votre demande #${ref} — ${siteName}`,
     html,
   });
 
