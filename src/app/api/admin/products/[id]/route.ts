@@ -17,6 +17,7 @@ const UpdateSchema = z.object({
   category: z.string().min(1).max(50).optional(),
   brand: z.string().max(80).optional().nullable(),
   productType: z.enum(["key", "account", "both"]).optional(),
+  requiresSteamUsername: z.boolean().optional(),
   price: z.number().positive().optional(),
   discountPrice: z.number().positive().optional().nullable(),
   accountPrice: z.number().positive().optional().nullable(),

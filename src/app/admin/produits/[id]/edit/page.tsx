@@ -24,6 +24,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     category: product.category,
     brand: product.brand ?? "",
     productType: (product.productType ?? "key") as "key" | "account" | "both",
+    requiresSteamUsername: product.requiresSteamUsername ?? false,
     price: product.price.toString(),
     discountPrice: product.discountPrice?.toString() ?? "",
     accountPrice: product.accountPrice?.toString() ?? "",

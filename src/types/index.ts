@@ -27,6 +27,7 @@ export type CartItem = {
   imageUrl?: string | null;
   platform: string;
   quantity: number;
+  requiresSteamUsername?: boolean;
 };
 
 declare module "next-auth" {

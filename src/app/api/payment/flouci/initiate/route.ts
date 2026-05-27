@@ -19,6 +19,7 @@ const schema = z.object({
     quantity: z.number().int().positive(),
   })).min(1),
   couponCode: z.string().optional(),
+  steamUsername: z.string().max(100).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Données invalides.", detail: parsed.error.flatten() }, { status: 400 });
     }
 
-    const { email, items, couponCode } = parsed.data;
+    const { email, items, couponCode, steamUsername } = parsed.data;
 
     const products = await prisma.product.findMany({
       where: { id: { in: items.map((i) => i.productId) }, isActive: true },
@@ -104,6 +105,7 @@ export async function POST(req: NextRequest) {
         totalAmount,
         discountAmount,
         ...(appliedCouponId && { couponId: appliedCouponId }),
+        ...(steamUsername && { steamUsername }),
       },
     });
 

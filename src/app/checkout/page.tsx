@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
-import { Loader2, CreditCard, Shield, Lock, Zap, Tag, X, CheckCircle } from "lucide-react";
+import { Loader2, CreditCard, Shield, Lock, Zap, Tag, X, CheckCircle, Gamepad2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/lib/cart-store";
@@ -29,6 +29,9 @@ export default function CheckoutPage() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<CouponResult | null>(null);
+
+  const [steamUsername, setSteamUsername] = useState("");
+  const needsSteam = items.some((i) => i.requiresSteamUsername);
 
   if (items.length === 0) {
     return (
@@ -73,6 +76,10 @@ export default function CheckoutPage() {
       setError("Entrez un email valide.");
       return;
     }
+    if (needsSteam && !steamUsername.trim()) {
+      setError("Veuillez entrer votre pseudo Steam.");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/payment/flouci/initiate", {
@@ -82,6 +89,7 @@ export default function CheckoutPage() {
           email,
           items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
           ...(appliedCoupon && { couponCode: appliedCoupon.code }),
+          ...(needsSteam && steamUsername.trim() && { steamUsername: steamUsername.trim() }),
         }),
       });
       const data = await res.json();
@@ -116,6 +124,28 @@ export default function CheckoutPage() {
               </p>
             )}
           </div>
+
+          {/* Steam username */}
+          {needsSteam && (
+            <div className="rounded-xl border border-blue-800/50 bg-blue-900/10 p-6 space-y-3">
+              <h2 className="text-base font-semibold text-white flex items-center gap-2">
+                <Gamepad2 className="h-4 w-4 text-blue-400" />
+                Pseudo Steam requis
+              </h2>
+              <p className="text-sm text-gray-400">
+                Ce produit est offert en cadeau via Steam. Entrez votre pseudo Steam exact pour que nous puissions vous ajouter en ami et envoyer le cadeau.
+              </p>
+              <Input
+                placeholder="VotrePseudoSteam"
+                value={steamUsername}
+                onChange={(e) => setSteamUsername(e.target.value)}
+                className="font-mono"
+              />
+              <p className="text-xs text-gray-500">
+                Retrouvez votre pseudo dans votre profil Steam → <span className="text-blue-400">Modifier le profil → Nom d&apos;utilisateur</span>
+              </p>
+            </div>
+          )}
 
           {/* Coupon */}
           <div className="rounded-xl border border-gray-800 bg-gray-900 p-6 space-y-3">

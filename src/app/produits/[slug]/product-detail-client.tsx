@@ -31,6 +31,7 @@ type ExtProduct = Product & {
   reviewCount?: number;
   urgencyHours?: number;
   productType?: string | null;
+  requiresSteamUsername?: boolean | null;
   accountPrice?: number | null;
   accountDiscountPrice?: number | null;
   accountDescription?: string | null;
@@ -95,6 +96,8 @@ export function ProductDetailClient({ product, upsells }: Props) {
       ? product.description
       : (product.accountDescription ?? product.description);
 
+  const needsSteam = product.requiresSteamUsername ?? false;
+
   function handleAddToCart() {
     for (let i = 0; i < qty; i++) {
       if (hasVariants && selectedVariant) {
@@ -108,6 +111,7 @@ export function ProductDetailClient({ product, upsells }: Props) {
           imageUrl: product.imageUrl,
           platform: product.platform,
           quantity: 1,
+          requiresSteamUsername: needsSteam,
         });
       } else {
         addItem({
@@ -119,6 +123,7 @@ export function ProductDetailClient({ product, upsells }: Props) {
           imageUrl: product.imageUrl,
           platform: product.platform,
           quantity: 1,
+          requiresSteamUsername: needsSteam,
         });
       }
     }

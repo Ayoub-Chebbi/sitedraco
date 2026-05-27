@@ -75,8 +75,9 @@ model Product {
   platform             String
   category             String
   brand                String?
-  productType          String   @default("key")
-  price                Float
+  productType            String   @default("key")
+  requiresSteamUsername  Boolean  @default(false)
+  price                  Float
   discountPrice        Float?
   accountPrice         Float?
   accountDiscountPrice Float?
@@ -190,6 +191,7 @@ model Order {
   totalAmount    Float
   discountAmount Float    @default(0)
   couponId       String?
+  steamUsername  String?
   notesInternal  String?
   agentId        String?
   createdAt      DateTime @default(now())

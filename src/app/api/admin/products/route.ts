@@ -16,6 +16,7 @@ const CreateSchema = z.object({
   category: z.string().min(1).max(50),
   brand: z.string().max(80).optional().nullable(),
   productType: z.enum(["key", "account", "both"]).optional().default("key"),
+  requiresSteamUsername: z.boolean().optional().default(false),
   price: z.number().positive(),
   discountPrice: z.number().positive().optional().nullable(),
   accountPrice: z.number().positive().optional().nullable(),

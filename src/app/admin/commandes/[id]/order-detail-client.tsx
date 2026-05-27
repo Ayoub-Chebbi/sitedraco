@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft, CheckCircle, XCircle, Clock, Send, Loader2, Key, User, FileText, Lock
+  ArrowLeft, CheckCircle, XCircle, Clock, Send, Loader2, Key, User, FileText, Lock, Gamepad2, Copy, Check
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,6 +21,8 @@ type OrderData = {
   paymentMethod: string | null;
   paymentStatus: string;
   totalAmount: number;
+  discountAmount?: number;
+  steamUsername?: string | null;
   notesInternal: string | null;
   createdAt: string;
   customer: { email: string; name: string | null; since: string | null };
@@ -51,6 +53,19 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 type ItemDelivery = { keyValue: string; email: string; password: string };
+
+function CopyButton({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={() => { navigator.clipboard.writeText(value); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
+      className="ml-1 p-1 rounded hover:bg-gray-700 transition-colors"
+      title="Copier"
+    >
+      {copied ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5 text-gray-500 hover:text-gray-300" />}
+    </button>
+  );
+}
 
 export function OrderDetailClient({ order }: { order: OrderData }) {
   const router = useRouter();
@@ -284,6 +299,23 @@ export function OrderDetailClient({ order }: { order: OrderData }) {
 
         {/* Right col */}
         <div className="space-y-6">
+          {/* Steam username — shown prominently when present */}
+          {order.steamUsername && (
+            <div className="rounded-xl border border-blue-700/50 bg-blue-900/15 p-5">
+              <h2 className="font-semibold text-white mb-3 flex items-center gap-2">
+                <Gamepad2 className="h-4 w-4 text-blue-400" />
+                Pseudo Steam
+              </h2>
+              <div className="flex items-center gap-1">
+                <span className="font-mono text-base font-bold text-blue-300">{order.steamUsername}</span>
+                <CopyButton value={order.steamUsername} />
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Ajoutez ce joueur en ami sur Steam et envoyez-lui le jeu en cadeau.
+              </p>
+            </div>
+          )}
+
           <div className="rounded-xl border border-gray-800 bg-gray-900 p-5">
             <h2 className="font-semibold text-white mb-3 flex items-center gap-2">
               <User className="h-4 w-4 text-purple-400" />

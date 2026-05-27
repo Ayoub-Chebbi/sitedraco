@@ -32,6 +32,7 @@ export type ProductFormValues = {
   category: string;
   brand: string;
   productType: "key" | "account" | "both";
+  requiresSteamUsername: boolean;
   imageUrl: string;
   isActive: boolean;
   lowStockAlert: string;
@@ -54,6 +55,7 @@ const DEFAULTS: ProductFormValues = {
   category: "game",
   brand: "",
   productType: "key",
+  requiresSteamUsername: false,
   imageUrl: "",
   isActive: true,
   lowStockAlert: "5",
@@ -137,6 +139,7 @@ export function ProductForm({ initial, mode, productId }: Props) {
         category: form.category,
         brand: form.brand.trim() || null,
         productType: form.productType,
+        requiresSteamUsername: form.requiresSteamUsername,
         price: parseFloat(form.price),
         discountPrice: hasKey && form.discountPrice ? parseFloat(form.discountPrice) : null,
         accountPrice: hasAccount && form.accountPrice ? parseFloat(form.accountPrice) : null,
@@ -319,6 +322,27 @@ export function ProductForm({ initial, mode, productId }: Props) {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Steam username requirement */}
+      <div className="rounded-xl border border-gray-800 bg-gray-900 p-5">
+        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Options de livraison</h2>
+        <label className="flex items-start gap-3 cursor-pointer group">
+          <input
+            type="checkbox"
+            checked={form.requiresSteamUsername}
+            onChange={(e) => set("requiresSteamUsername", e.target.checked)}
+            className="mt-0.5 rounded border-gray-600 bg-gray-800 text-purple-600 focus:ring-purple-500"
+          />
+          <div>
+            <p className="text-sm font-medium text-gray-200 group-hover:text-white transition-colors">
+              Requiert un pseudo Steam
+            </p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Le client devra saisir son pseudo Steam lors du paiement pour que vous puissiez l&apos;ajouter en ami et lui offrir le jeu.
+            </p>
+          </div>
+        </label>
       </div>
 
       {/* Descriptions */}
