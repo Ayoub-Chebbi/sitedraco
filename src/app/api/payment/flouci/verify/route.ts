@@ -48,6 +48,14 @@ export async function POST(req: NextRequest) {
     data: { paymentStatus: "paid", paymentRef: paymentId, status: "processing" },
   });
 
+  // Increment coupon usedCount only after payment is confirmed
+  if (order.couponId) {
+    await prisma.coupon.update({
+      where: { id: order.couponId },
+      data: { usedCount: { increment: 1 } },
+    }).catch((err) => console.error("[verify] coupon increment failed:", err));
+  }
+
   notifyAdminsNewOrder({
     orderNumber: order.orderNumber,
     clientEmail: order.user?.email ?? order.guestEmail ?? "guest",

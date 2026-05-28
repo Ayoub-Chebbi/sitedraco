@@ -51,21 +51,18 @@ export async function POST(req: NextRequest) {
 
     // Server-side stock check
     for (const item of items) {
-      if (item.variantId) continue; // variants use manual stock managed separately
+      if (item.variantId) continue;
       const p = products.find((p) => p.id === item.productId)!;
       const availableKeys = await prisma.productKey.count({
         where: { productId: p.id, status: "available" },
       });
       const stock = availableKeys + (p.manualStock ?? 0);
       if (stock < item.quantity) {
-        return NextResponse.json(
-          { error: `"${p.name}" est en rupture de stock.` },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: `"${p.name}" est en rupture de stock.` }, { status: 400 });
       }
     }
 
-    // For items with a variantId, validate the variant belongs to the product
+    // Validate variant ownership
     for (const item of items) {
       if (item.variantId) {
         const variant = variants.find((v) => v.id === item.variantId);
@@ -84,30 +81,7 @@ export async function POST(req: NextRequest) {
       return sum + (p.discountPrice ?? p.price) * item.quantity;
     }, 0);
 
-    // Validate and apply coupon
-    let discountAmount = 0;
-    let appliedCouponId: string | null = null;
-
-    if (couponCode) {
-      const coupon = await prisma.coupon.findUnique({ where: { code: couponCode.toUpperCase().trim() } });
-      if (
-        coupon &&
-        coupon.isActive &&
-        (!coupon.expiresAt || coupon.expiresAt > new Date()) &&
-        (coupon.maxUses === null || coupon.usedCount < coupon.maxUses) &&
-        (!coupon.minAmount || subtotal >= coupon.minAmount)
-      ) {
-        discountAmount =
-          coupon.type === "percentage"
-            ? Math.min(subtotal, (subtotal * coupon.value) / 100)
-            : Math.min(subtotal, coupon.value);
-        discountAmount = Math.round(discountAmount * 100) / 100;
-        appliedCouponId = coupon.id;
-      }
-    }
-
-    const totalAmount = Math.max(0, subtotal - discountAmount);
-
+    // Resolve userId first so we can check per-user coupon reuse
     const orderNumber = generateOrderNumber();
     let userId = session?.user?.id ?? null;
     let guestAutoCreated = false;
@@ -126,6 +100,37 @@ export async function POST(req: NextRequest) {
         guestAutoCreated = true;
       }
     }
+
+    // Validate and apply coupon (after userId is known)
+    let discountAmount = 0;
+    let appliedCouponId: string | null = null;
+
+    if (couponCode) {
+      const coupon = await prisma.coupon.findUnique({ where: { code: couponCode.toUpperCase().trim() } });
+      if (
+        coupon &&
+        coupon.isActive &&
+        (!coupon.expiresAt || coupon.expiresAt > new Date()) &&
+        (coupon.maxUses === null || coupon.usedCount < coupon.maxUses) &&
+        (!coupon.minAmount || subtotal >= coupon.minAmount)
+      ) {
+        // Prevent same user from reusing the same coupon on multiple paid orders
+        const alreadyUsed = userId ? await prisma.order.count({
+          where: { userId, couponId: coupon.id, paymentStatus: "paid" },
+        }) : 0;
+
+        if (alreadyUsed === 0) {
+          discountAmount =
+            coupon.type === "percentage"
+              ? Math.min(subtotal, (subtotal * coupon.value) / 100)
+              : Math.min(subtotal, coupon.value);
+          discountAmount = Math.round(discountAmount * 100) / 100;
+          appliedCouponId = coupon.id;
+        }
+      }
+    }
+
+    const totalAmount = Math.max(0, subtotal - discountAmount);
 
     const order = await prisma.order.create({
       data: {
@@ -166,20 +171,13 @@ export async function POST(req: NextRequest) {
       failLink: `${base}/checkout/fail?orderId=${order.id}`,
     });
 
-    // Store paymentUrl and paymentRef so we can link back to it from dashboard
     await prisma.order.update({
       where: { id: order.id },
       data: { paymentRef: paymentId, paymentUrl },
     });
 
-    if (appliedCouponId) {
-      await prisma.coupon.update({
-        where: { id: appliedCouponId },
-        data: { usedCount: { increment: 1 } },
-      });
-    }
-
-    // Welcome email is sent in /api/payment/flouci/verify after payment confirmed
+    // usedCount incremented in /verify after payment confirmed
+    // Welcome email sent in /verify after payment confirmed
 
     return NextResponse.json({ paymentUrl, orderId: order.id });
 

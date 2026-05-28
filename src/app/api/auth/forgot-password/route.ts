@@ -7,6 +7,16 @@ export async function POST(req: NextRequest) {
   const { email } = await req.json();
   if (!email) return NextResponse.json({ error: "Email requis." }, { status: 400 });
 
+  // Rate limit: max 3 reset requests per email per 15 minutes
+  const since = new Date(Date.now() - 15 * 60 * 1000);
+  const recentCount = await prisma.passwordResetToken.count({
+    where: { email, createdAt: { gte: since } },
+  });
+  if (recentCount >= 3) {
+    // Return success to avoid timing oracle — email enumeration already prevented
+    return NextResponse.json({ success: true });
+  }
+
   const user = await prisma.user.findUnique({ where: { email } });
 
   // Always return success to prevent email enumeration

@@ -4,8 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getMobileUser } from "@/lib/mobile-auth";
 
 const schema = z.object({
-  status: z.enum(["pending", "processing", "delivered", "cancelled", "refunded"]).optional(),
-  paymentStatus: z.enum(["pending", "awaiting_payment", "paid", "failed", "refunded"]).optional(),
+  status: z.enum(["pending", "processing", "failed", "refund_initiated", "refunded"]).optional(),
   notesInternal: z.string().optional(),
 });
 
