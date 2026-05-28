@@ -10,6 +10,7 @@ const schema = z.object({
   email: z.string().email(),
   items: z.array(z.object({
     productId: z.string(),
+    variantId: z.string().optional(),
     quantity: z.number().int().positive(),
   })).min(1),
   couponCode: z.string().optional(),
@@ -32,15 +33,37 @@ export async function POST(req: NextRequest) {
 
     const { email, items, couponCode, steamUsername } = parsed.data;
 
-    const products = await prisma.product.findMany({
-      where: { id: { in: items.map((i) => i.productId) }, isActive: true },
-    });
+    const [products, variants] = await Promise.all([
+      prisma.product.findMany({
+        where: { id: { in: items.map((i) => i.productId) }, isActive: true },
+      }),
+      prisma.productVariant.findMany({
+        where: {
+          id: { in: items.flatMap((i) => i.variantId ? [i.variantId] : []) },
+          isActive: true,
+        },
+      }),
+    ]);
 
     if (products.length !== items.length) {
       return NextResponse.json({ error: "Un ou plusieurs produits introuvables." }, { status: 400 });
     }
 
+    // For items with a variantId, validate the variant belongs to the product
+    for (const item of items) {
+      if (item.variantId) {
+        const variant = variants.find((v) => v.id === item.variantId);
+        if (!variant || variant.productId !== item.productId) {
+          return NextResponse.json({ error: "Variante invalide." }, { status: 400 });
+        }
+      }
+    }
+
     const subtotal = items.reduce((sum, item) => {
+      if (item.variantId) {
+        const v = variants.find((v) => v.id === item.variantId)!;
+        return sum + (v.discountPrice ?? v.price) * item.quantity;
+      }
       const p = products.find((p) => p.id === item.productId)!;
       return sum + (p.discountPrice ?? p.price) * item.quantity;
     }, 0);
@@ -104,13 +127,16 @@ export async function POST(req: NextRequest) {
     });
 
     for (const item of items) {
-      const p = products.find((p) => p.id === item.productId)!;
+      const unitPrice = item.variantId
+        ? (() => { const v = variants.find((v) => v.id === item.variantId)!; return v.discountPrice ?? v.price; })()
+        : (() => { const p = products.find((p) => p.id === item.productId)!; return p.discountPrice ?? p.price; })();
+
       await prisma.orderItem.create({
         data: {
           orderId: order.id,
           productId: item.productId,
           quantity: item.quantity,
-          unitPrice: p.discountPrice ?? p.price,
+          unitPrice,
         },
       });
     }

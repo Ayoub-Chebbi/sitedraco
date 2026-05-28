@@ -87,7 +87,11 @@ export default function CheckoutPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
-          items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+          items: items.map((i) => ({
+            productId: i.productId,
+            quantity: i.quantity,
+            ...(i.variantId && { variantId: i.variantId }),
+          })),
           ...(appliedCoupon && { couponCode: appliedCoupon.code }),
           ...(needsSteam && steamUsername.trim() && { steamUsername: steamUsername.trim() }),
         }),
