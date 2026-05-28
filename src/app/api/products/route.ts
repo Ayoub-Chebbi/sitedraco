@@ -35,7 +35,10 @@ export async function GET(req: NextRequest) {
       orderBy,
       skip: (page - 1) * limit,
       take: limit,
-      include: { _count: { select: { keys: { where: { status: "available" } } } } },
+      include: {
+        _count: { select: { keys: { where: { status: "available" } } } },
+        variants: { where: { isActive: true }, orderBy: { displayOrder: "asc" }, select: { id: true, name: true, price: true, discountPrice: true, displayOrder: true } },
+      },
     }),
     prisma.product.count({ where }),
   ]);

@@ -10,7 +10,10 @@ const FALLBACK_PLATFORMS = [
 ];
 
 export async function GET() {
-  const include = { _count: { select: { keys: { where: { status: "available" } } } } } as const;
+  const include = {
+    _count: { select: { keys: { where: { status: "available" } } } },
+    variants: { where: { isActive: true }, orderBy: { displayOrder: "asc" as const }, select: { id: true, name: true, price: true, discountPrice: true, displayOrder: true } },
+  } as const;
 
   const dbPlatforms = await prisma.platform.findMany({
     orderBy: [{ displayOrder: "asc" }, { label: "asc" }],
