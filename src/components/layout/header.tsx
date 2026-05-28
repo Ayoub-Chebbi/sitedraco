@@ -72,8 +72,7 @@ type SearchResult = {
 
 function getSearchPrice(r: SearchResult) {
   if (r.variants && r.variants.length > 0) {
-    const v = r.variants[0];
-    return v.discountPrice ?? v.price;
+    return Math.min(...r.variants.map((v) => v.discountPrice ?? v.price));
   }
   return r.discountPrice ?? r.price;
 }

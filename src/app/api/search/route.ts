@@ -15,22 +15,12 @@ export async function GET(req: NextRequest) {
         { platform: { contains: q, mode: "insensitive" } },
       ],
     },
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      platform: true,
-      price: true,
-      discountPrice: true,
-      imageUrl: true,
-      category: true,
-      manualStock: true,
+    include: {
       _count: { select: { keys: { where: { status: "available" } } } },
       variants: {
         where: { isActive: true },
         orderBy: { displayOrder: "asc" },
-        select: { id: true, name: true, price: true, discountPrice: true },
-        take: 1,
+        select: { id: true, name: true, price: true, discountPrice: true, displayOrder: true },
       },
     },
     take: 8,
@@ -38,6 +28,17 @@ export async function GET(req: NextRequest) {
   });
 
   return NextResponse.json(
-    products.map((p) => ({ ...p, availableKeys: p._count.keys + (p.manualStock ?? 0) }))
+    products.map((p) => ({
+      id: p.id,
+      name: p.name,
+      slug: p.slug,
+      platform: p.platform,
+      price: p.price,
+      discountPrice: p.discountPrice,
+      imageUrl: p.imageUrl,
+      category: p.category,
+      availableKeys: p._count.keys + (p.manualStock ?? 0),
+      variants: p.variants,
+    }))
   );
 }
