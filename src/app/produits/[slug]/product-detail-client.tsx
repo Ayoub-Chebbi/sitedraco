@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ShoppingCart, Zap, CheckCircle, Shield, ChevronRight, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PlatformBadge } from "@/components/shared/platform-badge";
@@ -50,6 +51,7 @@ const STATIC_REVIEWS = [
 ];
 
 export function ProductDetailClient({ product, upsells }: Props) {
+  const router = useRouter();
   const [qty, setQty] = useState(1);
   const addItem = useCart((s) => s.addItem);
   const { toast } = useToast();
@@ -301,12 +303,20 @@ export function ProductDetailClient({ product, upsells }: Props) {
             </Button>
           </div>
 
-          <Link href="/checkout" onClick={handleAddToCart}>
-            <Button size="lg" variant="outline" className="w-full gap-2" disabled={!inStock || (hasVariants && !selectedVariant)}>
-              <Zap className="h-5 w-5 text-yellow-400" />
-              Acheter maintenant
-            </Button>
-          </Link>
+          <Button
+            size="lg"
+            variant="outline"
+            className="w-full gap-2"
+            disabled={!inStock || (hasVariants && !selectedVariant)}
+            onClick={() => {
+              if (!inStock) return;
+              handleAddToCart();
+              router.push("/checkout");
+            }}
+          >
+            <Zap className="h-5 w-5 text-yellow-400" />
+            Acheter maintenant
+          </Button>
 
           <p className="text-xs text-gray-600 pt-1">
             ✓ Clé envoyée par email + espace client · ✓ Support 7j/7 · ✓ Paiement vérifié avant envoi

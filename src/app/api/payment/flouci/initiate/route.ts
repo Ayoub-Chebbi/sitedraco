@@ -49,6 +49,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Un ou plusieurs produits introuvables." }, { status: 400 });
     }
 
+    // Server-side stock check
+    for (const item of items) {
+      if (item.variantId) continue; // variants use manual stock managed separately
+      const p = products.find((p) => p.id === item.productId)!;
+      const availableKeys = await prisma.productKey.count({
+        where: { productId: p.id, status: "available" },
+      });
+      const stock = availableKeys + (p.manualStock ?? 0);
+      if (stock < item.quantity) {
+        return NextResponse.json(
+          { error: `"${p.name}" est en rupture de stock.` },
+          { status: 400 }
+        );
+      }
+    }
+
     // For items with a variantId, validate the variant belongs to the product
     for (const item of items) {
       if (item.variantId) {
