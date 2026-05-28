@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatPrice, formatDate } from "@/lib/utils";
 import { OrderStatusBadge } from "@/components/shared/order-status-badge";
-import { Package, Key, ArrowRight, MessageCircle, Plus, Clock } from "lucide-react";
+import { Package, Key, ArrowRight, MessageCircle, Plus, Clock, AlertCircle, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const TICKET_STATUS: Record<string, { label: string; color: string }> = {
@@ -18,7 +18,7 @@ export default async function DashboardPage() {
   const session = await auth();
   if (!session) redirect("/connexion");
 
-  const [orders, tickets] = await Promise.all([
+  const [orders, tickets, pendingOrders] = await Promise.all([
     prisma.order.findMany({
       where: { userId: session.user.id },
       include: { items: { include: { product: true } } },
@@ -33,6 +33,17 @@ export default async function DashboardPage() {
       },
       orderBy: { createdAt: "desc" },
       take: 3,
+    }),
+    prisma.order.findMany({
+      where: {
+        userId: session.user.id,
+        paymentStatus: "awaiting_payment",
+        paymentUrl: { not: null },
+        // Only show orders initiated in the last 2 hours (Flouci links expire)
+        createdAt: { gte: new Date(Date.now() - 2 * 60 * 60 * 1000) },
+      },
+      include: { items: { include: { product: true } } },
+      orderBy: { createdAt: "desc" },
     }),
   ]);
 
@@ -50,6 +61,36 @@ export default async function DashboardPage() {
         </h1>
         <p className="text-gray-500 text-sm mt-1">Bienvenue dans votre espace client</p>
       </div>
+
+      {/* Pending payment banners */}
+      {pendingOrders.length > 0 && (
+        <div className="space-y-3 mb-6">
+          {pendingOrders.map((po) => (
+            <div key={po.id} className="flex items-center gap-4 rounded-xl border border-yellow-700/50 bg-yellow-900/10 px-5 py-4">
+              <AlertCircle className="h-5 w-5 text-yellow-400 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-yellow-300">Paiement en attente</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Commande <span className="font-mono text-white">{po.orderNumber}</span>
+                  {" · "}
+                  {po.items.map((i) => i.product.name).join(", ")}
+                  {" · "}
+                  <span className="text-white font-semibold">{formatPrice(po.totalAmount)}</span>
+                </p>
+              </div>
+              <a
+                href={po.paymentUrl!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 flex items-center gap-1.5 bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-bold px-3 py-2 rounded-lg transition-colors"
+              >
+                Compléter le paiement
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">

@@ -5,12 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { generateOrderNumber } from "@/lib/utils";
 import { initiateFlouciPayment } from "@/lib/flouci";
-import { sendWelcomeEmail } from "@/lib/email";
-
-function generatePassword(len = 10) {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
-  return Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-}
 
 const schema = z.object({
   email: z.string().email(),
@@ -77,21 +71,20 @@ export async function POST(req: NextRequest) {
 
     const orderNumber = generateOrderNumber();
     let userId = session?.user?.id ?? null;
-    let autoCreated = false;
-    let plainPassword = "";
+    let guestAutoCreated = false;
 
     if (!userId) {
       const existing = await prisma.user.findUnique({ where: { email } });
       if (existing) {
         userId = existing.id;
       } else {
-        plainPassword = generatePassword();
-        const passwordHash = await bcrypt.hash(plainPassword, 12);
+        // Create account with a random unusable password — welcome email sent after payment
+        const passwordHash = await bcrypt.hash(Math.random().toString(36) + Date.now(), 12);
         const newUser = await prisma.user.create({
           data: { email, passwordHash, role: "customer" },
         });
         userId = newUser.id;
-        autoCreated = true;
+        guestAutoCreated = true;
       }
     }
 
@@ -104,12 +97,12 @@ export async function POST(req: NextRequest) {
         paymentStatus: "awaiting_payment",
         totalAmount,
         discountAmount,
+        guestAutoCreated,
         ...(appliedCouponId && { couponId: appliedCouponId }),
         ...(steamUsername && { steamUsername }),
       },
     });
 
-    // Neon HTTP adapter doesn't support transactions — insert items separately
     for (const item of items) {
       const p = products.find((p) => p.id === item.productId)!;
       await prisma.orderItem.create({
@@ -131,7 +124,11 @@ export async function POST(req: NextRequest) {
       failLink: `${base}/checkout/fail?orderId=${order.id}`,
     });
 
-    await prisma.order.update({ where: { id: order.id }, data: { paymentRef: paymentId } });
+    // Store paymentUrl and paymentRef so we can link back to it from dashboard
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { paymentRef: paymentId, paymentUrl },
+    });
 
     if (appliedCouponId) {
       await prisma.coupon.update({
@@ -140,11 +137,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    if (autoCreated) {
-      sendWelcomeEmail(email, plainPassword, orderNumber).catch((err) =>
-        console.error("[flouci] welcome email failed:", err)
-      );
-    }
+    // Welcome email is sent in /api/payment/flouci/verify after payment confirmed
 
     return NextResponse.json({ paymentUrl, orderId: order.id });
 

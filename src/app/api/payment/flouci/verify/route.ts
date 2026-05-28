@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyFlouciPayment } from "@/lib/flouci";
 import { notifyAdminsNewOrder } from "@/lib/push-notifications";
+import { sendWelcomeEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   let body: { paymentId?: string; orderId?: string };
@@ -55,6 +56,27 @@ export async function POST(req: NextRequest) {
     totalAmount: order.totalAmount,
     orderId: order.id,
   }).catch(console.error);
+
+  // Send welcome email to auto-created guest accounts only after payment confirmed
+  if (order.guestAutoCreated && order.user?.email) {
+    const base = process.env.SITE_URL ?? process.env.NEXTAUTH_URL ?? "https://loot.tn";
+    const token = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000);
+
+    try {
+      await prisma.passwordResetToken.create({
+        data: { email: order.user.email, token, expiresAt },
+      });
+
+      sendWelcomeEmail(
+        order.user.email,
+        order.orderNumber,
+        `${base}/mot-de-passe-oublie/reset?token=${token}`
+      ).catch((err) => console.error("[verify] welcome email failed:", err));
+    } catch (err) {
+      console.error("[verify] failed to create reset token:", err);
+    }
+  }
 
   return NextResponse.json({ orderNumber: order.orderNumber });
 }

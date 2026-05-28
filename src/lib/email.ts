@@ -20,25 +20,25 @@ const foot = `
   </div>
 `;
 
-export async function sendWelcomeEmail(email: string, password: string, orderNumber: string) {
+export async function sendWelcomeEmail(email: string, orderNumber: string, setupUrl: string) {
   const html = `${base}
     <h2 style="color:#fff;margin:0 0 12px">Bienvenue sur LootStore ! 🎮</h2>
-    <p style="color:#9ca3af;margin:0 0 20px">Votre commande <strong style="color:#fff">#${orderNumber}</strong> a bien été enregistrée. Nous avons automatiquement créé un compte pour vous.</p>
+    <p style="color:#9ca3af;margin:0 0 20px">Votre paiement pour la commande <strong style="color:#fff">#${orderNumber}</strong> a été confirmé. Nous avons automatiquement créé un compte pour vous.</p>
     <div style="background:#1a1a2e;border:1px solid #2d2d4e;border-radius:8px;padding:20px;margin-bottom:24px">
-      <p style="margin:0 0 8px;font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:.5px">Vos identifiants</p>
-      <p style="margin:0 0 6px"><span style="color:#9ca3af">Email :</span> <strong style="color:#fff">${email}</strong></p>
-      <p style="margin:0"><span style="color:#9ca3af">Mot de passe temporaire :</span> <strong style="color:#a78bfa;font-size:18px;letter-spacing:2px">${password}</strong></p>
+      <p style="margin:0 0 8px;font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:.5px">Votre compte</p>
+      <p style="margin:0"><span style="color:#9ca3af">Email :</span> <strong style="color:#fff">${email}</strong></p>
     </div>
-    <p style="color:#9ca3af;font-size:13px;margin:0 0 20px">⚠️ Pensez à changer votre mot de passe après votre première connexion.</p>
-    <a href="${process.env.SITE_URL ?? process.env.NEXTAUTH_URL ?? "https://loot.tn"}/connexion" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">
-      Voir ma commande →
+    <p style="color:#9ca3af;font-size:13px;margin:0 0 20px">Cliquez ci-dessous pour définir votre mot de passe et accéder à votre espace client.</p>
+    <a href="${setupUrl}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">
+      Définir mon mot de passe →
     </a>
+    <p style="color:#6b7280;font-size:12px;margin:20px 0 0">Ce lien expire dans 72 heures.</p>
   ${foot}`;
 
   const { error } = await resend.emails.send({
     from: FROM,
     to: email,
-    subject: `🎮 Votre commande LootStore #${orderNumber} + vos accès`,
+    subject: `🎮 Votre commande LootStore #${orderNumber} confirmée — accédez à votre compte`,
     html,
   });
 

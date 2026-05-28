@@ -189,9 +189,11 @@ model Order {
   paymentStatus  String   @default("pending")
   paymentRef     String?
   totalAmount    Float
-  discountAmount Float    @default(0)
-  couponId       String?
-  steamUsername  String?
+  discountAmount    Float    @default(0)
+  couponId          String?
+  steamUsername     String?
+  paymentUrl        String?
+  guestAutoCreated  Boolean  @default(false)
   notesInternal  String?
   agentId        String?
   createdAt      DateTime @default(now())
