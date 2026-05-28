@@ -67,7 +67,16 @@ type SearchResult = {
   id: string; name: string; slug: string; platform: string;
   price: number; discountPrice: number | null; imageUrl: string | null;
   _count: { keys: number };
+  variants?: { id: string; name: string; price: number; discountPrice: number | null }[];
 };
+
+function getSearchPrice(r: SearchResult) {
+  if (r.variants && r.variants.length > 0) {
+    const v = r.variants[0];
+    return v.discountPrice ?? v.price;
+  }
+  return r.discountPrice ?? r.price;
+}
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -103,6 +112,7 @@ export function Header({ siteName = "Loot", logoUrl = "", platforms = [] }: { si
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const dropdownTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const searchRef = useRef<HTMLDivElement>(null);
+  const mobileSearchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   function openDropdown(label: string) {
@@ -126,13 +136,18 @@ export function Header({ siteName = "Loot", logoUrl = "", platforms = [] }: { si
   }, [debouncedQuery]);
 
   useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
-        setSearchOpen(false);
-      }
+    function handleClick(e: MouseEvent | TouchEvent) {
+      const target = e.target as Node;
+      const outsideDesktop = searchRef.current && !searchRef.current.contains(target);
+      const outsideMobile = mobileSearchRef.current && !mobileSearchRef.current.contains(target);
+      if (outsideDesktop && outsideMobile) setSearchOpen(false);
     }
     document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("touchstart", handleClick as EventListener);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("touchstart", handleClick as EventListener);
+    };
   }, []);
 
   function clearSearch() { setQuery(""); setResults([]); setSearchOpen(false); }
@@ -176,19 +191,13 @@ export function Header({ siteName = "Loot", logoUrl = "", platforms = [] }: { si
               )}
             </div>
 
-            {/* Dropdown — closes when mouse leaves the dropdown itself */}
             {searchOpen && results.length > 0 && (
-              <div
-                onMouseLeave={() => setSearchOpen(false)}
-                className="absolute top-full mt-2 left-0 right-0 rounded-xl border border-gray-700 bg-gray-900 shadow-2xl shadow-black/60 overflow-hidden z-50"
-              >
+              <div className="absolute top-full mt-2 left-0 right-0 rounded-xl border border-gray-700 bg-gray-900 shadow-2xl shadow-black/60 overflow-hidden z-50">
                 <div className="px-3 py-2 border-b border-gray-800 bg-gray-900">
                   <p className="text-xs text-gray-500">{results.length} résultat{results.length > 1 ? "s" : ""} pour «&nbsp;{query}&nbsp;»</p>
                 </div>
                 <ul className="bg-gray-900">
                   {results.map((r) => {
-                    const price = r.discountPrice ?? r.price;
-                    const hasDiscount = r.discountPrice && r.discountPrice < r.price;
                     return (
                       <li key={r.id}>
                         <Link
@@ -207,8 +216,7 @@ export function Header({ siteName = "Loot", logoUrl = "", platforms = [] }: { si
                             <PlatformBadge platform={r.platform} />
                           </div>
                           <div className="text-right shrink-0">
-                            <p className="text-sm font-bold text-white">{formatPrice(price)}</p>
-                            {hasDiscount && <p className="text-xs text-gray-500 line-through">{formatPrice(r.price)}</p>}
+                            <p className="text-sm font-bold text-white">{formatPrice(getSearchPrice(r))}</p>
                           </div>
                         </Link>
                       </li>
@@ -294,7 +302,7 @@ export function Header({ siteName = "Loot", logoUrl = "", platforms = [] }: { si
 
         {/* Mobile search bar */}
         {mobileSearch && (
-          <div className="md:hidden pb-3">
+          <div className="md:hidden pb-3" ref={mobileSearchRef}>
             <div className="relative">
               <div className="flex items-center gap-2 h-10 px-4 rounded-xl border border-purple-500/60 bg-gray-800">
                 <Search className="h-4 w-4 text-gray-500 shrink-0" />
@@ -310,10 +318,7 @@ export function Header({ siteName = "Loot", logoUrl = "", platforms = [] }: { si
                 {query && <button onClick={clearSearch}><X className="h-3.5 w-3.5 text-gray-500" /></button>}
               </div>
               {searchOpen && results.length > 0 && (
-                <div
-                  onMouseLeave={() => setSearchOpen(false)}
-                  className="absolute top-full mt-2 left-0 right-0 rounded-xl border border-gray-700 bg-gray-900 shadow-2xl z-50"
-                >
+                <div className="absolute top-full mt-2 left-0 right-0 rounded-xl border border-gray-700 bg-gray-900 shadow-2xl z-50">
                   <ul>
                     {results.slice(0, 5).map((r) => (
                       <li key={r.id}>
@@ -328,7 +333,7 @@ export function Header({ siteName = "Loot", logoUrl = "", platforms = [] }: { si
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-white truncate">{r.name}</p>
                           </div>
-                          <p className="text-sm font-bold text-white shrink-0">{formatPrice(r.discountPrice ?? r.price)}</p>
+                          <p className="text-sm font-bold text-white shrink-0">{formatPrice(getSearchPrice(r))}</p>
                         </Link>
                       </li>
                     ))}

@@ -26,6 +26,12 @@ export async function GET(req: NextRequest) {
       category: true,
       manualStock: true,
       _count: { select: { keys: { where: { status: "available" } } } },
+      variants: {
+        where: { isActive: true },
+        orderBy: { displayOrder: "asc" },
+        select: { id: true, name: true, price: true, discountPrice: true },
+        take: 1,
+      },
     },
     take: 8,
     orderBy: { soldCount: "desc" },
