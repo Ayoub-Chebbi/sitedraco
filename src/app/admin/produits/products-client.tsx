@@ -119,7 +119,8 @@ export function ProductsClient({ products }: { products: Product[] }) {
 
       {/* Table */}
       <div className="rounded-xl border border-gray-800 overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-175">
           <thead>
             <tr className="border-b border-gray-800 bg-gray-900">
               <th className="text-left px-4 py-3 text-gray-500 font-medium">Produit</th>
@@ -216,6 +217,7 @@ export function ProductsClient({ products }: { products: Product[] }) {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </>
   );

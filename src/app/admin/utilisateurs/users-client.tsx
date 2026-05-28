@@ -99,11 +99,11 @@ export function UsersClient({ initialUsers }: { initialUsers: UserRow[] }) {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-start justify-between mb-6 gap-3 flex-wrap">
         <div className="flex items-center gap-3">
-          <Users className="h-6 w-6 text-purple-400" />
+          <Users className="h-6 w-6 text-purple-400 shrink-0" />
           <div>
-            <h1 className="text-2xl font-bold text-white">Clients</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-white">Clients</h1>
             <p className="text-sm text-gray-500">{users.length} utilisateur{users.length !== 1 ? "s" : ""}</p>
           </div>
           {recentOrderCount > 0 && (

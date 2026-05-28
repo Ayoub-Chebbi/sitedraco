@@ -135,8 +135,8 @@ export function OrderTrackingClient({ order }: { order: OrderData }) {
                   <Key className="h-3 w-3" />
                   Votre clé d&apos;activation
                 </p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 font-mono text-sm text-white bg-gray-900 rounded px-3 py-2 select-all border border-gray-700">
+                <div className="flex items-center gap-2 min-w-0">
+                  <code className="flex-1 min-w-0 font-mono text-sm text-white bg-gray-900 rounded px-3 py-2 select-all border border-gray-700 overflow-x-auto block">
                     {item.key.value}
                   </code>
                   <Button

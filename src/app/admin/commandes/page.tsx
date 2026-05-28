@@ -45,7 +45,7 @@ export default async function AdminCommandesPage({
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-gray-900 border border-gray-800 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 mb-6 bg-gray-900 border border-gray-800 rounded-xl p-1 overflow-x-auto scrollbar-none">
         {TABS.map((tab) => (
           <Link key={tab.value} href={`/admin/commandes${tab.value !== "all" ? `?status=${tab.value}` : ""}`}>
             <button className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${

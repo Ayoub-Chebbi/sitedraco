@@ -178,7 +178,7 @@ export default function CheckoutPage() {
                 </button>
               </div>
             ) : (
-              <div className="flex gap-2">
+              <div className="flex flex-col xs:flex-row gap-2">
                 <Input
                   placeholder="Ex : PROMO20"
                   value={couponInput}

@@ -28,7 +28,7 @@ export function AdminMetricsClient({ topProducts, recentOrders, lowStockProducts
         </div>
         <div className="rounded-xl border border-gray-800 bg-gray-900 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-120">
               <thead>
                 <tr className="border-b border-gray-800 bg-gray-900/50">
                   <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">N° commande</th>

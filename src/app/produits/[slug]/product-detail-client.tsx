@@ -264,8 +264,8 @@ export function ProductDetailClient({ product, upsells }: Props) {
           <div className="grid grid-cols-3 gap-2">
             {[
               { icon: "⚡", label: "15–60 min" },
-              { icon: "🔒", label: "Paiement sécurisé" },
-              { icon: "✅", label: productType === "account" ? "Compte garanti" : "Clé garantie" },
+              { icon: "🔒", label: "Sécurisé" },
+              { icon: "✅", label: productType === "account" ? "Garanti" : "Garanti" },
             ].map((b) => (
               <div key={b.label} className="flex flex-col items-center gap-1 p-2 sm:p-3 rounded-lg bg-gray-900 border border-gray-800 text-center">
                 <span className="text-base sm:text-lg">{b.icon}</span>

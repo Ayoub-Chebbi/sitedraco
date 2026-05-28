@@ -118,8 +118,8 @@ export function KeysClient({ keys }: { keys: KeyEntry[] }) {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-2">
-                <div className="flex-1 font-mono text-sm bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-300 select-all">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="flex-1 min-w-0 font-mono text-sm bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-300 select-all overflow-x-auto">
                   {isVisible ? entry.keyValue : "••••-••••-••••-••••"}
                 </div>
                 <Button

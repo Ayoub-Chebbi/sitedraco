@@ -158,13 +158,13 @@ export default async function HomePage() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {SERVICES.map(({ icon: Icon, color, title, desc }) => (
-              <div key={title} className={`flex items-center gap-3 p-3 rounded-xl border ${color}`}>
-                <div className={`p-2 rounded-lg ${color} shrink-0`}>
-                  <Icon className="h-4 w-4" />
+              <div key={title} className={`flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-xl border ${color}`}>
+                <div className={`p-1.5 sm:p-2 rounded-lg ${color} shrink-0`}>
+                  <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-white">{title}</p>
-                  <p className="text-xs text-gray-500 truncate">{desc}</p>
+                  <p className="text-xs sm:text-sm font-semibold text-white leading-tight">{title}</p>
+                  <p className="text-[10px] sm:text-xs text-gray-500 truncate hidden sm:block">{desc}</p>
                 </div>
               </div>
             ))}
