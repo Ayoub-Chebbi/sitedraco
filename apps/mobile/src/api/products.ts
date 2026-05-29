@@ -33,3 +33,11 @@ export async function getHomeData(): Promise<{
 }> {
   return api.get("/api/home");
 }
+
+export async function getPlatforms(): Promise<{ value: string; label: string; emoji: string }[]> {
+  return api.get("/api/platforms");
+}
+
+export async function getSiteSettings(): Promise<{ siteName: string; logoUrl: string | null }> {
+  return api.get("/api/settings");
+}

@@ -12,8 +12,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { getHomeData } from "@/api/products";
+import { getHomeData, getSiteSettings } from "@/api/products";
 import { HeroCarousel } from "@/components/home/HeroCarousel";
+import { Image } from "expo-image";
 import { CategoryStrip } from "@/components/home/CategoryStrip";
 import { SectionHeader } from "@/components/home/SectionHeader";
 import { ProductCard } from "@/components/product/ProductCard";
@@ -34,6 +35,15 @@ export default function HomeScreen() {
     staleTime: 60_000,
   });
 
+  const { data: settings } = useQuery({
+    queryKey: ["settings"],
+    queryFn: getSiteSettings,
+    staleTime: 10 * 60_000,
+  });
+
+  const siteName = settings?.siteName ?? "LootStore";
+  const logoUrl = settings?.logoUrl ?? null;
+
   return (
     <ScrollView
       style={styles.container}
@@ -44,9 +54,13 @@ export default function HomeScreen() {
       <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
         <View style={styles.logoRow}>
           <View style={styles.logoBox}>
-            <Text style={styles.logoLetter}>L</Text>
+            {logoUrl ? (
+              <Image source={logoUrl} style={{ width: 32, height: 32 }} contentFit="contain" />
+            ) : (
+              <Text style={styles.logoLetter}>{siteName.charAt(0)}</Text>
+            )}
           </View>
-          <Text style={styles.logoText}>LOOTSTORE</Text>
+          <Text style={styles.logoText}>{siteName.toUpperCase()}</Text>
         </View>
         <TouchableOpacity
           onPress={() => router.push("/ticket/new")}

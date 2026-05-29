@@ -34,6 +34,7 @@ export interface Product {
   reviewCount: number;
   urgencyHours: number;
   variants: ProductVariant[];
+  availableKeys: number;
   _count: { keys: number };
 }
 

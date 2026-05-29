@@ -24,9 +24,18 @@ export function ProductCard({ product }: { product: Product }) {
   const router = useRouter();
   const add = useCartStore((s) => s.add);
   const hasBoth = product.productType === "both";
-  const hasDiscount = product.discountPrice != null && product.discountPrice < product.price;
-  const displayPrice = product.discountPrice ?? product.price;
-  const stock = product._count.keys;
+  const hasVariants = (product.variants?.length ?? 0) > 0;
+  // Use pre-computed availableKeys (includes manualStock) from API
+  const stock = product.availableKeys ?? product._count.keys;
+
+  // Price: for variant products show "from" minimum price
+  const minVariantPrice = hasVariants && product.variants?.length
+    ? Math.min(...product.variants.map((v) => v.discountPrice ?? v.price))
+    : null;
+  const hasDiscount = minVariantPrice !== null
+    ? false
+    : product.discountPrice != null && product.discountPrice < product.price;
+  const displayPrice = minVariantPrice ?? product.discountPrice ?? product.price;
   const discountPct = hasDiscount
     ? Math.round(((product.price - product.discountPrice!) / product.price) * 100)
     : 0;
@@ -125,6 +134,7 @@ export function ProductCard({ product }: { product: Product }) {
 
         {/* Price */}
         <View style={styles.priceRow}>
+          {hasVariants && <Text style={styles.fromText}>À partir de </Text>}
           <Text style={styles.price}>{formatPrice(displayPrice)}</Text>
           {hasDiscount && (
             <Text style={styles.oldPrice}>{formatPrice(product.price)}</Text>
@@ -225,7 +235,8 @@ const styles = StyleSheet.create({
   variantPillKey: { color: "#c4b5fd", fontSize: 9, fontWeight: "700" },
   variantPillAcc: { color: "#93c5fd", fontSize: 9, fontWeight: "700" },
   variantPlus: { color: "#4b5563", fontSize: 10 },
-  priceRow: { flexDirection: "row", alignItems: "baseline", gap: 6 },
+  priceRow: { flexDirection: "row", alignItems: "baseline", gap: 4, flexWrap: "wrap" },
+  fromText: { color: "#6b7280", fontSize: 10 },
   price: { color: "#a78bfa", fontSize: 15, fontWeight: "800" },
   oldPrice: { color: "#4b5563", fontSize: 11, textDecorationLine: "line-through" },
   addBtn: {

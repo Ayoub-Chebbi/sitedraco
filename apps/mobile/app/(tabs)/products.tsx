@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from "react";
+"use client";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -10,115 +11,148 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import { useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { getProducts } from "@/api/products";
+import { getProducts, getPlatforms } from "@/api/products";
 import { ProductCard } from "@/components/product/ProductCard";
 import { EmptyState } from "@/components/common/EmptyState";
 
-const PLATFORMS = ["Tous", "PlayStation", "Xbox", "PC", "Nintendo", "Mobile", "Gift Cards"];
-
 const SORTS = [
   { label: "Nouveautés", value: "newest" },
+  { label: "Populaires", value: "popular" },
   { label: "Prix ↑", value: "price_asc" },
   { label: "Prix ↓", value: "price_desc" },
-  { label: "Populaires", value: "popular" },
 ];
+
+const ALL_PLATFORM = { value: "", label: "Tous", emoji: "🎮" };
+
+function useDebounce(value: string, delay: number) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
 
 export default function ProductsScreen() {
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ platform?: string }>();
-  const [platform, setPlatform] = useState(params.platform ?? "Tous");
+  const [platformValue, setPlatformValue] = useState("");
   const [sort, setSort] = useState("newest");
   const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(searchInput, 280);
+  const inputRef = useRef<TextInput>(null);
+
+  // Fetch dynamic platforms from API
+  const { data: platformsData } = useQuery({
+    queryKey: ["platforms"],
+    queryFn: getPlatforms,
+    staleTime: 5 * 60_000,
+  });
+
+  const platforms = [ALL_PLATFORM, ...(platformsData ?? [])];
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ["products", platform, sort, search],
+    queryKey: ["products", platformValue, sort, debouncedSearch],
     queryFn: () =>
       getProducts({
-        platform: platform === "Tous" ? undefined : platform,
+        platform: platformValue || undefined,
         sort,
-        search: search || undefined,
+        search: debouncedSearch || undefined,
         limit: 40,
       }),
     staleTime: 30_000,
   });
 
-  const handleSearch = useCallback(() => setSearch(searchInput), [searchInput]);
+  const products = data?.products ?? [];
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <Text style={styles.headerTitle}>Boutique</Text>
-
-        {/* Search */}
-        <View style={styles.searchRow}>
-          <View style={styles.searchWrap}>
-            <Ionicons name="search-outline" size={16} color="#6b7280" style={{ marginLeft: 12 }} />
-            <TextInput
-              value={searchInput}
-              onChangeText={setSearchInput}
-              onSubmitEditing={handleSearch}
-              placeholder="Rechercher un jeu…"
-              placeholderTextColor="#4b5563"
-              style={styles.searchInput}
-              returnKeyType="search"
-            />
-            {searchInput.length > 0 && (
-              <TouchableOpacity onPress={() => { setSearchInput(""); setSearch(""); }} style={{ marginRight: 10 }}>
-                <Ionicons name="close-circle" size={16} color="#6b7280" />
-              </TouchableOpacity>
-            )}
-          </View>
-          <TouchableOpacity onPress={handleSearch} style={styles.searchBtn}>
-            <Ionicons name="search" size={18} color="#fff" />
-          </TouchableOpacity>
+        <View style={styles.titleRow}>
+          <Text style={styles.headerTitle}>Boutique</Text>
+          {data && (
+            <Text style={styles.count}>{data.total} produit{data.total !== 1 ? "s" : ""}</Text>
+          )}
         </View>
 
-        {/* Platforms */}
-        <FlatList
-          data={PLATFORMS}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={(p) => p}
-          contentContainerStyle={{ gap: 8, paddingHorizontal: 2 }}
-          renderItem={({ item }) => (
+        {/* Search bar — real-time, same logic as web */}
+        <View style={styles.searchWrap}>
+          <Ionicons
+            name="search-outline"
+            size={16}
+            color={isFetching ? "#a78bfa" : "#6b7280"}
+            style={{ marginLeft: 12 }}
+          />
+          <TextInput
+            ref={inputRef}
+            value={searchInput}
+            onChangeText={setSearchInput}
+            placeholder="Chercher un jeu, une carte, une plateforme…"
+            placeholderTextColor="#4b5563"
+            style={styles.searchInput}
+            returnKeyType="search"
+            autoCorrect={false}
+            autoCapitalize="none"
+          />
+          {searchInput.length > 0 && (
             <TouchableOpacity
-              onPress={() => setPlatform(item)}
-              style={[styles.chip, platform === item && styles.chipActive]}
-              activeOpacity={0.8}
+              onPress={() => { setSearchInput(""); inputRef.current?.blur(); }}
+              style={{ marginRight: 12 }}
             >
-              <Text style={[styles.chipText, platform === item && styles.chipTextActive]}>
-                {item}
-              </Text>
+              <Ionicons name="close-circle" size={16} color="#6b7280" />
             </TouchableOpacity>
           )}
+        </View>
+
+        {/* Platforms — fetched from API, use `value` not display name */}
+        <FlatList
+          data={platforms}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(p) => p.value}
+          contentContainerStyle={{ gap: 8, paddingHorizontal: 2 }}
+          renderItem={({ item }) => {
+            const active = platformValue === item.value;
+            return (
+              <TouchableOpacity
+                onPress={() => setPlatformValue(item.value)}
+                style={[styles.chip, active && styles.chipActive]}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                  {item.emoji ? `${item.emoji} ` : ""}{item.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          }}
         />
 
-        {/* Sorts */}
+        {/* Sort */}
         <FlatList
           data={SORTS}
           horizontal
           showsHorizontalScrollIndicator={false}
           keyExtractor={(s) => s.value}
           contentContainerStyle={{ gap: 8, paddingHorizontal: 2 }}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              onPress={() => setSort(item.value)}
-              style={[styles.sortChip, sort === item.value && styles.sortChipActive]}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.sortText, sort === item.value && styles.sortTextActive]}>
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          )}
+          renderItem={({ item }) => {
+            const active = sort === item.value;
+            return (
+              <TouchableOpacity
+                onPress={() => setSort(item.value)}
+                style={[styles.sortChip, active && styles.sortChipActive]}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.sortText, active && styles.sortTextActive]}>
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          }}
         />
       </View>
 
-      {/* Grid */}
+      {/* Product grid */}
       {isLoading ? (
         <View style={styles.loadingWrap}>
           <ActivityIndicator color="#7c3aed" size="large" />
@@ -126,7 +160,7 @@ export default function ProductsScreen() {
         </View>
       ) : (
         <FlatList
-          data={data?.products ?? []}
+          data={products}
           numColumns={2}
           keyExtractor={(p) => p.id}
           contentContainerStyle={[styles.grid, { paddingBottom: insets.bottom + 90 }]}
@@ -161,10 +195,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "#2d2d4e",
   },
+  titleRow: { flexDirection: "row", alignItems: "baseline", gap: 10 },
   headerTitle: { color: "#fff", fontSize: 26, fontWeight: "800" },
-  searchRow: { flexDirection: "row", gap: 10 },
+  count: { color: "#6b7280", fontSize: 13 },
   searchWrap: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#12121f",
@@ -179,14 +213,6 @@ const styles = StyleSheet.create({
     color: "#f9fafb",
     fontSize: 14,
   },
-  searchBtn: {
-    backgroundColor: "#7c3aed",
-    borderRadius: 12,
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   chip: {
     paddingHorizontal: 14,
     paddingVertical: 7,
@@ -195,22 +221,11 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "#2d2d4e",
   },
-  chipActive: {
-    backgroundColor: "#4c1d95",
-    borderColor: "#7c3aed",
-  },
+  chipActive: { backgroundColor: "#4c1d95", borderColor: "#7c3aed" },
   chipText: { color: "#9ca3af", fontSize: 13, fontWeight: "600" },
   chipTextActive: { color: "#fff" },
-  sortChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  sortChipActive: {
-    backgroundColor: "#1a0533",
-    borderWidth: 1,
-    borderColor: "#7c3aed",
-  },
+  sortChip: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8 },
+  sortChipActive: { backgroundColor: "#1a0533", borderWidth: 1, borderColor: "#7c3aed" },
   sortText: { color: "#6b7280", fontSize: 12, fontWeight: "500" },
   sortTextActive: { color: "#a78bfa", fontWeight: "700" },
   loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
