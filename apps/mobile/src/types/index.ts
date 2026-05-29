@@ -3,6 +3,15 @@ export interface User {
   email: string;
   name: string | null;
   role: "customer" | "admin" | "support";
+  avatarUrl?: string | null;
+}
+
+export interface ProductVariant {
+  id: string;
+  name: string;
+  price: number;
+  discountPrice: number | null;
+  displayOrder: number;
 }
 
 export interface Product {
@@ -13,6 +22,7 @@ export interface Product {
   platform: string;
   category: string;
   productType: "key" | "account" | "both";
+  requiresSteamUsername: boolean;
   price: number;
   discountPrice: number | null;
   accountPrice: number | null;
@@ -23,6 +33,7 @@ export interface Product {
   rating: number;
   reviewCount: number;
   urgencyHours: number;
+  variants: ProductVariant[];
   _count: { keys: number };
 }
 
@@ -37,10 +48,13 @@ export interface OrderItem {
 export interface Order {
   id: string;
   orderNumber: string;
-  status: "pending" | "processing" | "delivered" | "cancelled" | "refunded";
+  status: "pending" | "processing" | "delivered" | "failed" | "refund_initiated" | "refunded";
   paymentMethod: string | null;
-  paymentStatus: "pending" | "paid" | "failed";
+  paymentStatus: "awaiting_payment" | "paid" | "failed";
   totalAmount: number;
+  discountAmount: number;
+  steamUsername: string | null;
+  paymentUrl: string | null;
   createdAt: string;
   items: OrderItem[];
 }
@@ -65,6 +79,9 @@ export interface TicketMessage {
 export interface CartItem {
   product: Product;
   variant?: "key" | "account";
+  variantId?: string;
+  variantName?: string;
+  variantPrice?: number;
   quantity: number;
 }
 
@@ -77,4 +94,12 @@ export interface HeroSlide {
   discountPrice: number | null;
   href: string;
   gradient: string;
+}
+
+export interface CouponResult {
+  id: string;
+  code: string;
+  type: "percentage" | "fixed";
+  value: number;
+  discount: number;
 }

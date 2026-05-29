@@ -1,5 +1,6 @@
 import React from "react";
-import { View, Text, TouchableOpacity, ScrollView, Alert, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, Alert, StyleSheet, Linking } from "react-native";
+import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -106,11 +107,19 @@ export default function ProfileScreen() {
         style={[styles.profileHeader, { paddingTop: insets.top + 16 }]}
       >
         <View style={styles.avatarRow}>
-          <LinearGradient colors={["#7c3aed", "#db2777"]} style={styles.avatar}>
-            <Text style={styles.avatarLetter}>
-              {(user.name ?? user.email)[0].toUpperCase()}
-            </Text>
-          </LinearGradient>
+          {user.avatarUrl ? (
+            <Image
+              source={user.avatarUrl}
+              style={[styles.avatar, { borderWidth: 2, borderColor: "#7c3aed" }]}
+              contentFit="cover"
+            />
+          ) : (
+            <LinearGradient colors={["#7c3aed", "#db2777"]} style={styles.avatar}>
+              <Text style={styles.avatarLetter}>
+                {(user.name ?? user.email)[0].toUpperCase()}
+              </Text>
+            </LinearGradient>
+          )}
           <View style={{ flex: 1 }}>
             <Text style={styles.profileName}>{user.name ?? "Utilisateur"}</Text>
             <Text style={styles.profileEmail}>{user.email}</Text>
@@ -145,6 +154,26 @@ export default function ProfileScreen() {
           </View>
         </View>
       </LinearGradient>
+
+      {/* Pending payment banners */}
+      {orders?.filter((o) => {
+        const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+        return o.paymentStatus === "awaiting_payment" && o.paymentUrl && o.createdAt >= twoHoursAgo;
+      }).map((o) => (
+        <TouchableOpacity
+          key={o.id}
+          style={{ marginHorizontal: 16, marginTop: 12, backgroundColor: "#422006", borderWidth: 1, borderColor: "#d97706", borderRadius: 14, padding: 14, flexDirection: "row", alignItems: "center", gap: 12 }}
+          onPress={() => o.paymentUrl && Linking.openURL(o.paymentUrl)}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="warning" size={20} color="#f59e0b" />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: "#fcd34d", fontWeight: "700", fontSize: 13 }}>Paiement en attente</Text>
+            <Text style={{ color: "#d97706", fontSize: 12, marginTop: 2 }}>#{o.orderNumber} · {o.totalAmount.toFixed(2)} TND · Appuyez pour compléter</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color="#d97706" />
+        </TouchableOpacity>
+      ))}
 
       {/* Recent orders */}
       {(orders?.length ?? 0) > 0 && (
