@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { verifyFlouciPayment } from "@/lib/flouci";
 import { notifyAdminsNewOrder } from "@/lib/push-notifications";
@@ -68,7 +69,7 @@ export async function POST(req: NextRequest) {
   // Send welcome email to auto-created guest accounts only after payment confirmed
   if (order.guestAutoCreated && order.user?.email) {
     const base = process.env.SITE_URL ?? process.env.NEXTAUTH_URL ?? "https://loot.tn";
-    const token = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    const token = randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000);
 
     try {

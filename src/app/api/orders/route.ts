@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
@@ -18,9 +19,14 @@ const schema = z.object({
   })).min(1),
 });
 
-function generatePassword(len = 10) {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#!";
-  return Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+function generatePassword(len = 16) {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+  let password = "";
+  const bytes = randomBytes(len);
+  for (let i = 0; i < len; i++) {
+    password += chars[bytes[i] % chars.length];
+  }
+  return password;
 }
 
 export async function POST(req: NextRequest) {

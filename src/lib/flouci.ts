@@ -26,16 +26,14 @@ export async function initiateFlouciPayment({
     developer_tracking_id: crypto.randomUUID(), // must be UUID format
   };
 
-  console.log("[flouci] sending payload:", JSON.stringify({ ...payload, app_token: "***", app_secret: "***" }));
-
   const res = await fetch(`${FLOUCI_BASE}/generate_payment`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(10000), // 10 second timeout
   });
 
   const data = await res.json().catch(() => ({}));
-  console.log("[flouci] raw response:", JSON.stringify(data));
 
   if (!res.ok) {
     throw new Error(`Flouci HTTP ${res.status}: ${JSON.stringify(data)}`);

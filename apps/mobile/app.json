@@ -56,7 +56,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "apiUrl": "http://192.168.1.40:3000",
+      "apiUrl": "https://loot.tn",
       "router": {},
       "eas": {
         "projectId": "28155ffd-1374-4810-bc96-95f912acfd30"

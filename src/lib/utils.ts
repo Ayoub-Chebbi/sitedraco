@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { randomBytes } from "crypto";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -16,7 +17,7 @@ export function formatPrice(amount: number): string {
 export function generateOrderNumber(): string {
   const date = new Date();
   const year = date.getFullYear();
-  const random = Math.floor(Math.random() * 100000).toString().padStart(5, "0");
+  const random = randomBytes(4).toString('hex').toUpperCase();
   return `CMD-${year}-${random}`;
 }
 

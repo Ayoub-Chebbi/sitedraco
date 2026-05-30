@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 import { auth } from "@/lib/auth";
 import { put } from "@vercel/blob";
 
-const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
+const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 const ALLOWED_FOLDERS = ["products", "hero", "logo", "logos", "categories"];
 const MAX_BYTES = 5 * 1024 * 1024;
 
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
   }
   if (!ALLOWED_TYPES.includes(file.type)) {
     return NextResponse.json(
-      { error: "Type de fichier non autorisé (JPG, PNG, WebP, GIF uniquement)" },
+      { error: "Type de fichier non autorisé (JPG, PNG, WebP uniquement)" },
       { status: 415 }
     );
   }
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
   }
 
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-  const filename = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const filename = `${folder}/${randomUUID()}.${ext}`;
 
   try {
     const blob = await put(filename, file, {
