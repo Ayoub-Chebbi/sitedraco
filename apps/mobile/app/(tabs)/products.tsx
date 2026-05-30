@@ -44,6 +44,13 @@ export default function ProductsScreen() {
   const debouncedSearch = useDebounce(searchInput, 280);
   const inputRef = useRef<TextInput>(null);
 
+  // Update platform when query param changes
+  useEffect(() => {
+    if (initialPlatform !== undefined) {
+      setPlatformValue(initialPlatform);
+    }
+  }, [initialPlatform]);
+
   // Fetch dynamic platforms from API
   const { data: platformsData } = useQuery({
     queryKey: ["platforms"],
