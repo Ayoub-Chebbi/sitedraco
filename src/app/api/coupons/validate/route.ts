@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { rateLimit } from "@/lib/rate-limit";
 
 const schema = z.object({
   code: z.string().min(1).max(50),
@@ -8,6 +9,13 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  // Rate limit: max 20 coupon validations per IP per hour (prevent brute-force)
+  const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
+  const { allowed, retryAfterMs } = rateLimit(`coupon:${ip}`, { max: 20, windowMs: 60 * 60 * 1000 });
+  if (!allowed) {
+    return NextResponse.json({ error: "Trop de tentatives. Réessayez plus tard." }, { status: 429, headers: { "Retry-After": Math.ceil(retryAfterMs / 1000).toString() } });
+  }
+
   let body: unknown;
   try { body = await req.json(); } catch {
     return NextResponse.json({ error: "Requête invalide." }, { status: 400 });
