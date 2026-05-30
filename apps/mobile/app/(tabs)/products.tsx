@@ -10,6 +10,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { getProducts, getPlatforms } from "@/api/products";
@@ -36,7 +37,8 @@ function useDebounce(value: string, delay: number) {
 
 export default function ProductsScreen() {
   const insets = useSafeAreaInsets();
-  const [platformValue, setPlatformValue] = useState("");
+  const { platform: initialPlatform } = useLocalSearchParams<{ platform?: string }>();
+  const [platformValue, setPlatformValue] = useState(initialPlatform ?? "");
   const [sort, setSort] = useState("newest");
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebounce(searchInput, 280);
