@@ -3,7 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
 
-const schema = z.object({ name: z.string().max(100).optional() });
+const schema = z.object({
+  name: z.string().min(1).max(100).refine(s => s.trim().length > 0, "Name cannot be only whitespace").optional()
+});
 
 export async function PATCH(req: NextRequest) {
   const session = await auth();
@@ -15,7 +17,7 @@ export async function PATCH(req: NextRequest) {
 
   await prisma.user.update({
     where: { id: session.user.id },
-    data: { name: parsed.data.name },
+    data: { name: parsed.data.name?.trim() },
   });
 
   return NextResponse.json({ success: true });

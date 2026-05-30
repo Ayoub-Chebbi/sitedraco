@@ -146,11 +146,12 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const base = process.env.SITE_URL ?? process.env.NEXTAUTH_URL ?? "https://loot.tn";
     const { paymentUrl, paymentId } = await initiateFlouciPayment({
       amount: totalAmount,
       orderId: order.id,
-      successLink: `https://loot.tn?payment=success`,
-      failLink: `https://loot.tn?payment=failed`,
+      successLink: `${base}?payment=success`,
+      failLink: `${base}?payment=failed`,
     });
 
     await prisma.order.update({

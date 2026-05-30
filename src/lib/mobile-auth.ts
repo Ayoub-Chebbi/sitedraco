@@ -2,9 +2,10 @@ import jwt from "jsonwebtoken";
 import { NextRequest } from "next/server";
 import { prisma } from "./prisma";
 
-const raw = process.env.MOBILE_JWT_SECRET ?? process.env.NEXTAUTH_SECRET;
-if (!raw) throw new Error("MOBILE_JWT_SECRET or NEXTAUTH_SECRET must be set");
-const JWT_SECRET: string = raw;
+if (!process.env.MOBILE_JWT_SECRET) {
+  throw new Error("MOBILE_JWT_SECRET must be set independently (not shared with NEXTAUTH_SECRET)");
+}
+const JWT_SECRET: string = process.env.MOBILE_JWT_SECRET;
 const EXPIRY = "30d";
 
 export interface MobileJwtPayload {
