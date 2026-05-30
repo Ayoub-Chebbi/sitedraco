@@ -5,6 +5,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as WebBrowser from "expo-web-browser";
 import { Ionicons } from "@expo/vector-icons";
 import { useCartStore } from "@/store/cart";
 import { useAuthStore } from "@/store/auth";
@@ -59,32 +60,32 @@ export default function CheckoutScreen() {
   const discount = appliedCoupon?.discount ?? 0;
   const finalTotal = Math.max(0, subtotal - discount);
 
-  const pendingRef = useRef<{ orderId: string; email: string } | null>(null);
+  const pendingRef = useRef<{ orderId: string; email: string; paymentId: string } | null>(null);
+  const pollRef = useRef<NodeJS.Timeout | null>(null);
+
+  async function pollPaymentStatus() {
+    if (!pendingRef.current) return;
+    const { orderId, email: pendingEmail, paymentId } = pendingRef.current;
+
+    try {
+      const { orderNumber } = await api.post<{ orderNumber: string }>(
+        "/api/payment/flouci/verify",
+        { orderId, paymentId }
+      );
+      pendingRef.current = null;
+      if (pollRef.current) clearInterval(pollRef.current);
+      setLoading(false);
+      clear();
+      router.replace(`/order/success?orderNumber=${orderNumber}&email=${encodeURIComponent(pendingEmail)}`);
+    } catch {
+      // Still pending, keep polling
+    }
+  }
 
   useEffect(() => {
-    const sub = Linking.addEventListener("url", async ({ url }) => {
-      if (!pendingRef.current) return;
-      if (!url.includes("checkout/success")) return;
-
-      const { orderId, email: pendingEmail } = pendingRef.current;
-      pendingRef.current = null;
-
-      const params = parseQuery(url);
-      const paymentId = params["payment_id"] ?? "";
-
-      try {
-        const { orderNumber } = await api.post<{ orderNumber: string }>(
-          "/api/payment/flouci/verify",
-          { orderId, paymentId }
-        );
-        clear();
-        router.replace(`/order/success?orderNumber=${orderNumber}&email=${encodeURIComponent(pendingEmail)}`);
-      } catch (err: any) {
-        setLoading(false);
-        Alert.alert("Paiement non confirmé", err.message ?? "Contactez le support si vous avez été débité.");
-      }
-    });
-    return () => sub.remove();
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
   }, []);
 
   async function applyCode() {
@@ -124,7 +125,7 @@ export default function CheckoutScreen() {
 
     setLoading(true);
     try {
-      const { paymentUrl, orderId } = await api.post<{ paymentUrl: string; orderId: string }>(
+      const { paymentUrl, orderId, paymentId } = await api.post<{ paymentUrl: string; orderId: string; paymentId: string }>(
         "/api/mobile/payment/flouci/initiate",
         {
           email,
@@ -138,8 +139,23 @@ export default function CheckoutScreen() {
         }
       );
 
-      pendingRef.current = { orderId, email };
-      await Linking.openURL(paymentUrl);
+      pendingRef.current = { orderId, email, paymentId };
+
+      // Open payment in web browser
+      await WebBrowser.openBrowserAsync(paymentUrl);
+
+      // Start polling for payment status (every 3 seconds, max 5 minutes)
+      let pollCount = 0;
+      pollRef.current = setInterval(() => {
+        pollCount++;
+        if (pollCount > 100) {
+          if (pollRef.current) clearInterval(pollRef.current);
+          setLoading(false);
+          Alert.alert("Vérification", "Vérifiez votre email pour le statut du paiement.");
+          return;
+        }
+        pollPaymentStatus();
+      }, 3000);
     } catch (e: any) {
       setLoading(false);
       Alert.alert("Erreur", e.message ?? "Une erreur s'est produite. Réessayez.");

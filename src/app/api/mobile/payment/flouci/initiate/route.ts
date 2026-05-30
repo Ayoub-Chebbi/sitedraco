@@ -134,8 +134,8 @@ export async function POST(req: NextRequest) {
     const { paymentUrl, paymentId } = await initiateFlouciPayment({
       amount: totalAmount,
       orderId: order.id,
-      successLink: `https://loot.tn/api/payment/flouci/callback?status=success&orderId=${order.id}`,
-      failLink: `https://loot.tn/api/payment/flouci/callback?status=failed&orderId=${order.id}`,
+      successLink: `https://loot.tn?payment=success`,
+      failLink: `https://loot.tn?payment=failed`,
     });
 
     await prisma.order.update({
