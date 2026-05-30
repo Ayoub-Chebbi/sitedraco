@@ -100,7 +100,9 @@ export function ProductCard({ product }: { product: Product }) {
 
         {stock === 0 && (
           <View style={styles.outOfStock}>
-            <Text style={styles.outOfStockText}>Rupture</Text>
+            <Text style={styles.outOfStockText}>
+              {`avail=${product.availableKeys} cnt=${product._count?.keys} man=${(product as any).manualStock}`}
+            </Text>
           </View>
         )}
 
