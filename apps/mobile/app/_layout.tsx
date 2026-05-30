@@ -4,7 +4,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Platform, View, StyleSheet } from "react-native";
 import { useAuthStore } from "@/store/auth";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -23,6 +23,22 @@ function BackgroundServices() {
   return null;
 }
 
+function SafeAreaBackground() {
+  const insets = useSafeAreaInsets();
+  if (insets.bottom === 0) return null;
+  return (
+    <View style={{
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: insets.bottom,
+      backgroundColor: APP_BG,
+      zIndex: 1,
+    }} />
+  );
+}
+
 export default function RootLayout() {
   const refresh = useAuthStore((s) => s.refresh);
 
@@ -38,6 +54,7 @@ export default function RootLayout() {
 
       <GestureHandlerRootView style={styles.flex}>
         <SafeAreaProvider>
+          <SafeAreaBackground />
           <QueryClientProvider client={queryClient}>
             <Stack
               screenOptions={{

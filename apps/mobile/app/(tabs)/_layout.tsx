@@ -26,6 +26,7 @@ function TabIcon({
       <Text
         style={[styles.label, focused && styles.labelActive]}
         numberOfLines={1}
+        ellipsizeMode="tail"
       >
         {label}
       </Text>
@@ -52,6 +53,7 @@ function CartIcon({ focused }: { focused: boolean }) {
       <Text
         style={[styles.label, focused && styles.labelActive]}
         numberOfLines={1}
+        ellipsizeMode="tail"
       >
         Panier
       </Text>
