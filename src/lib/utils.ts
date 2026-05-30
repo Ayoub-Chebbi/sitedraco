@@ -15,9 +15,8 @@ export function formatPrice(amount: number): string {
 }
 
 export function generateOrderNumber(): string {
-  const date = new Date();
-  const year = date.getFullYear();
-  const random = randomBytes(4).toString('hex').toUpperCase();
+  const year = new Date().getFullYear();
+  const random = randomBytes(4).toString("hex").toUpperCase();
   return `CMD-${year}-${random}`;
 }
 

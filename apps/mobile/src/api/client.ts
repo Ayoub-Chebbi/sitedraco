@@ -26,7 +26,11 @@ async function request<T>(
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers,
+    signal: AbortSignal.timeout(15_000),
+  });
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));

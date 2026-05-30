@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { generateOrderNumber } from "@/lib/utils";
 import { sendWelcomeEmail } from "@/lib/email";
 import { notifyAdminsNewOrder } from "@/lib/push-notifications";
+import { rateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
 
 const schema = z.object({
@@ -19,17 +20,13 @@ const schema = z.object({
   })).min(1),
 });
 
-function generatePassword(len = 16) {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
-  let password = "";
-  const bytes = randomBytes(len);
-  for (let i = 0; i < len; i++) {
-    password += chars[bytes[i] % chars.length];
-  }
-  return password;
-}
-
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
+  const { allowed, retryAfterMs } = rateLimit(`orders:${ip}`, { max: 10, windowMs: 15 * 60 * 1000 });
+  if (!allowed) {
+    return NextResponse.json({ error: "Trop de tentatives. Réessayez plus tard." }, { status: 429, headers: { "Retry-After": Math.ceil(retryAfterMs / 1000).toString() } });
+  }
+
   const session = await auth();
   const body = await req.json();
   const parsed = schema.safeParse(body);
@@ -59,15 +56,14 @@ export async function POST(req: NextRequest) {
   // For guest orders: auto-create account if email not already registered
   let userId: string | null = session?.user?.id ?? null;
   let autoCreated = false;
-  let plainPassword = "";
 
   if (!session) {
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       userId = existing.id;
     } else {
-      plainPassword = generatePassword();
-      const passwordHash = await bcrypt.hash(plainPassword, 12);
+      // Generate a random unusable password — user sets their own via email link
+      const passwordHash = await bcrypt.hash(randomBytes(32).toString("hex"), 12);
       const newUser = await prisma.user.create({
         data: { email, passwordHash, role: "customer" },
       });
@@ -112,10 +108,15 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  if (autoCreated) {
-    sendWelcomeEmail(email, plainPassword, orderNumber).catch((err) =>
-      console.error("Welcome email failed:", err)
-    );
+  if (autoCreated && userId) {
+    const base = process.env.SITE_URL ?? process.env.NEXTAUTH_URL ?? "https://loot.tn";
+    const token = randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000);
+    prisma.passwordResetToken.create({ data: { email, token, expiresAt } })
+      .then(() =>
+        sendWelcomeEmail(email, orderNumber, `${base}/reinitialiser-mot-de-passe?token=${token}`)
+      )
+      .catch((err) => console.error("Welcome email failed:", err));
   }
 
   notifyAdminsNewOrder({

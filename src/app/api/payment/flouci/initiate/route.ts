@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomBytes } from "crypto";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { generateOrderNumber } from "@/lib/utils";
 import { initiateFlouciPayment } from "@/lib/flouci";
+import { rateLimit } from "@/lib/rate-limit";
 
 const schema = z.object({
   email: z.string().email(),
@@ -18,6 +20,12 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
+  const { allowed, retryAfterMs } = rateLimit(`pay:${ip}`, { max: 5, windowMs: 15 * 60 * 1000 });
+  if (!allowed) {
+    return NextResponse.json({ error: "Trop de tentatives. Réessayez plus tard." }, { status: 429, headers: { "Retry-After": Math.ceil(retryAfterMs / 1000).toString() } });
+  }
+
   try {
     const session = await auth();
 
@@ -92,7 +100,7 @@ export async function POST(req: NextRequest) {
         userId = existing.id;
       } else {
         // Create account with a random unusable password — welcome email sent after payment
-        const passwordHash = await bcrypt.hash(Math.random().toString(36) + Date.now(), 12);
+        const passwordHash = await bcrypt.hash(randomBytes(32).toString("hex"), 12);
         const newUser = await prisma.user.create({
           data: { email, passwordHash, role: "customer" },
         });
@@ -182,8 +190,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ paymentUrl, orderId: order.id });
 
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("[flouci] initiate error:", msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[flouci] initiate error:", err instanceof Error ? err.message : String(err));
+    return NextResponse.json({ error: "Erreur de paiement. Veuillez réessayer." }, { status: 500 });
   }
 }

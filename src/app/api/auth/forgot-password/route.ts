@@ -2,19 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { sendPasswordResetEmail } from "@/lib/email";
-import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
-  // Rate limit per IP: max 10 requests per 15 minutes to prevent password reset DOS
-  const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
-  const { allowed, retryAfterMs } = rateLimit(`forgot-password:${ip}`, { max: 10, windowMs: 15 * 60 * 1000 });
-  if (!allowed) {
-    return NextResponse.json({ success: true }, { headers: { "Retry-After": Math.ceil(retryAfterMs / 1000).toString() } });
-  }
-
   const { email } = await req.json();
-  if (!email || typeof email !== 'string') return NextResponse.json({ error: "Email requis." }, { status: 400 });
-  if (!email.includes('@')) return NextResponse.json({ success: true });
+  if (!email) return NextResponse.json({ error: "Email requis." }, { status: 400 });
 
   // Rate limit: max 3 reset requests per email per 15 minutes
   const since = new Date(Date.now() - 15 * 60 * 1000);

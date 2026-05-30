@@ -8,8 +8,9 @@ const schema = z.object({
   amount: z.number().positive(),
 });
 
+const INVALID_MSG = "Code promo invalide ou inapplicable.";
+
 export async function POST(req: NextRequest) {
-  // Rate limit: max 20 coupon validations per IP per hour (prevent brute-force)
   const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
   const { allowed, retryAfterMs } = rateLimit(`coupon:${ip}`, { max: 20, windowMs: 60 * 60 * 1000 });
   if (!allowed) {
@@ -29,13 +30,13 @@ export async function POST(req: NextRequest) {
   const coupon = await prisma.coupon.findUnique({ where: { code: code.toUpperCase().trim() } });
 
   if (!coupon || !coupon.isActive) {
-    return NextResponse.json({ error: "Code promo invalide ou inactif." }, { status: 404 });
+    return NextResponse.json({ error: INVALID_MSG }, { status: 404 });
   }
   if (coupon.expiresAt && coupon.expiresAt < new Date()) {
-    return NextResponse.json({ error: "Ce code promo a expiré." }, { status: 400 });
+    return NextResponse.json({ error: INVALID_MSG }, { status: 400 });
   }
   if (coupon.maxUses !== null && coupon.usedCount >= coupon.maxUses) {
-    return NextResponse.json({ error: "Ce code promo a atteint sa limite d'utilisation." }, { status: 400 });
+    return NextResponse.json({ error: INVALID_MSG }, { status: 400 });
   }
   if (coupon.minAmount && amount < coupon.minAmount) {
     return NextResponse.json(

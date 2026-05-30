@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
   // Send welcome email to auto-created guest accounts only after payment confirmed
   if (order.guestAutoCreated && order.user?.email) {
     const base = process.env.SITE_URL ?? process.env.NEXTAUTH_URL ?? "https://loot.tn";
-    const token = randomBytes(32).toString('hex');
+    const token = randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000);
 
     try {

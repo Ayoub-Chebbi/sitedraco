@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "./prisma";
 
 if (!process.env.MOBILE_JWT_SECRET) {
-  throw new Error("MOBILE_JWT_SECRET must be set independently (not shared with NEXTAUTH_SECRET)");
+  throw new Error("MOBILE_JWT_SECRET env var must be set (must be different from NEXTAUTH_SECRET)");
 }
 const JWT_SECRET: string = process.env.MOBILE_JWT_SECRET;
 const EXPIRY = "30d";

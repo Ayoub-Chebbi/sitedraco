@@ -3,16 +3,11 @@ import crypto from "crypto";
 const ALGORITHM = "aes-256-gcm";
 
 if (!process.env.ENCRYPTION_KEY) {
-  throw new Error("ENCRYPTION_KEY env var must be set to a base64-encoded 32-byte value");
+  throw new Error("ENCRYPTION_KEY env var must be set");
 }
-let KEY: Buffer;
-try {
-  KEY = Buffer.from(process.env.ENCRYPTION_KEY, "base64");
-  if (KEY.length !== 32) {
-    throw new Error("ENCRYPTION_KEY must decode to exactly 32 bytes");
-  }
-} catch (e) {
-  throw new Error("ENCRYPTION_KEY must be a valid base64-encoded 32-byte value. Generate with: node -e \"console.log(require('crypto').randomBytes(32).toString('base64'))\"");
+const KEY = Buffer.from(process.env.ENCRYPTION_KEY, "base64");
+if (KEY.length !== 32) {
+  throw new Error("ENCRYPTION_KEY must decode to exactly 32 bytes. Generate with: node -e \"console.log(require('crypto').randomBytes(32).toString('base64'))\"");
 }
 
 export function encryptKey(plaintext: string): string {
