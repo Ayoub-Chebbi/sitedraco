@@ -99,10 +99,8 @@ export function ProductCard({ product }: { product: Product }) {
         )}
 
         {stock === 0 && (
-          <View style={[styles.outOfStock, { backgroundColor: "rgba(220,0,0,0.85)" }]}>
-            <Text style={{ color: "#fff", fontWeight: "900", fontSize: 11, textAlign: "center", padding: 4 }}>
-              {`avail=${product.availableKeys}\ncnt=${product._count?.keys}\nman=${(product as any).manualStock}`}
-            </Text>
+          <View style={styles.outOfStock}>
+            <Text style={styles.outOfStockText}>Rupture de stock</Text>
           </View>
         )}
 
