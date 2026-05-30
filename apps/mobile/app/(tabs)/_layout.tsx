@@ -161,12 +161,12 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(167,139,250,0.12)",
   },
   label: {
-    fontSize: 8,
-    lineHeight: 10,
+    fontSize: 7,
+    lineHeight: 9,
     color: "#4b5563",
     fontWeight: "500",
     textAlign: "center",
-    maxWidth: 55,
+    maxWidth: 50,
   },
   labelActive: {
     color: "#a78bfa",
