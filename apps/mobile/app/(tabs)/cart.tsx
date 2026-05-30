@@ -110,7 +110,7 @@ export default function CartScreen() {
           />
 
           {/* Sticky bottom summary */}
-          <View style={[styles.summary, { paddingBottom: insets.bottom + 16 }]}>
+          <View style={[styles.summary, { paddingBottom: insets.bottom + 90 }]}>
             <View style={styles.summaryRow}>
               <View>
                 <Text style={styles.summaryLabel}>Total</Text>

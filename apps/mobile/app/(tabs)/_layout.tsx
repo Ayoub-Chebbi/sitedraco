@@ -63,34 +63,45 @@ export default function TabsLayout() {
   const insets = useSafeAreaInsets();
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarShowLabel: false,
-        tabBarStyle: {
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: TAB_HEIGHT + insets.bottom,
-          backgroundColor: "#0d0d14",
-          borderTopWidth: 1,
-          borderTopColor: "#1f1f35",
-          elevation: 20,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.5,
-          shadowRadius: 12,
-          paddingTop: 0,
-          paddingBottom: insets.bottom,
-        },
-        tabBarItemStyle: {
-          height: TAB_HEIGHT,
-          paddingTop: 0,
-          paddingBottom: 0,
-        },
-      }}
-    >
+    <>
+      {/* Background for safe area gesture bar */}
+      <View style={{
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: insets.bottom,
+        backgroundColor: "#0d0d14",
+        zIndex: 0,
+      }} />
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarShowLabel: false,
+          tabBarStyle: {
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: TAB_HEIGHT + insets.bottom,
+            backgroundColor: "#0d0d14",
+            borderTopWidth: 1,
+            borderTopColor: "#1f1f35",
+            elevation: 20,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: -4 },
+            shadowOpacity: 0.5,
+            shadowRadius: 12,
+            paddingTop: 0,
+            paddingBottom: insets.bottom,
+          },
+          tabBarItemStyle: {
+            height: TAB_HEIGHT,
+            paddingTop: 0,
+            paddingBottom: 0,
+          },
+        }}
+      >
       <Tabs.Screen
         name="index"
         options={{
@@ -133,7 +144,8 @@ export default function TabsLayout() {
           ),
         }}
       />
-    </Tabs>
+      </Tabs>
+    </>
   );
 }
 
@@ -161,7 +173,7 @@ const styles = StyleSheet.create({
     color: "#4b5563",
     fontWeight: "500",
     textAlign: "center",
-    maxWidth: 60,
+    maxWidth: 75,
   },
   labelActive: {
     color: "#a78bfa",
