@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle, Loader2, XCircle, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { trackPurchase } from "@/components/shared/meta-pixel";
 
 export default function CheckoutSuccessPage() {
   const params = useSearchParams();
@@ -33,6 +34,7 @@ export default function CheckoutSuccessPage() {
         if (data.orderNumber) {
           setOrderNumber(data.orderNumber);
           setState("success");
+          trackPurchase(data.orderNumber, data.totalAmount ?? 0);
         } else {
           setError(data.error ?? "Paiement non confirmé.");
           setState("error");

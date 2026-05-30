@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { CartItem } from "@/types";
+import { trackAddToCart } from "@/components/shared/meta-pixel";
 
 type CartStore = {
   items: CartItem[];
@@ -31,6 +32,7 @@ export const useCart = create<CartStore>()(
         } else {
           set((state) => ({ items: [...state.items, { ...item, quantity: 1 }] }));
         }
+        trackAddToCart(item.name, item.discountPrice ?? item.price);
       },
       removeItem: (productId, variantId) =>
         set((state) => ({

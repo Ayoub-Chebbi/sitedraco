@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/lib/cart-store";
 import { formatPrice } from "@/lib/utils";
+import { trackInitiateCheckout } from "@/components/shared/meta-pixel";
 
 type CouponResult = {
   id: string;
@@ -32,6 +33,13 @@ export default function CheckoutPage() {
 
   const [steamUsername, setSteamUsername] = useState("");
   const needsSteam = items.some((i) => i.requiresSteamUsername);
+
+  useEffect(() => {
+    if (items.length > 0) {
+      trackInitiateCheckout(total(), items.reduce((s, i) => s + i.quantity, 0));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (items.length === 0) {
     return (

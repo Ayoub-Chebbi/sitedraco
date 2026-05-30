@@ -87,5 +87,5 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ orderNumber: order.orderNumber });
+  return NextResponse.json({ orderNumber: order.orderNumber, totalAmount: order.totalAmount });
 }

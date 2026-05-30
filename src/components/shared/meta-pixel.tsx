@@ -13,13 +13,44 @@ declare global {
   }
 }
 
+export function fbq(...args: unknown[]) {
+  if (typeof window !== "undefined" && typeof window.fbq === "function") {
+    window.fbq(...args);
+  }
+}
+
+export function trackPurchase(orderNumber: string, value: number, currency = "TND") {
+  fbq("track", "Purchase", {
+    value,
+    currency,
+    content_type: "product",
+    order_id: orderNumber,
+  });
+}
+
+export function trackInitiateCheckout(value: number, numItems: number, currency = "TND") {
+  fbq("track", "InitiateCheckout", {
+    value,
+    currency,
+    num_items: numItems,
+    content_type: "product",
+  });
+}
+
+export function trackAddToCart(productName: string, value: number, currency = "TND") {
+  fbq("track", "AddToCart", {
+    content_name: productName,
+    value,
+    currency,
+    content_type: "product",
+  });
+}
+
 function MetaPixelPageTracker() {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (typeof window.fbq === "function") {
-      window.fbq("track", "PageView");
-    }
+    fbq("track", "PageView");
   }, [pathname]);
 
   return null;
