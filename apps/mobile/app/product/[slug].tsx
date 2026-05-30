@@ -30,7 +30,9 @@ export default function ProductDetailScreen() {
   const p = product;
   const hasVariants = (p?.variants?.length ?? 0) > 0;
   const hasBoth = p?.productType === "both";
-  const stock = p ? (p.availableKeys ?? p._count.keys) : 0;
+  const stock = p
+    ? (p.availableKeys != null ? p.availableKeys : (p._count?.keys ?? 0) + (p.manualStock ?? 0))
+    : 0;
 
   const [variant, setVariant] = useState<"key" | "account">(
     p?.productType === "account" ? "account" : "key"

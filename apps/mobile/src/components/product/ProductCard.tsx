@@ -25,8 +25,10 @@ export function ProductCard({ product }: { product: Product }) {
   const add = useCartStore((s) => s.add);
   const hasBoth = product.productType === "both";
   const hasVariants = (product.variants?.length ?? 0) > 0;
-  // Use pre-computed availableKeys (includes manualStock) from API
-  const stock = product.availableKeys ?? product._count.keys;
+  // Use all available stock fields — belt and suspenders
+  const stock =
+    product.availableKeys != null ? product.availableKeys
+    : (product._count?.keys ?? 0) + (product.manualStock ?? 0);
 
   // Price: for variant products show "from" minimum price
   const minVariantPrice = hasVariants && product.variants?.length

@@ -34,7 +34,8 @@ export interface Product {
   reviewCount: number;
   urgencyHours: number;
   variants: ProductVariant[];
-  availableKeys: number;
+  availableKeys?: number;
+  manualStock?: number | null;
   _count: { keys: number };
 }
 
