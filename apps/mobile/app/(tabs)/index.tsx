@@ -55,7 +55,7 @@ export default function HomeScreen() {
         <View style={styles.logoRow}>
           <View style={styles.logoBox}>
             {logoUrl ? (
-              <Image source={logoUrl} style={{ width: 32, height: 32 }} contentFit="contain" />
+              <Image source={{ uri: logoUrl }} style={{ width: 32, height: 32 }} contentFit="contain" />
             ) : (
               <Text style={styles.logoLetter}>{siteName.charAt(0)}</Text>
             )}

@@ -78,7 +78,7 @@ export function ProductCard({ product }: { product: Product }) {
       {/* Image / Gradient thumbnail */}
       <View style={styles.thumb}>
         {product.imageUrl ? (
-          <Image source={product.imageUrl} style={StyleSheet.absoluteFill} contentFit="cover" />
+          <Image source={{ uri: product.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
         ) : (
           <LinearGradient colors={gradientColors} style={StyleSheet.absoluteFill}>
             <View style={styles.thumbEmoji}>

@@ -109,7 +109,7 @@ export default function ProfileScreen() {
         <View style={styles.avatarRow}>
           {user.avatarUrl ? (
             <Image
-              source={user.avatarUrl}
+              source={{ uri: user.avatarUrl }}
               style={[styles.avatar, { borderWidth: 2, borderColor: "#7c3aed" }]}
               contentFit="cover"
             />

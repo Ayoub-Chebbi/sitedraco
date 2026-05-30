@@ -83,7 +83,7 @@ export default function ProductDetailScreen() {
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
         {/* Image / Hero */}
         {p.imageUrl ? (
-          <Image source={p.imageUrl} style={{ width: "100%", height: 260 }} contentFit="cover" />
+          <Image source={{ uri: p.imageUrl }} style={{ width: "100%", height: 260 }} contentFit="cover" />
         ) : (
           <LinearGradient colors={["#4c1d95", "#1e1b4b"]} style={{ height: 260, alignItems: "center", justifyContent: "center" }}>
             <Text style={{ fontSize: 72 }}>🎮</Text>
