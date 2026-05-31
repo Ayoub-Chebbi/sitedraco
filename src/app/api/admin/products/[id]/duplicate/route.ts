@@ -63,7 +63,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     return NextResponse.json({ id: duplicate.id }, { status: 201 });
   } catch (err) {
-    console.error("[duplicate]", err);
-    return NextResponse.json({ error: "Erreur lors de la duplication." }, { status: 500 });
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[duplicate]", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
