@@ -94,6 +94,8 @@ export function usePushNotifications() {
         const data = response.notification.request.content.data as Record<string, unknown>;
         if (data?.type === "new_order") {
           router.push("/admin/orders");
+        } else if (data?.type === "new_ticket" && data.ticketId) {
+          router.push(`/support/ticket/${data.ticketId}` as any);
         }
       }
     );

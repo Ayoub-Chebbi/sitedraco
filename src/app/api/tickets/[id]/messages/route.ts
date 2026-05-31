@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { sendTicketReplyEmail } from "@/lib/email";
+import { notifySupportNewTicket } from "@/lib/push-notifications";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -54,6 +55,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       where: { id },
       data: { status: "in_progress", agentId: session.user.id },
     });
+  }
+
+  // Notify support team when a customer replies
+  if (!isStaff) {
+    notifySupportNewTicket({
+      ticketId: id,
+      subject: `Réponse: ${ticket.subject}`,
+      fromEmail: session.user.email!,
+      fromName: session.user.name,
+    }).catch(console.error);
   }
 
   // Send email notification to client when staff replies

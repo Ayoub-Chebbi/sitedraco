@@ -63,3 +63,35 @@ export async function notifyAdminsNewOrder(params: {
 
   await sendExpoPush(messages);
 }
+
+export async function notifySupportNewTicket(params: {
+  ticketId: string;
+  subject: string;
+  fromEmail: string;
+  fromName?: string | null;
+}) {
+  // Notify admins + support agents who have push tokens
+  const staff = await prisma.user.findMany({
+    where: { role: { in: ["admin", "support"] }, pushToken: { not: null } },
+    select: { pushToken: true },
+  });
+
+  if (staff.length === 0) return;
+
+  const from = params.fromName ?? params.fromEmail;
+
+  const messages: PushMessage[] = staff.map((s) => ({
+    to: s.pushToken!,
+    title: "🎫 Nouveau ticket support",
+    body: `${from} — ${params.subject}`,
+    sound: "default",
+    channelId: "new-orders",
+    priority: "high",
+    data: {
+      type: "new_ticket",
+      ticketId: params.ticketId,
+    },
+  }));
+
+  await sendExpoPush(messages);
+}

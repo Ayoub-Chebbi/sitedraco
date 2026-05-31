@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { notifySupportNewTicket } from "@/lib/push-notifications";
 
 const CreateSchema = z.object({
   subject: z.string().min(5).max(200),
@@ -79,6 +80,13 @@ export async function POST(req: NextRequest) {
         message,
       },
     });
+
+    notifySupportNewTicket({
+      ticketId: ticket.id,
+      subject,
+      fromEmail: session.user.email!,
+      fromName: session.user.name,
+    }).catch(console.error);
 
     return NextResponse.json({ ...ticket, messages: [ticketMessage] }, { status: 201 });
   } catch (err) {
