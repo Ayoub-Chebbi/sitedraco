@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft, CheckCircle, XCircle, Clock, Send, Loader2, Key, User, FileText, Lock, Gamepad2, Copy, Check
+  ArrowLeft, CheckCircle, XCircle, Clock, Send, Loader2, Key, User, FileText, Lock, Gamepad2, Copy, Check, MessageSquarePlus, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -67,11 +67,111 @@ function CopyButton({ value }: { value: string }) {
   );
 }
 
+function OpenTicketModal({
+  orderId,
+  orderNumber,
+  customerEmail,
+  onClose,
+  onCreated,
+}: {
+  orderId: string;
+  orderNumber: string;
+  customerEmail: string;
+  onClose: () => void;
+  onCreated: (ticketId: string) => void;
+}) {
+  const [subject, setSubject] = useState(`Commande ${orderNumber} — `);
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit() {
+    if (!subject.trim() || !message.trim()) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/ticket`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subject: subject.trim(), message: message.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Erreur");
+      onCreated(data.ticketId);
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-lg bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-6 space-y-5">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <MessageSquarePlus className="h-5 w-5 text-purple-400" />
+              Ouvrir un ticket
+            </h2>
+            <p className="text-sm text-gray-400 mt-0.5">
+              Ce ticket sera visible par <span className="text-white font-medium">{customerEmail}</span> dans son espace client.
+            </p>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors mt-0.5">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Subject */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Sujet</label>
+          <Input
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            placeholder="Ex: Commande CMD-2026-XXXX — Question sur votre commande"
+            maxLength={200}
+          />
+        </div>
+
+        {/* Message */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Message</label>
+          <Textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Bonjour, nous vous contactons au sujet de votre commande..."
+            rows={5}
+            maxLength={5000}
+          />
+          <p className="text-xs text-gray-600 text-right">{message.length}/5000</p>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-3 pt-1">
+          <Button variant="outline" className="flex-1" onClick={onClose} disabled={loading}>
+            Annuler
+          </Button>
+          <Button
+            className="flex-1 gap-2"
+            onClick={handleSubmit}
+            disabled={loading || !subject.trim() || !message.trim()}
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            Envoyer et ouvrir le ticket
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function OrderDetailClient({ order }: { order: OrderData }) {
   const router = useRouter();
   const { toast } = useToast();
   const [notes, setNotes] = useState(order.notesInternal || "");
   const [loading, setLoading] = useState<string | null>(null);
+  const [ticketModal, setTicketModal] = useState(false);
 
   const pendingItems = order.items.filter((i) => !i.hasKey);
 
@@ -133,6 +233,7 @@ export function OrderDetailClient({ order }: { order: OrderData }) {
   const canProcess = order.status === "pending";
 
   return (
+    <>
     <div className="max-w-5xl mx-auto px-4 py-8">
       <div className="flex items-center gap-3 mb-6">
         <Link href="/admin/commandes">
@@ -328,6 +429,17 @@ export function OrderDetailClient({ order }: { order: OrderData }) {
 
           <div className="rounded-xl border border-gray-800 bg-gray-900 p-5 space-y-3">
             <h2 className="font-semibold text-white">Actions</h2>
+
+            {/* Open ticket with customer */}
+            <Button
+              variant="outline"
+              className="w-full gap-2 border-purple-700/50 text-purple-300 hover:bg-purple-900/20 hover:text-purple-200"
+              onClick={() => setTicketModal(true)}
+            >
+              <MessageSquarePlus className="h-4 w-4" />
+              Ouvrir un ticket client
+            </Button>
+
             {canProcess && (
               <Button
                 variant="secondary"
@@ -383,5 +495,20 @@ export function OrderDetailClient({ order }: { order: OrderData }) {
         </div>
       </div>
     </div>
+
+    {ticketModal && (
+      <OpenTicketModal
+        orderId={order.id}
+        orderNumber={order.orderNumber}
+        customerEmail={order.customer.email}
+        onClose={() => setTicketModal(false)}
+        onCreated={(ticketId) => {
+          setTicketModal(false);
+          toast({ title: "Ticket ouvert", description: "Le client peut répondre depuis son espace client.", variant: "success" });
+          router.push(`/admin/tickets/${ticketId}`);
+        }}
+      />
+    )}
+    </>
   );
 }
