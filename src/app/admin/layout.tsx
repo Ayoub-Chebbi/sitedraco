@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { LayoutDashboard, ShoppingBag, Package, Users, ImageIcon, Ticket, Settings, Tag, Monitor, Sparkles, BadgePercent } from "lucide-react";
+import { TicketNotificationBell } from "@/components/admin/TicketNotificationBell";
 
 const ADMIN_NAV = [
   { href: "/admin",              label: "Dashboard",      icon: LayoutDashboard },
@@ -34,9 +35,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       {/* Mobile top nav — scrollable, shown on small screens */}
       <div className="md:hidden border-b border-gray-800 bg-gray-950 overflow-x-auto">
         <div className="flex items-center gap-1 px-2 py-2 min-w-max">
-          <div className="flex items-center gap-1.5 px-2 py-1 mr-2 border-r border-gray-800 shrink-0">
+          <div className="flex items-center gap-2 px-2 py-1 mr-2 border-r border-gray-800 shrink-0">
             <Sparkles className="h-3.5 w-3.5 text-purple-400" />
             <span className="text-xs font-semibold text-white capitalize">{session?.user.role}</span>
+            <TicketNotificationBell />
           </div>
           {nav.map(({ href, label, icon: Icon }) => (
             <Link
@@ -57,10 +59,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <div className="p-4 border-b border-gray-800">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-purple-400" />
-              <div>
+              <div className="flex-1">
                 <p className="text-sm font-semibold text-white">Administration</p>
                 <p className="text-xs text-gray-600 capitalize">{session?.user.role}</p>
               </div>
+              <TicketNotificationBell />
             </div>
           </div>
           <nav className="p-2 space-y-0.5">
