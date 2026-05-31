@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Bell, MessageSquare, Clock, ChevronRight } from "lucide-react";
+import { Bell, MessageSquare, Clock } from "lucide-react";
 
 type Ticket = {
   id: string;
@@ -15,20 +15,10 @@ type Ticket = {
   messages: { sender: { role: string } }[];
 };
 
-const STATUS_COLOR: Record<string, string> = {
-  open: "bg-green-500",
-  in_progress: "bg-yellow-500",
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  open: "Nouveau",
-  in_progress: "En cours",
-};
-
 function timeAgo(date: string) {
   const diff = Date.now() - new Date(date).getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 1) return "À l'instant";
+  if (m < 1) return "à l'instant";
   if (m < 60) return `${m}m`;
   const h = Math.floor(m / 60);
   if (h < 24) return `${h}h`;
@@ -51,14 +41,12 @@ export function TicketNotificationBell() {
     }
   }
 
-  // Poll every 30 seconds
   useEffect(() => {
     fetchTickets();
     const interval = setInterval(fetchTickets, 30_000);
     return () => clearInterval(interval);
   }, []);
 
-  // Close on outside click
   useEffect(() => {
     function handler(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
@@ -68,127 +56,105 @@ export function TicketNotificationBell() {
   }, []);
 
   const newCount = tickets.filter((t) => t.status === "open").length;
-  const hasNew = newCount > 0;
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative shrink-0">
+      {/* Bell button */}
       <button
         onClick={() => { setOpen((o) => !o); if (!open) fetchTickets(); }}
-        className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-gray-600 transition-colors"
+        className="relative p-1.5 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-colors"
         title="Tickets support"
       >
-        <Bell className="h-4 w-4 text-gray-400" />
-        {hasNew && (
-          <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-[10px] font-bold text-white leading-none border-2 border-gray-950">
-            {newCount > 9 ? "9+" : newCount}
-          </span>
+        <Bell className="h-4 w-4" />
+        {newCount > 0 && (
+          <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-red-500 border border-gray-950" />
         )}
       </button>
 
+      {/* Dropdown */}
       {open && (
-        <div className="absolute right-0 top-11 w-80 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-hidden z-50">
+        <div className="absolute left-0 top-9 w-72 rounded-xl border border-gray-800 bg-gray-950 shadow-xl shadow-black/40 overflow-hidden z-50">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4 text-purple-400" />
-              <span className="text-sm font-semibold text-white">Tickets ouverts</span>
+          <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-800">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-semibold text-white">Tickets ouverts</span>
               {tickets.length > 0 && (
-                <span className="text-xs text-gray-500">({tickets.length})</span>
+                <span className="text-[10px] font-bold bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded-full">
+                  {tickets.length}
+                </span>
               )}
             </div>
             <Link
               href="/admin/tickets"
               onClick={() => setOpen(false)}
-              className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+              className="text-[11px] text-purple-400 hover:text-purple-300 transition-colors"
             >
-              Voir tout
+              Voir tout →
             </Link>
           </div>
 
           {/* List */}
-          <div className="max-h-96 overflow-y-auto divide-y divide-gray-800/60">
+          <div className="max-h-80 overflow-y-auto">
             {loading && tickets.length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-gray-500">Chargement…</div>
+              <p className="px-3 py-6 text-center text-xs text-gray-600">Chargement…</p>
             ) : tickets.length === 0 ? (
-              <div className="px-4 py-8 text-center">
-                <Bell className="h-8 w-8 text-gray-700 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">Aucun ticket ouvert</p>
+              <div className="px-3 py-6 text-center">
+                <Bell className="h-6 w-6 text-gray-800 mx-auto mb-1.5" />
+                <p className="text-xs text-gray-600">Aucun ticket ouvert</p>
               </div>
             ) : (
-              tickets.map((ticket) => {
-                const lastSenderRole = ticket.messages[0]?.sender.role;
-                const awaitingReply = lastSenderRole !== "admin" && lastSenderRole !== "support";
-                return (
-                  <Link
-                    key={ticket.id}
-                    href={`/admin/tickets/${ticket.id}`}
-                    onClick={() => setOpen(false)}
-                    className="flex items-start gap-3 px-4 py-3 hover:bg-gray-800/60 transition-colors group"
-                  >
-                    {/* Status dot */}
-                    <div className="mt-1.5 shrink-0">
-                      <span className={`block w-2 h-2 rounded-full ${STATUS_COLOR[ticket.status] ?? "bg-gray-500"}`} />
-                    </div>
+              <div className="divide-y divide-gray-800/50">
+                {tickets.map((ticket) => {
+                  const lastRole = ticket.messages[0]?.sender.role;
+                  const awaitingReply = lastRole !== "admin" && lastRole !== "support";
+                  const isNew = ticket.status === "open";
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                          ticket.status === "open"
-                            ? "bg-green-900/40 text-green-400"
-                            : "bg-yellow-900/40 text-yellow-400"
-                        }`}>
-                          {STATUS_LABEL[ticket.status]}
+                  return (
+                    <Link
+                      key={ticket.id}
+                      href={`/admin/tickets/${ticket.id}`}
+                      onClick={() => setOpen(false)}
+                      className="flex items-start gap-2.5 px-3 py-2.5 hover:bg-gray-800/40 transition-colors group"
+                    >
+                      {/* Dot */}
+                      <div className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${isNew ? "bg-green-500" : "bg-yellow-500"}`} />
+
+                      <div className="flex-1 min-w-0">
+                        {/* Subject */}
+                        <p className="text-xs font-medium text-gray-200 truncate group-hover:text-white leading-snug">
+                          {ticket.subject}
+                        </p>
+                        {/* Meta */}
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[11px] text-gray-500 truncate">
+                            {ticket.user?.name ?? ticket.user?.email ?? "Client"}
+                          </span>
+                          {ticket.order && (
+                            <span className="text-[11px] text-gray-700 shrink-0">
+                              #{ticket.order.orderNumber}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right side */}
+                      <div className="shrink-0 flex flex-col items-end gap-1 pt-0.5">
+                        <span className="text-[10px] text-gray-600 flex items-center gap-0.5">
+                          <Clock className="h-2.5 w-2.5" />
+                          {timeAgo(ticket.createdAt)}
                         </span>
                         {awaitingReply && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-purple-900/40 text-purple-400">
-                            Attend réponse
+                          <span className="text-[9px] font-semibold bg-purple-900/50 text-purple-400 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                            À répondre
                           </span>
                         )}
                       </div>
-                      <p className="text-sm font-medium text-gray-200 truncate group-hover:text-white">
-                        {ticket.subject}
-                      </p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs text-gray-500 truncate">
-                          {ticket.user?.name ?? ticket.user?.email ?? "Client"}
-                        </span>
-                        {ticket.order && (
-                          <span className="text-xs text-gray-600 shrink-0">
-                            #{ticket.order.orderNumber}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="shrink-0 flex flex-col items-end gap-1">
-                      <div className="flex items-center gap-1 text-xs text-gray-600">
-                        <Clock className="h-3 w-3" />
-                        {timeAgo(ticket.createdAt)}
-                      </div>
-                      <div className="flex items-center gap-0.5 text-xs text-gray-600">
-                        <MessageSquare className="h-3 w-3" />
-                        {ticket._count.messages}
-                      </div>
-                    </div>
-
-                    <ChevronRight className="h-4 w-4 text-gray-700 group-hover:text-gray-400 transition-colors shrink-0 mt-1" />
-                  </Link>
-                );
-              })
+                    </Link>
+                  );
+                })}
+              </div>
             )}
           </div>
-
-          {tickets.length > 0 && (
-            <div className="px-4 py-2.5 border-t border-gray-800 bg-gray-900/50">
-              <Link
-                href="/admin/tickets"
-                onClick={() => setOpen(false)}
-                className="flex items-center justify-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors font-medium"
-              >
-                Gérer tous les tickets <ChevronRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-          )}
         </div>
       )}
     </div>
