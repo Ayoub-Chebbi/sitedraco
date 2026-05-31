@@ -122,22 +122,24 @@ function PickerSheet({
                   activeOpacity={0.75}
                 >
                   <LinearGradient colors={["#1a0533", "#12121f"]} style={styles.variantRowGrad}>
-                    <View style={styles.variantRowLeft}>
+                    {/* Name row */}
+                    <View style={styles.variantNameRow}>
                       <View style={styles.variantDot} />
-                      <Text style={styles.variantName}>{v.name}</Text>
-                    </View>
-                    <View style={styles.variantRowRight}>
+                      <Text style={styles.variantName} numberOfLines={1}>{v.name}</Text>
                       {hasDisc && (
-                        <>
-                          <View style={styles.discBadge}>
-                            <Text style={styles.discBadgeText}>-{pct}%</Text>
-                          </View>
-                          <Text style={styles.variantOld}>{formatPrice(v.price)}</Text>
-                        </>
+                        <View style={styles.discBadge}>
+                          <Text style={styles.discBadgeText}>-{pct}%</Text>
+                        </View>
+                      )}
+                    </View>
+                    {/* Price + button row */}
+                    <View style={styles.variantPriceRow}>
+                      {hasDisc && (
+                        <Text style={styles.variantOld}>{formatPrice(v.price)}</Text>
                       )}
                       <Text style={styles.variantPrice}>{formatPrice(price)}</Text>
                       <View style={styles.addChip}>
-                        <Ionicons name="cart-outline" size={13} color="#a78bfa" />
+                        <Ionicons name="cart-outline" size={12} color="#a78bfa" />
                         <Text style={styles.addChipText}>Ajouter</Text>
                       </View>
                     </View>
@@ -395,18 +397,15 @@ const styles = StyleSheet.create({
 
   // Variant rows (gift cards etc)
   variantRow: { borderRadius: 14, overflow: "hidden", borderWidth: 1, borderColor: "#2d2d4e" },
-  variantRowGrad: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 16, paddingVertical: 14,
-  },
-  variantRowLeft: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1, marginRight: 8 },
-  variantDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#7c3aed", flexShrink: 0 },
+  variantRowGrad: { paddingHorizontal: 14, paddingVertical: 12, gap: 8 },
+  variantNameRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  variantDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#7c3aed", flexShrink: 0 },
   variantName: { color: "#e5e7eb", fontSize: 14, fontWeight: "700", flex: 1 },
-  variantRowRight: { flexDirection: "row", alignItems: "center", gap: 6, flexShrink: 0 },
+  variantPriceRow: { flexDirection: "row", alignItems: "center", gap: 8, justifyContent: "flex-end" },
   discBadge: { backgroundColor: "#db2777", borderRadius: 6, paddingHorizontal: 5, paddingVertical: 2 },
   discBadgeText: { color: "#fff", fontSize: 9, fontWeight: "800" },
   variantOld: { color: "#4b5563", fontSize: 12, textDecorationLine: "line-through" },
-  variantPrice: { color: "#a78bfa", fontSize: 16, fontWeight: "900" },
+  variantPrice: { color: "#a78bfa", fontSize: 15, fontWeight: "900" },
   addChip: {
     flexDirection: "row", alignItems: "center", gap: 4,
     backgroundColor: "#1a0533", borderWidth: 1, borderColor: "#7c3aed44",
