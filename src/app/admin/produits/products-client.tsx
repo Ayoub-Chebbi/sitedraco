@@ -2,9 +2,10 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { formatPrice } from "@/lib/utils";
 import { PlatformBadge } from "@/components/shared/platform-badge";
-import { Sparkles, Edit2, Archive, Layers, Search, X, ChevronDown } from "lucide-react";
+import { Sparkles, Edit2, Archive, Layers, Search, X, ChevronDown, Copy, Loader2 } from "lucide-react";
 
 type Product = {
   id: string;
@@ -33,11 +34,28 @@ const STATUS_FILTERS = [
 ];
 
 export function ProductsClient({ products }: { products: Product[] }) {
+  const router = useRouter();
   const [search, setSearch]         = useState("");
   const [platform, setPlatform]     = useState("all");
   const [category, setCategory]     = useState("all");
   const [stock, setStock]           = useState("all");
   const [status, setStatus]         = useState("all");
+  const [duplicating, setDuplicating] = useState<string | null>(null);
+
+  async function handleDuplicate(productId: string) {
+    setDuplicating(productId);
+    try {
+      const res = await fetch(`/api/admin/products/${productId}/duplicate`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Erreur");
+      router.push(`/admin/produits/${data.id}/edit`);
+      router.refresh();
+    } catch (e: any) {
+      alert(e.message ?? "Erreur lors de la duplication.");
+    } finally {
+      setDuplicating(null);
+    }
+  }
 
   const platforms = useMemo(() => {
     const vals = [...new Set(products.map((p) => p.platform))].sort();
@@ -187,9 +205,22 @@ export function ProductsClient({ products }: { products: Product[] }) {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Link href={`/admin/produits/${product.id}/edit`} className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-300 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition-colors">
-                      <Edit2 className="h-3 w-3" /> Modifier
-                    </Link>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <Link href={`/admin/produits/${product.id}/edit`} className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-300 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition-colors">
+                        <Edit2 className="h-3 w-3" /> Modifier
+                      </Link>
+                      <button
+                        onClick={() => handleDuplicate(product.id)}
+                        disabled={duplicating === product.id}
+                        title="Dupliquer le produit"
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-400 hover:text-amber-300 bg-amber-900/20 hover:bg-amber-900/40 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {duplicating === product.id
+                          ? <Loader2 className="h-3 w-3 animate-spin" />
+                          : <Copy className="h-3 w-3" />}
+                        Dupliquer
+                      </button>
+                    </div>
                   </td>
                   <td className="px-2 py-3 text-right">
                     <Link href={`/admin/produits/${product.id}/stock`} className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
