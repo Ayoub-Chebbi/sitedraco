@@ -171,7 +171,7 @@ export default function PanierPage() {
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
-            <p className="text-xs text-gray-600 text-center">Paiement sécurisé · Livraison en 1 à 6h</p>
+            <p className="text-xs text-gray-600 text-center">Paiement sécurisé · Livraison en 1h à 24h</p>
           </div>
         </div>
       </div>

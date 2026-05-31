@@ -73,7 +73,7 @@ async function getGiftCards() {
 }
 
 const SERVICES = [
-  { icon: Zap,          color: "text-yellow-400 bg-yellow-900/20 border-yellow-800/40", title: "Livraison rapide",     desc: "Clés livrées en 1 à 6h" },
+  { icon: Zap,          color: "text-yellow-400 bg-yellow-900/20 border-yellow-800/40", title: "Livraison rapide",     desc: "Clés livrées en 1h à 24h" },
   { icon: Lock,         color: "text-green-400 bg-green-900/20 border-green-800/40",    title: "Paiement sécurisé",    desc: "Carte bancaire" },
   { icon: CheckCircle,  color: "text-blue-400 bg-blue-900/20 border-blue-800/40",       title: "Satisfaction garantie",desc: "Remboursement si problème" },
   { icon: Headphones,   color: "text-purple-400 bg-purple-900/20 border-purple-800/40", title: "Support 7j/7",         desc: "Via notre système de tickets" },

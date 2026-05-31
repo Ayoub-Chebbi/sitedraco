@@ -8,7 +8,7 @@ export function Footer({ siteName = "Loot", logoUrl = "" }: { siteName?: string;
       <div className="border-b border-gray-800/50 py-6">
         <div className="max-w-7xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-6">
           {[
-            { icon: <Zap className="h-5 w-5 text-purple-400" />, title: "Livraison rapide", desc: "Clé reçue en 1 à 6h" },
+            { icon: <Zap className="h-5 w-5 text-purple-400" />, title: "Livraison rapide", desc: "Clé reçue en 1h à 24h" },
             { icon: <Shield className="h-5 w-5 text-purple-400" />, title: "Paiement sécurisé", desc: "Transactions chiffrées" },
             { icon: <MessageCircle className="h-5 w-5 text-purple-400" />, title: "Support réactif", desc: "Disponible 7j/7" },
             { icon: <RefreshCw className="h-5 w-5 text-purple-400" />, title: "Satisfaction garantie", desc: "Remboursement si problème" },

@@ -245,7 +245,7 @@ export default function CheckoutPage() {
             <div className="flex items-center justify-center gap-6 pt-1">
               {[
                 { icon: Shield, text: "Paiement sécurisé SSL" },
-                { icon: Zap, text: "Livraison en 1 à 6h" },
+                { icon: Zap, text: "Livraison en 1h à 24h" },
                 { icon: Lock, text: "Données chiffrées" },
               ].map(({ icon: Icon, text }) => (
                 <div key={text} className="flex items-center gap-1.5 text-xs text-gray-500">

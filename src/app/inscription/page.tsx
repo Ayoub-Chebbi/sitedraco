@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 
 const TRUST = [
   { icon: Shield,        text: "Paiement sécurisé SSL" },
-  { icon: Zap,           text: "Livraison en 1 à 6h" },
+  { icon: Zap,           text: "Livraison en 1h à 24h" },
   { icon: MessageCircle, text: "Support 7j/7" },
 ];
 

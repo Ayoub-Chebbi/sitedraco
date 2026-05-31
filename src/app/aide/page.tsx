@@ -20,7 +20,7 @@ const steps = [
   {
     icon: <Zap className="h-6 w-6 text-purple-400" />,
     title: "3. Recevez votre clé",
-    desc: "Votre clé ou code d'activation est envoyé dans un délai de 1 à 6 heures après confirmation du paiement, directement dans votre espace client.",
+    desc: "Votre clé ou code d'activation est envoyé dans un délai de 1h à 24h après confirmation du paiement, directement dans votre espace client.",
   },
   {
     icon: <Mail className="h-6 w-6 text-purple-400" />,
@@ -32,7 +32,7 @@ const steps = [
 const faqs = [
   {
     q: "Combien de temps faut-il pour recevoir ma clé ?",
-    a: "La livraison est effectuée après confirmation du paiement, généralement entre 1 et 6 heures.",
+    a: "La livraison est effectuée après confirmation du paiement, généralement entre 1h et 24h.",
   },
   {
     q: "Que faire si ma clé ne fonctionne pas ?",
