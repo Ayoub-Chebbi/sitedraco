@@ -263,7 +263,7 @@ export function ProductDetailClient({ product, upsells }: Props) {
 
           <div className="grid grid-cols-3 gap-2">
             {[
-              { icon: "⚡", label: "15–60 min" },
+              { icon: "⚡", label: "1h – 24h" },
               { icon: "🔒", label: "Sécurisé" },
               { icon: "✅", label: productType === "account" ? "Garanti" : "Garanti" },
             ].map((b) => (

@@ -20,7 +20,7 @@ import { SectionHeader } from "@/components/home/SectionHeader";
 import { ProductCard } from "@/components/product/ProductCard";
 
 const SERVICES = [
-  { icon: "flash" as const, label: "Livraison\ninstantanée" },
+  { icon: "flash" as const, label: "Livraison\n1h – 24h" },
   { icon: "shield-checkmark" as const, label: "Paiement\nsécurisé" },
   { icon: "headset" as const, label: "Support\n7j/7" },
   { icon: "star" as const, label: "4.9/5\nclients" },

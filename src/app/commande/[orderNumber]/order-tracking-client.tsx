@@ -107,7 +107,7 @@ export function OrderTrackingClient({ order }: { order: OrderData }) {
         <div className="rounded-xl border border-purple-800/30 bg-purple-900/10 p-4 mb-6 flex items-center gap-3">
           <Clock className="h-5 w-5 text-purple-400 shrink-0" />
           <p className="text-sm text-gray-300">
-            Livraison estimée : <strong className="text-white">15 à 60 minutes</strong>. Vous recevrez un email dès que votre clé sera prête.
+            Livraison estimée : <strong className="text-white">1h à 24h</strong>. Vous recevrez un email dès que votre clé sera prête.
           </p>
         </div>
       )}

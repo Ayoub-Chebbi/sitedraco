@@ -258,7 +258,7 @@ export function QuickViewModal({ product, onClose, onAddToCart }: Props) {
             </div>
 
             <div className="text-xs text-gray-600 space-y-1">
-              <div className="flex items-center gap-1.5"><CheckCircle className="h-3 w-3 text-green-500" /> Livraison 15–60 min</div>
+              <div className="flex items-center gap-1.5"><CheckCircle className="h-3 w-3 text-green-500" /> Livraison 1h – 24h</div>
               <div className="flex items-center gap-1.5"><CheckCircle className="h-3 w-3 text-green-500" /> Clé envoyée par email + espace client</div>
             </div>
           </div>

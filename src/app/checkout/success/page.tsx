@@ -76,7 +76,7 @@ export default function CheckoutSuccessPage() {
       <p className="text-xl font-mono font-bold text-purple-300 mb-4">{orderNumber}</p>
       <p className="text-sm text-gray-400 mb-8 max-w-sm mx-auto">
         Votre clé de jeu sera livrée par email et dans votre espace client sous{" "}
-        <strong className="text-white">15 à 60 minutes</strong>.
+        <strong className="text-white">1h à 24h</strong>.
       </p>
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
         <Link href={`/commande/${orderNumber}`}>

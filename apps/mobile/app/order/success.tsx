@@ -60,8 +60,8 @@ export default function OrderSuccessScreen() {
             },
             {
               icon: "flash-outline" as const,
-              title: "Livraison instantanée",
-              desc: "Vos clés seront disponibles après validation du paiement",
+              title: "Livraison 1h – 24h",
+              desc: "Vos clés seront disponibles entre 1h et 24h après validation du paiement",
             },
             {
               icon: "headset-outline" as const,

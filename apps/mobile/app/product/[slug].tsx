@@ -227,7 +227,7 @@ export default function ProductDetailScreen() {
           {/* Guarantees */}
           <View style={{ backgroundColor: "#1a1a2e", borderRadius: 12, borderWidth: 1, borderColor: "#2d2d4e", padding: 16, gap: 10 }}>
             {[
-              ["⚡", "Livraison instantanée après paiement"],
+              ["⚡", "Livraison entre 1h et 24h après paiement"],
               ["🔒", "Paiement 100% sécurisé"],
               ["🎧", "Support disponible 7j/7"],
             ].map(([emoji, label]) => (

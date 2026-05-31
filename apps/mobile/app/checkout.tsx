@@ -314,7 +314,7 @@ export default function CheckoutScreen() {
         <View style={styles.guarantees}>
           {[
             { icon: "shield-checkmark-outline" as const, text: "Paiement 100% sécurisé SSL" },
-            { icon: "flash-outline" as const, text: "Livraison instantanée après validation" },
+            { icon: "flash-outline" as const, text: "Livraison entre 1h et 24h après validation" },
             { icon: "lock-closed-outline" as const, text: "Données chiffrées et protégées" },
           ].map(({ icon, text }) => (
             <View key={text} style={styles.guaranteeRow}>
