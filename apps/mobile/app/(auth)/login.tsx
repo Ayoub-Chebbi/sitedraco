@@ -8,13 +8,16 @@ import {
   Platform,
   StyleSheet,
 } from "react-native";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useAuthStore } from "@/store/auth";
+import { getSiteSettings } from "@/api/products";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -24,6 +27,15 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [showPwd, setShowPwd] = useState(false);
   const [error, setError] = useState("");
+
+  const { data: settings } = useQuery({
+    queryKey: ["settings"],
+    queryFn: getSiteSettings,
+    staleTime: 10 * 60_000,
+  });
+
+  const siteName = settings?.siteName || "LootStore";
+  const logoUrl = settings?.logoUrl ?? null;
 
   async function handleLogin() {
     if (!email || !password) { setError("Remplissez tous les champs."); return; }
@@ -51,10 +63,20 @@ export default function LoginScreen() {
 
           {/* Logo */}
           <View style={styles.logoSection}>
-            <LinearGradient colors={["#7c3aed", "#db2777"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.logoBox}>
-              <Text style={styles.logoLetter}>L</Text>
-            </LinearGradient>
-            <Text style={styles.appName}>LOOTSTORE</Text>
+            <View style={styles.logoBox}>
+              {logoUrl ? (
+                <Image
+                  source={{ uri: logoUrl }}
+                  style={{ width: 64, height: 64, borderRadius: 18 }}
+                  contentFit="contain"
+                />
+              ) : (
+                <LinearGradient colors={["#7c3aed", "#db2777"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.logoGradient}>
+                  <Text style={styles.logoLetter}>{siteName.charAt(0).toUpperCase()}</Text>
+                </LinearGradient>
+              )}
+            </View>
+            <Text style={styles.appName}>{siteName.toUpperCase()}</Text>
             <Text style={styles.tagline}>Connectez-vous à votre compte</Text>
           </View>
 
@@ -129,16 +151,18 @@ const styles = StyleSheet.create({
   },
   logoSection: { alignItems: "center", gap: 10 },
   logoBox: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
     shadowColor: "#7c3aed",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 20,
     elevation: 10,
+  },
+  logoGradient: {
+    width: 64,
+    height: 64,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
   },
   logoLetter: { color: "#fff", fontSize: 30, fontWeight: "900" },
   appName: { color: "#fff", fontSize: 26, fontWeight: "900", letterSpacing: 2 },
