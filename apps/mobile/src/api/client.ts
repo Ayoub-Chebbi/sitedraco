@@ -26,17 +26,24 @@ async function request<T>(
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers,
-    signal: AbortSignal.timeout(15_000),
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15_000);
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ?? `HTTP ${res.status}`);
+  try {
+    const res = await fetch(`${API_BASE_URL}${path}`, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error ?? `HTTP ${res.status}`);
+    }
+    return res.json();
+  } finally {
+    clearTimeout(timer);
   }
-  return res.json();
 }
 
 export const api = {
