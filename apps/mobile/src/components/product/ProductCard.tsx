@@ -1,14 +1,14 @@
 import React, { useRef, useState } from "react";
 import {
   View, Text, TouchableOpacity, Dimensions, StyleSheet,
-  Modal, Animated, Pressable,
+  Modal, Animated, Pressable, ScrollView,
 } from "react-native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { Product } from "@/types";
+import type { Product, ProductVariant } from "@/types";
 import { formatPrice } from "@/utils/format";
 import { useCartStore } from "@/store/cart";
 
@@ -24,118 +24,169 @@ const PLATFORM_COLORS: Record<string, [string, string]> = {
   "Gift Cards": ["#b45309", "#78350f"],
 };
 
-// ─── Bottom Sheet ───────────────────────────────────────────────────────────
+// ─── Bottom Sheet ─────────────────────────────────────────────────────────────
 
-function ChooseTypeSheet({
+function PickerSheet({
   visible,
   product,
   onClose,
-  onSelect,
+  onAdded,
 }: {
   visible: boolean;
   product: Product;
   onClose: () => void;
-  onSelect: (type: "key" | "account") => void;
+  onAdded: () => void;
 }) {
   const insets = useSafeAreaInsets();
-  const translateY = useRef(new Animated.Value(400)).current;
+  const add = useCartStore((s) => s.add);
+  const translateY = useRef(new Animated.Value(600)).current;
   const opacity = useRef(new Animated.Value(0)).current;
+
+  const hasVariants = (product.variants?.length ?? 0) > 0;
+  const hasBoth = product.productType === "both";
 
   React.useEffect(() => {
     if (visible) {
       Animated.parallel([
         Animated.timing(opacity, { toValue: 1, duration: 220, useNativeDriver: true }),
-        Animated.spring(translateY, { toValue: 0, damping: 22, stiffness: 280, useNativeDriver: true }),
+        Animated.spring(translateY, { toValue: 0, damping: 22, stiffness: 260, useNativeDriver: true }),
       ]).start();
     } else {
       Animated.parallel([
         Animated.timing(opacity, { toValue: 0, duration: 160, useNativeDriver: true }),
-        Animated.timing(translateY, { toValue: 400, duration: 180, useNativeDriver: true }),
+        Animated.timing(translateY, { toValue: 600, duration: 180, useNativeDriver: true }),
       ]).start();
     }
   }, [visible]);
 
-  const keyPrice = product.discountPrice ?? product.price;
-  const keyOriginal = product.discountPrice ? product.price : null;
-  const accPrice = product.accountDiscountPrice ?? product.accountPrice ?? product.price;
-  const accOriginal = product.accountDiscountPrice ? product.accountPrice ?? product.price : null;
+  function selectVariant(v: ProductVariant) {
+    onClose();
+    setTimeout(() => { add(product, 1, undefined, v); onAdded(); }, 220);
+  }
+
+  function selectType(type: "key" | "account") {
+    onClose();
+    setTimeout(() => { add(product, 1, type); onAdded(); }, 220);
+  }
+
+  const title = hasVariants ? "Choisir un montant" : "Choisir un type";
 
   return (
     <Modal transparent visible={visible} animationType="none" onRequestClose={onClose} statusBarTranslucent>
+      {/* Backdrop */}
       <Animated.View style={[styles.backdrop, { opacity }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
 
-      <Animated.View style={[styles.sheet, { transform: [{ translateY }], paddingBottom: insets.bottom + 16 }]}>
+      {/* Sheet */}
+      <Animated.View style={[styles.sheet, { transform: [{ translateY }], paddingBottom: insets.bottom + 12 }]}>
         {/* Handle */}
         <View style={styles.handle} />
 
         {/* Header */}
         <View style={styles.sheetHeader}>
+          {product.imageUrl ? (
+            <Image source={{ uri: product.imageUrl }} style={styles.sheetThumb} contentFit="cover" />
+          ) : (
+            <View style={[styles.sheetThumb, { backgroundColor: "#1a1a2e", alignItems: "center", justifyContent: "center" }]}>
+              <Text style={{ fontSize: 20 }}>🎮</Text>
+            </View>
+          )}
           <View style={{ flex: 1 }}>
-            <Text style={styles.sheetTitle}>Choisir un type</Text>
-            <Text style={styles.sheetSubtitle} numberOfLines={1}>{product.name}</Text>
+            <Text style={styles.sheetTitle}>{title}</Text>
+            <Text style={styles.sheetSubtitle} numberOfLines={2}>{product.name}</Text>
           </View>
           <TouchableOpacity onPress={onClose} style={styles.closeBtn} hitSlop={12}>
             <Ionicons name="close" size={20} color="#6b7280" />
           </TouchableOpacity>
         </View>
 
-        {/* Options */}
-        <View style={styles.optionsRow}>
-          {/* Key option */}
-          <TouchableOpacity
-            style={styles.optionCard}
-            onPress={() => onSelect("key")}
-            activeOpacity={0.8}
-          >
-            <LinearGradient colors={["#2d1b4e", "#1a0533"]} style={styles.optionGradient}>
-              <View style={styles.optionIcon}>
-                <Text style={{ fontSize: 32 }}>🔑</Text>
-              </View>
-              <Text style={styles.optionLabel}>Clé / Code</Text>
-              <Text style={styles.optionDesc}>Activez sur votre compte</Text>
-              <View style={styles.optionPriceRow}>
-                <Text style={styles.optionPrice}>{formatPrice(keyPrice)}</Text>
-                {keyOriginal && (
-                  <Text style={styles.optionOldPrice}>{formatPrice(keyOriginal)}</Text>
-                )}
-              </View>
-              <View style={styles.optionCta}>
-                <Text style={styles.optionCtaText}>Ajouter</Text>
-                <Ionicons name="arrow-forward" size={13} color="#a78bfa" />
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
+        <View style={styles.dividerLine} />
 
-          {/* Account option */}
-          <TouchableOpacity
-            style={styles.optionCard}
-            onPress={() => onSelect("account")}
-            activeOpacity={0.8}
+        {/* Variants list */}
+        {hasVariants ? (
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            style={{ maxHeight: 360 }}
+            contentContainerStyle={{ gap: 10 }}
           >
-            <LinearGradient colors={["#1e2a4e", "#0f1729"]} style={styles.optionGradient}>
-              <View style={styles.optionIcon}>
-                <Text style={{ fontSize: 32 }}>👤</Text>
-              </View>
-              <Text style={[styles.optionLabel, { color: "#93c5fd" }]}>Compte</Text>
-              <Text style={styles.optionDesc}>Accédez directement</Text>
-              <View style={styles.optionPriceRow}>
-                <Text style={[styles.optionPrice, { color: "#60a5fa" }]}>{formatPrice(accPrice)}</Text>
-                {accOriginal && (
-                  <Text style={styles.optionOldPrice}>{formatPrice(accOriginal)}</Text>
+            {product.variants!.map((v) => {
+              const price = v.discountPrice ?? v.price;
+              const hasDisc = v.discountPrice != null && v.discountPrice < v.price;
+              const pct = hasDisc ? Math.round(((v.price - v.discountPrice!) / v.price) * 100) : 0;
+              return (
+                <TouchableOpacity
+                  key={v.id}
+                  onPress={() => selectVariant(v)}
+                  style={styles.variantRow}
+                  activeOpacity={0.75}
+                >
+                  <LinearGradient colors={["#1a0533", "#12121f"]} style={styles.variantRowGrad}>
+                    <View style={styles.variantRowLeft}>
+                      <View style={styles.variantDot} />
+                      <Text style={styles.variantName}>{v.name}</Text>
+                    </View>
+                    <View style={styles.variantRowRight}>
+                      {hasDisc && (
+                        <>
+                          <View style={styles.discBadge}>
+                            <Text style={styles.discBadgeText}>-{pct}%</Text>
+                          </View>
+                          <Text style={styles.variantOld}>{formatPrice(v.price)}</Text>
+                        </>
+                      )}
+                      <Text style={styles.variantPrice}>{formatPrice(price)}</Text>
+                      <View style={styles.addChip}>
+                        <Ionicons name="cart-outline" size={13} color="#a78bfa" />
+                        <Text style={styles.addChipText}>Ajouter</Text>
+                      </View>
+                    </View>
+                  </LinearGradient>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        ) : (
+          // Key / Account cards side by side
+          <View style={styles.typeRow}>
+            <TouchableOpacity style={[styles.typeCard, { borderColor: "#6d28d9" }]} onPress={() => selectType("key")} activeOpacity={0.8}>
+              <LinearGradient colors={["#2d1b4e", "#1a0533"]} style={styles.typeGrad}>
+                <Text style={{ fontSize: 30, marginBottom: 6 }}>🔑</Text>
+                <Text style={styles.typeLabel}>Clé / Code</Text>
+                <Text style={styles.typeDesc}>Activez sur votre compte</Text>
+                <Text style={styles.typePrice}>{formatPrice(product.discountPrice ?? product.price)}</Text>
+                {product.discountPrice && (
+                  <Text style={styles.typeOld}>{formatPrice(product.price)}</Text>
                 )}
-              </View>
-              <View style={[styles.optionCta, { borderColor: "#3b5bdb22", backgroundColor: "#3b5bdb22" }]}>
-                <Text style={[styles.optionCtaText, { color: "#93c5fd" }]}>Ajouter</Text>
-                <Ionicons name="arrow-forward" size={13} color="#93c5fd" />
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
+                <View style={styles.typeBtn}>
+                  <Text style={styles.typeBtnText}>Ajouter</Text>
+                  <Ionicons name="arrow-forward" size={12} color="#a78bfa" />
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.typeCard, { borderColor: "#3b5bdb" }]} onPress={() => selectType("account")} activeOpacity={0.8}>
+              <LinearGradient colors={["#1e2a4e", "#0f1729"]} style={styles.typeGrad}>
+                <Text style={{ fontSize: 30, marginBottom: 6 }}>👤</Text>
+                <Text style={[styles.typeLabel, { color: "#93c5fd" }]}>Compte</Text>
+                <Text style={styles.typeDesc}>Accès direct</Text>
+                <Text style={[styles.typePrice, { color: "#60a5fa" }]}>
+                  {formatPrice(product.accountDiscountPrice ?? product.accountPrice ?? product.price)}
+                </Text>
+                {product.accountDiscountPrice && (
+                  <Text style={styles.typeOld}>{formatPrice(product.accountPrice ?? product.price)}</Text>
+                )}
+                <View style={[styles.typeBtn, { backgroundColor: "#3b5bdb22", borderColor: "#3b5bdb44" }]}>
+                  <Text style={[styles.typeBtnText, { color: "#93c5fd" }]}>Ajouter</Text>
+                  <Ionicons name="arrow-forward" size={12} color="#93c5fd" />
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Cancel */}
-        <TouchableOpacity onPress={onClose} style={styles.cancelBtn}>
+        <TouchableOpacity onPress={onClose} style={styles.cancelBtn} activeOpacity={0.7}>
           <Text style={styles.cancelText}>Annuler</Text>
         </TouchableOpacity>
       </Animated.View>
@@ -143,7 +194,7 @@ function ChooseTypeSheet({
   );
 }
 
-// ─── ProductCard ─────────────────────────────────────────────────────────────
+// ─── ProductCard ──────────────────────────────────────────────────────────────
 
 export function ProductCard({ product }: { product: Product }) {
   const router = useRouter();
@@ -168,18 +219,16 @@ export function ProductCard({ product }: { product: Product }) {
     : 0;
   const gradientColors = (PLATFORM_COLORS[product.platform] ?? ["#4c1d95", "#1e1b4b"]) as [string, string];
 
+  const needsPicker = hasBoth || hasVariants;
+
   function handleAdd() {
     if (stock === 0) return;
-    if (hasBoth) {
+    if (needsPicker) {
       setSheetVisible(true);
     } else {
       add(product, 1);
+      router.push("/(tabs)/cart");
     }
-  }
-
-  function handleSelect(type: "key" | "account") {
-    setSheetVisible(false);
-    setTimeout(() => add(product, 1, type), 200);
   }
 
   return (
@@ -189,32 +238,25 @@ export function ProductCard({ product }: { product: Product }) {
         style={[styles.card, { width: CARD_WIDTH }]}
         activeOpacity={0.92}
       >
-        {/* Image / Gradient thumbnail */}
         <View style={styles.thumb}>
           {product.imageUrl ? (
             <Image source={{ uri: product.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
           ) : (
             <LinearGradient colors={gradientColors} style={StyleSheet.absoluteFill}>
-              <View style={styles.thumbEmoji}>
-                <Text style={{ fontSize: 34 }}>🎮</Text>
-              </View>
+              <View style={styles.thumbEmoji}><Text style={{ fontSize: 34 }}>🎮</Text></View>
             </LinearGradient>
           )}
-
           <LinearGradient colors={["transparent", "rgba(0,0,0,0.6)"]} style={StyleSheet.absoluteFill} />
-
           {hasDiscount && (
             <View style={styles.discountBadge}>
               <Text style={styles.discountText}>-{discountPct}%</Text>
             </View>
           )}
-
           {stock === 0 && (
             <View style={styles.outOfStock}>
               <Text style={styles.outOfStockText}>Rupture de stock</Text>
             </View>
           )}
-
           {stock > 0 && stock <= 3 && (
             <View style={styles.stockWarning}>
               <Text style={styles.stockWarningText}>⚡ {stock} restant</Text>
@@ -222,7 +264,6 @@ export function ProductCard({ product }: { product: Product }) {
           )}
         </View>
 
-        {/* Content */}
         <View style={styles.body}>
           <View style={[styles.platformPill, { backgroundColor: gradientColors[0] + "40" }]}>
             <Text style={[styles.platformText, { color: gradientColors[0] === "#003791" ? "#60a5fa" : "#e5e7eb" }]}>
@@ -232,8 +273,8 @@ export function ProductCard({ product }: { product: Product }) {
 
           <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
 
-          {hasBoth && (
-            <View style={styles.variantRow}>
+          {hasBoth && !hasVariants && (
+            <View style={styles.variantBadgeRow}>
               <View style={styles.variantPill}>
                 <Text style={styles.variantPillKey}>🔑 Clé</Text>
               </View>
@@ -245,11 +286,9 @@ export function ProductCard({ product }: { product: Product }) {
           )}
 
           <View style={styles.priceRow}>
-            {hasVariants && <Text style={styles.fromText}>À partir de </Text>}
+            {(hasVariants || hasBoth) && <Text style={styles.fromText}>À partir de </Text>}
             <Text style={styles.price}>{formatPrice(displayPrice)}</Text>
-            {hasDiscount && (
-              <Text style={styles.oldPrice}>{formatPrice(product.price)}</Text>
-            )}
+            {hasDiscount && <Text style={styles.oldPrice}>{formatPrice(product.price)}</Text>}
           </View>
 
           <TouchableOpacity
@@ -259,22 +298,22 @@ export function ProductCard({ product }: { product: Product }) {
             activeOpacity={0.8}
           >
             <Ionicons
-              name={stock === 0 ? "close-circle-outline" : hasBoth ? "options-outline" : "cart-outline"}
+              name={stock === 0 ? "close-circle-outline" : needsPicker ? "options-outline" : "cart-outline"}
               size={13}
               color={stock === 0 ? "#4b5563" : "#a78bfa"}
             />
             <Text style={[styles.addBtnText, stock === 0 && styles.addBtnTextDisabled]}>
-              {stock === 0 ? "Indisponible" : hasBoth ? "Choisir" : "Ajouter"}
+              {stock === 0 ? "Indisponible" : needsPicker ? "Choisir" : "Ajouter"}
             </Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
 
-      <ChooseTypeSheet
+      <PickerSheet
         visible={sheetVisible}
         product={product}
         onClose={() => setSheetVisible(false)}
-        onSelect={handleSelect}
+        onAdded={() => router.push("/(tabs)/cart")}
       />
     </>
   );
@@ -283,42 +322,33 @@ export function ProductCard({ product }: { product: Product }) {
 const styles = StyleSheet.create({
   // Card
   card: {
-    borderRadius: 16,
-    overflow: "hidden",
-    backgroundColor: "#12121f",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#2d2d4e",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    borderRadius: 16, overflow: "hidden", backgroundColor: "#12121f",
+    borderWidth: StyleSheet.hairlineWidth, borderColor: "#2d2d4e",
+    shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3, shadowRadius: 8, elevation: 5,
   },
   thumb: { height: 130, backgroundColor: "#1a1a2e", overflow: "hidden", position: "relative" },
   thumbEmoji: { flex: 1, alignItems: "center", justifyContent: "center" },
   discountBadge: {
-    position: "absolute", top: 8, right: 8,
-    backgroundColor: "#db2777", borderRadius: 8,
-    paddingHorizontal: 7, paddingVertical: 3,
+    position: "absolute", top: 8, right: 8, backgroundColor: "#db2777",
+    borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3,
   },
   discountText: { color: "#fff", fontSize: 10, fontWeight: "800" },
   outOfStock: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.65)",
+    ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.65)",
     alignItems: "center", justifyContent: "center",
   },
   outOfStockText: { color: "#f87171", fontWeight: "800", fontSize: 13 },
   stockWarning: {
-    position: "absolute", bottom: 6, left: 6,
-    backgroundColor: "rgba(0,0,0,0.7)", borderRadius: 6,
-    paddingHorizontal: 7, paddingVertical: 3,
+    position: "absolute", bottom: 6, left: 6, backgroundColor: "rgba(0,0,0,0.7)",
+    borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3,
   },
   stockWarningText: { color: "#fbbf24", fontSize: 10, fontWeight: "700" },
   body: { padding: 10, gap: 5 },
   platformPill: { alignSelf: "flex-start", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
   platformText: { fontSize: 10, fontWeight: "700" },
   name: { color: "#f9fafb", fontSize: 13, fontWeight: "600", lineHeight: 18 },
-  variantRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  variantBadgeRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   variantPill: {
     backgroundColor: "#2d1b4e", borderWidth: 1, borderColor: "#6d28d9",
     borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2,
@@ -341,98 +371,68 @@ const styles = StyleSheet.create({
   addBtnTextDisabled: { color: "#4b5563" },
 
   // Sheet
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.6)",
-  },
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.65)" },
   sheet: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
+    position: "absolute", bottom: 0, left: 0, right: 0,
     backgroundColor: "#12121f",
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    borderTopWidth: 1,
-    borderLeftWidth: StyleSheet.hairlineWidth,
-    borderRightWidth: StyleSheet.hairlineWidth,
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    borderTopWidth: 1, borderLeftWidth: StyleSheet.hairlineWidth, borderRightWidth: StyleSheet.hairlineWidth,
     borderColor: "#2d2d4e",
-    padding: 20,
-    gap: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -12 },
-    shadowOpacity: 0.6,
-    shadowRadius: 24,
-    elevation: 30,
+    padding: 20, gap: 14,
+    shadowColor: "#000", shadowOffset: { width: 0, height: -12 },
+    shadowOpacity: 0.6, shadowRadius: 24, elevation: 30,
   },
-  handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#2d2d4e",
-    alignSelf: "center",
-    marginBottom: 4,
-  },
-  sheetHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  sheetTitle: { color: "#fff", fontSize: 18, fontWeight: "800" },
-  sheetSubtitle: { color: "#6b7280", fontSize: 13, marginTop: 2 },
+  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: "#2d2d4e", alignSelf: "center" },
+  sheetHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
+  sheetThumb: { width: 48, height: 48, borderRadius: 12 },
+  sheetTitle: { color: "#fff", fontSize: 16, fontWeight: "800" },
+  sheetSubtitle: { color: "#6b7280", fontSize: 12, marginTop: 2 },
   closeBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: "#1a1a2e",
-    alignItems: "center",
-    justifyContent: "center",
+    width: 34, height: 34, borderRadius: 10, backgroundColor: "#1a1a2e",
+    alignItems: "center", justifyContent: "center",
   },
-  optionsRow: { flexDirection: "row", gap: 12 },
-  optionCard: {
-    flex: 1,
-    borderRadius: 16,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "#6d28d9",
+  dividerLine: { height: StyleSheet.hairlineWidth, backgroundColor: "#2d2d4e" },
+
+  // Variant rows (gift cards etc)
+  variantRow: { borderRadius: 14, overflow: "hidden", borderWidth: 1, borderColor: "#2d2d4e" },
+  variantRowGrad: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 16, paddingVertical: 14,
   },
-  optionGradient: {
-    padding: 16,
-    gap: 8,
-    alignItems: "center",
+  variantRowLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
+  variantDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#7c3aed" },
+  variantName: { color: "#e5e7eb", fontSize: 15, fontWeight: "700" },
+  variantRowRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  discBadge: { backgroundColor: "#db2777", borderRadius: 6, paddingHorizontal: 5, paddingVertical: 2 },
+  discBadgeText: { color: "#fff", fontSize: 9, fontWeight: "800" },
+  variantOld: { color: "#4b5563", fontSize: 12, textDecorationLine: "line-through" },
+  variantPrice: { color: "#a78bfa", fontSize: 16, fontWeight: "900" },
+  addChip: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: "#1a0533", borderWidth: 1, borderColor: "#7c3aed44",
+    borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5,
   },
-  optionIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
+  addChipText: { color: "#a78bfa", fontSize: 12, fontWeight: "700" },
+
+  // Key / Account cards
+  typeRow: { flexDirection: "row", gap: 12 },
+  typeCard: { flex: 1, borderRadius: 16, overflow: "hidden", borderWidth: 1 },
+  typeGrad: { padding: 16, gap: 4, alignItems: "center" },
+  typeLabel: { color: "#c4b5fd", fontSize: 15, fontWeight: "800" },
+  typeDesc: { color: "#6b7280", fontSize: 11, textAlign: "center" },
+  typePrice: { color: "#a78bfa", fontSize: 16, fontWeight: "900", marginTop: 4 },
+  typeOld: { color: "#4b5563", fontSize: 11, textDecorationLine: "line-through" },
+  typeBtn: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: "#7c3aed22", borderWidth: 1, borderColor: "#7c3aed44",
+    borderRadius: 8, paddingHorizontal: 14, paddingVertical: 7, marginTop: 6,
   },
-  optionLabel: { color: "#c4b5fd", fontSize: 15, fontWeight: "800" },
-  optionDesc: { color: "#6b7280", fontSize: 11, textAlign: "center" },
-  optionPriceRow: { flexDirection: "row", alignItems: "baseline", gap: 5, flexWrap: "wrap", justifyContent: "center" },
-  optionPrice: { color: "#a78bfa", fontSize: 16, fontWeight: "900" },
-  optionOldPrice: { color: "#4b5563", fontSize: 12, textDecorationLine: "line-through" },
-  optionCta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#7c3aed22",
-    borderWidth: 1,
-    borderColor: "#7c3aed44",
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    marginTop: 4,
-  },
-  optionCtaText: { color: "#a78bfa", fontSize: 13, fontWeight: "700" },
+  typeBtnText: { color: "#a78bfa", fontSize: 13, fontWeight: "700" },
+
+  // Cancel
   cancelBtn: {
-    alignItems: "center",
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: "#1a1a2e",
+    alignItems: "center", paddingVertical: 13,
+    borderRadius: 12, backgroundColor: "#1a1a2e",
   },
   cancelText: { color: "#6b7280", fontSize: 15, fontWeight: "600" },
 });
