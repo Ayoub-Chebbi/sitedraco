@@ -35,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       isActive: false, // draft by default
       soldCount: 0,
       variants: source.variants.length > 0 ? {
-        create: source.variants.map(({ id: _vid, productId: _pid, createdAt: _c, updatedAt: _u, ...v }) => v),
+        create: source.variants.map(({ id: _vid, productId: _pid, createdAt: _c, ...v }) => v),
       } : undefined,
     },
   });
