@@ -3,7 +3,11 @@ import { put } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 
-const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+const ALLOWED_TYPES = [
+  "image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif",
+  "image/heic", "image/heif", // iPhone photos
+];
+const ALLOWED_EXTS = ["jpg", "jpeg", "png", "webp", "gif", "heic", "heif"];
 const MAX_BYTES = 2 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
@@ -21,7 +25,8 @@ export async function POST(req: NextRequest) {
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "Aucun fichier reçu" }, { status: 400 });
   }
-  if (!ALLOWED_TYPES.includes(file.type)) {
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  if (!ALLOWED_TYPES.includes(file.type) && !ALLOWED_EXTS.includes(ext)) {
     return NextResponse.json({ error: "Format non autorisé (JPG, PNG, WebP uniquement)" }, { status: 415 });
   }
   if (file.size > MAX_BYTES) {

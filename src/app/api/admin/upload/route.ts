@@ -3,7 +3,11 @@ import { randomUUID } from "crypto";
 import { auth } from "@/lib/auth";
 import { put } from "@vercel/blob";
 
-const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
+const ALLOWED_TYPES = [
+  "image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif",
+  "image/heic", "image/heif",
+];
+const ALLOWED_EXTS = ["jpg", "jpeg", "png", "webp", "gif", "heic", "heif"];
 const ALLOWED_FOLDERS = ["products", "hero", "logo", "logos", "categories"];
 const MAX_BYTES = 5 * 1024 * 1024;
 
@@ -27,7 +31,8 @@ export async function POST(req: NextRequest) {
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "Aucun fichier reçu" }, { status: 400 });
   }
-  if (!ALLOWED_TYPES.includes(file.type)) {
+  const fileExt = file.name.split(".").pop()?.toLowerCase() ?? "";
+  if (!ALLOWED_TYPES.includes(file.type) && !ALLOWED_EXTS.includes(fileExt)) {
     return NextResponse.json(
       { error: "Type de fichier non autorisé (JPG, PNG, WebP, GIF uniquement)" },
       { status: 415 }
