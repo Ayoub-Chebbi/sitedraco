@@ -6,7 +6,7 @@ import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? "unknown";
-  const { allowed, retryAfterMs } = rateLimit(`login:${ip}`, { max: 10, windowMs: 15 * 60 * 1000 });
+  const { allowed, retryAfterMs } = await rateLimit(`login:${ip}`, { max: 10, windowMs: 15 * 60 * 1000 });
   if (!allowed) {
     return NextResponse.json(
       { error: "Trop de tentatives. Réessayez dans quelques minutes." },

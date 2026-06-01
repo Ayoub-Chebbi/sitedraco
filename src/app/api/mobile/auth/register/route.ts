@@ -6,7 +6,7 @@ import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? "unknown";
-  const { allowed, retryAfterMs } = rateLimit(`register:${ip}`, { max: 5, windowMs: 60 * 60 * 1000 });
+  const { allowed, retryAfterMs } = await rateLimit(`register:${ip}`, { max: 5, windowMs: 60 * 60 * 1000 });
   if (!allowed) {
     return NextResponse.json(
       { error: "Trop de comptes créés. Réessayez plus tard." },

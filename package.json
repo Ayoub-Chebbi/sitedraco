@@ -30,6 +30,7 @@
     "@radix-ui/react-toast": "^1.2.15",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/nodemailer": "^6.4.23",
+    "@upstash/redis": "^1.38.0",
     "@vercel/blob": "^2.4.0",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.10.0",

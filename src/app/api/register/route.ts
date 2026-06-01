@@ -12,7 +12,7 @@ const schema = z.object({
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
-  const { allowed, retryAfterMs } = rateLimit(`register:${ip}`, { max: 5, windowMs: 60 * 60 * 1000 });
+  const { allowed, retryAfterMs } = await rateLimit(`register:${ip}`, { max: 5, windowMs: 60 * 60 * 1000 });
   if (!allowed) {
     return NextResponse.json({ error: "Trop de tentatives. Réessayez plus tard." }, { status: 429, headers: { "Retry-After": Math.ceil(retryAfterMs / 1000).toString() } });
   }
