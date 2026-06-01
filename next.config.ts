@@ -14,11 +14,11 @@ const SECURITY_HEADERS = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://connect.facebook.net",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://connect.facebook.net https://static.cloudflareinsights.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob: https://usy4zczaubjlufi6.public.blob.vercel-storage.com https://www.facebook.com https:",
       "font-src 'self' https://fonts.gstatic.com",
-      "connect-src 'self' https://loot.tn https://developers.flouci.com https://www.facebook.com https://connect.facebook.net",
+      "connect-src 'self' https://loot.tn https://developers.flouci.com https://www.facebook.com https://connect.facebook.net https://cloudflareinsights.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
