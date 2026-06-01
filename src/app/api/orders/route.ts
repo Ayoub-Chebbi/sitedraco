@@ -11,7 +11,7 @@ import { z } from "zod";
 
 const schema = z.object({
   email: z.string().email(),
-  paymentMethod: z.string(),
+  paymentMethod: z.enum(["flouci", "d17", "flouci_app", "virement"]),
   totalAmount: z.number().positive(),
   items: z.array(z.object({
     productId: z.string(),

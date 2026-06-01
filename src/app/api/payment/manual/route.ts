@@ -10,7 +10,10 @@ import { notifyAdminsNewOrder } from "@/lib/push-notifications";
 const schema = z.object({
   email: z.string().email(),
   paymentMethod: z.enum(["d17", "flouci_app", "virement"]),
-  paymentProofUrl: z.string().url(),
+  paymentProofUrl: z.string().url().refine(
+    (url) => url.startsWith("https://usy4zczaubjlufi6.public.blob.vercel-storage.com/"),
+    { message: "URL de justificatif invalide." }
+  ),
   items: z.array(z.object({
     productId: z.string(),
     variantId: z.string().optional(),

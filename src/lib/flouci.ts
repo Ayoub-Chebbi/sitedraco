@@ -61,6 +61,7 @@ export async function verifyFlouciPayment(paymentId: string): Promise<boolean> {
       apppublic: token,
       appsecret: secret,
     },
+    signal: AbortSignal.timeout(10_000),
   });
 
   const data = await res.json().catch(() => ({}));

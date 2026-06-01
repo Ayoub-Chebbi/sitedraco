@@ -4,6 +4,11 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 const FROM = process.env.EMAIL_FROM ?? "noreply@loot.tn";
 
+function h(str: string | null | undefined): string {
+  if (!str) return "";
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 const base = `
   <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;background:#0d0d14;color:#e5e7eb;border-radius:12px;overflow:hidden">
     <div style="background:linear-gradient(135deg,#7c3aed,#db2777);padding:28px 32px">
@@ -137,7 +142,7 @@ export async function sendTicketReplyEmail({
       const bubbleBg   = isStaff ? "#f3f0ff" : "#f9fafb";
       const bubbleBorder = isStaff ? "#ddd6fe" : "#e5e7eb";
       const labelColor = isStaff ? "#7c3aed" : "#6b7280";
-      const label      = isStaff ? `🛡️ Support` : `👤 ${m.senderName}`;
+      const label      = isStaff ? `🛡️ Support` : `👤 ${h(m.senderName)}`;
       const align      = isStaff ? "right" : "left";
       return `
         <tr><td style="padding:0 0 10px">
@@ -183,7 +188,7 @@ export async function sendTicketReplyEmail({
               Vous avez reçu une réponse
             </p>
             <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6">
-              Bonjour ${clientName ? `<strong style="color:#111827">${clientName}</strong>` : ""},
+              Bonjour ${clientName ? `<strong style="color:#111827">${h(clientName)}</strong>` : ""},
               notre équipe support a répondu à votre demande
               <strong style="color:#111827">#${ref}</strong>.
             </p>
@@ -191,7 +196,7 @@ export async function sendTicketReplyEmail({
             <!-- Subject chip -->
             <p style="margin:0 0 20px">
               <span style="display:inline-block;background:#f3f0ff;border:1px solid #ddd6fe;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;color:#7c3aed">
-                📋 ${ticketSubject}
+                📋 ${h(ticketSubject)}
               </span>
             </p>
 
@@ -200,7 +205,7 @@ export async function sendTicketReplyEmail({
               <tr>
                 <td style="background:#faf5ff;border:1px solid #ddd6fe;border-left:4px solid #7c3aed;border-radius:10px;padding:16px 18px">
                   <p style="margin:0 0 6px;font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px">
-                    🛡️ ${agentName} · Support
+                    🛡️ ${h(agentName)} · Support
                   </p>
                   <p style="margin:0;font-size:14px;color:#1f2937;line-height:1.65">${newMessage.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>")}</p>
                 </td>

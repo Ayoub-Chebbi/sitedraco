@@ -2,14 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { rateLimit } from "@/lib/rate-limit";
 
 const schema = z.object({
   email: z.string().email(),
-  password: z.string().min(8),
-  name: z.string().optional(),
+  password: z.string().min(8).max(128),
+  name: z.string().max(100).optional(),
 });
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
+  const { allowed, retryAfterMs } = rateLimit(`register:${ip}`, { max: 5, windowMs: 60 * 60 * 1000 });
+  if (!allowed) {
+    return NextResponse.json({ error: "Trop de tentatives. Réessayez plus tard." }, { status: 429, headers: { "Retry-After": Math.ceil(retryAfterMs / 1000).toString() } });
+  }
+
   const body = await req.json();
   const parsed = schema.safeParse(body);
   if (!parsed.success) {

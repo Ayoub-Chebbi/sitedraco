@@ -22,6 +22,7 @@ async function sendExpoPush(messages: PushMessage[]) {
         Accept: "application/json",
       },
       body: JSON.stringify(messages),
+      signal: AbortSignal.timeout(5_000),
     });
   } catch (err) {
     console.error("[push] Failed to send Expo push:", err);

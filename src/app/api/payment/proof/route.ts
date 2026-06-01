@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { put } from "@vercel/blob";
+import { rateLimit } from "@/lib/rate-limit";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif"];
 const ALLOWED_EXTS = ["jpg", "jpeg", "png", "webp", "gif", "heic", "heif"];
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
+  const { allowed, retryAfterMs } = rateLimit(`proof:${ip}`, { max: 10, windowMs: 60 * 60 * 1000 });
+  if (!allowed) {
+    return NextResponse.json({ error: "Trop de tentatives. Réessayez plus tard." }, { status: 429, headers: { "Retry-After": Math.ceil(retryAfterMs / 1000).toString() } });
+  }
+
   let formData: FormData;
   try {
     formData = await req.formData();

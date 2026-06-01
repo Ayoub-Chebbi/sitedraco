@@ -31,12 +31,10 @@ export async function POST(req: NextRequest) {
 
   const resetUrl = `${process.env.SITE_URL ?? process.env.NEXTAUTH_URL ?? "https://loot.tn"}/reinitialiser-mot-de-passe?token=${token}`;
 
-  try {
-    await sendPasswordResetEmail(email, resetUrl);
-  } catch (err) {
-    console.error("Password reset email failed:", err);
-    return NextResponse.json({ error: "Impossible d'envoyer l'email. Vérifiez votre adresse." }, { status: 500 });
-  }
+  // Always return success — never leak whether the email exists or the send failed
+  sendPasswordResetEmail(email, resetUrl).catch((err) =>
+    console.error("Password reset email failed:", err)
+  );
 
   return NextResponse.json({ success: true });
 }

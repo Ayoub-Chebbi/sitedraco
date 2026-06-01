@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getMobileUser } from "@/lib/mobile-auth";
 import { generateOrderNumber } from "@/lib/utils";
 import { initiateFlouciPayment } from "@/lib/flouci";
+import { rateLimit } from "@/lib/rate-limit";
 
 const schema = z.object({
   email: z.string().email(),
@@ -17,6 +18,12 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
+  const { allowed, retryAfterMs } = rateLimit(`mobile-pay:${ip}`, { max: 5, windowMs: 15 * 60 * 1000 });
+  if (!allowed) {
+    return NextResponse.json({ error: "Trop de tentatives. Réessayez plus tard." }, { status: 429, headers: { "Retry-After": Math.ceil(retryAfterMs / 1000).toString() } });
+  }
+
   const mobileUser = await getMobileUser(req);
 
   let body: unknown;

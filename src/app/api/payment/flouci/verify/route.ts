@@ -34,8 +34,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Statut de commande inattendu." }, { status: 409 });
   }
 
-  // Prevent payment injection: verify the paymentId matches what we stored
-  if (order.paymentRef && order.paymentRef !== paymentId) {
+  // Prevent payment injection: paymentRef must match exactly
+  // If paymentRef is still null (race window), reject — client will retry
+  if (!order.paymentRef) {
+    return NextResponse.json({ error: "Paiement en cours d'initialisation. Réessayez dans quelques secondes." }, { status: 409 });
+  }
+  if (order.paymentRef !== paymentId) {
     return NextResponse.json({ error: "Référence de paiement invalide." }, { status: 400 });
   }
 

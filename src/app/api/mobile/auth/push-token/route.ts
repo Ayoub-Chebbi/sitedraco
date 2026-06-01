@@ -10,6 +10,9 @@ export async function PATCH(req: NextRequest) {
   if (!token || typeof token !== "string") {
     return NextResponse.json({ error: "Token manquant." }, { status: 400 });
   }
+  if (!/^ExponentPushToken\[.+\]$/.test(token)) {
+    return NextResponse.json({ error: "Format de token invalide." }, { status: 400 });
+  }
 
   await prisma.user.update({
     where: { id: user.id },
