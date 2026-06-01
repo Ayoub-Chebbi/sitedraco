@@ -2,40 +2,62 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/utils";
-import { AdminMetricsClient } from "./admin-metrics-client";
-import { TrendingUp, Users, ShoppingCart, AlertCircle } from "lucide-react";
-import Link from "next/link";
+import { AdminDashboard } from "./admin-metrics-client";
 
 async function getMetrics() {
   const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const startOfToday    = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfMonth    = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfLastMonth= new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const start7DaysAgo   = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
   const [
+    // Revenue — only paid orders
+    allTimePaidOrders,
+    todayPaidOrders,
+    monthPaidOrders,
+    lastMonthPaidOrders,
+    // Order counts
     totalOrders,
+    paidOrdersCount,
     pendingOrders,
+    awaitingVerification,
     deliveredOrders,
-    monthOrders,
-    lastMonthOrders,
+    // Users
     totalUsers,
     newUsersThisMonth,
+    // Charts: last 7 days daily revenue
+    last7DaysPaidOrders,
+    // Payment method breakdown
+    paymentMethodStats,
+    // Top products
     topProducts,
+    // Recent orders
     recentOrders,
+    // Low stock
     lowStockProducts,
   ] = await Promise.all([
+    prisma.order.findMany({ where: { paymentStatus: "paid" }, select: { totalAmount: true } }),
+    prisma.order.findMany({ where: { paymentStatus: "paid", createdAt: { gte: startOfToday } }, select: { totalAmount: true } }),
+    prisma.order.findMany({ where: { paymentStatus: "paid", createdAt: { gte: startOfMonth } }, select: { totalAmount: true } }),
+    prisma.order.findMany({ where: { paymentStatus: "paid", createdAt: { gte: startOfLastMonth, lt: startOfMonth } }, select: { totalAmount: true } }),
     prisma.order.count(),
-    prisma.order.count({ where: { status: { in: ["pending", "processing"] } } }),
+    prisma.order.count({ where: { paymentStatus: "paid" } }),
+    prisma.order.count({ where: { status: { in: ["pending", "processing"] }, paymentStatus: "paid" } }),
+    prisma.order.count({ where: { paymentStatus: "awaiting_verification" } }),
     prisma.order.count({ where: { status: "delivered" } }),
-    prisma.order.findMany({
-      where: { createdAt: { gte: startOfMonth }, status: "delivered" },
-      select: { totalAmount: true },
-    }),
-    prisma.order.findMany({
-      where: { createdAt: { gte: startOfLastMonth, lt: startOfMonth }, status: "delivered" },
-      select: { totalAmount: true },
-    }),
     prisma.user.count({ where: { role: "customer" } }),
     prisma.user.count({ where: { role: "customer", createdAt: { gte: startOfMonth } } }),
+    prisma.order.findMany({
+      where: { paymentStatus: "paid", createdAt: { gte: start7DaysAgo } },
+      select: { totalAmount: true, createdAt: true },
+    }),
+    prisma.order.groupBy({
+      by: ["paymentMethod"],
+      where: { paymentStatus: "paid" },
+      _count: { id: true },
+      _sum: { totalAmount: true },
+    }),
     prisma.product.findMany({
       where: { isActive: true },
       include: {
@@ -56,24 +78,58 @@ async function getMetrics() {
     prisma.product.findMany({
       where: { isActive: true },
       include: { keys: { where: { status: "available" }, select: { id: true } } },
-      orderBy: { name: "asc" },
     }),
   ]);
 
-  const monthRevenue = monthOrders.reduce((s, o) => s + o.totalAmount, 0);
-  const lastMonthRevenue = lastMonthOrders.reduce((s, o) => s + o.totalAmount, 0);
-  const revenueGrowth = lastMonthRevenue > 0
+  // Calculate revenues
+  const totalRevenue    = allTimePaidOrders.reduce((s, o) => s + o.totalAmount, 0);
+  const todayRevenue    = todayPaidOrders.reduce((s, o) => s + o.totalAmount, 0);
+  const monthRevenue    = monthPaidOrders.reduce((s, o) => s + o.totalAmount, 0);
+  const lastMonthRevenue= lastMonthPaidOrders.reduce((s, o) => s + o.totalAmount, 0);
+  const revenueGrowth   = lastMonthRevenue > 0
     ? Math.round(((monthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100)
-    : 100;
+    : monthRevenue > 0 ? 100 : 0;
+  const avgOrderValue   = paidOrdersCount > 0 ? totalRevenue / paidOrdersCount : 0;
+
+  // Build 7-day chart
+  const dailyRevenue: { date: string; revenue: number; orders: number }[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const dayEnd   = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+    const dayOrders = last7DaysPaidOrders.filter(
+      (o) => o.createdAt >= dayStart && o.createdAt < dayEnd
+    );
+    dailyRevenue.push({
+      date: dayStart.toLocaleDateString("fr-TN", { weekday: "short", day: "numeric" }),
+      revenue: Math.round(dayOrders.reduce((s, o) => s + o.totalAmount, 0) * 1000) / 1000,
+      orders: dayOrders.length,
+    });
+  }
+
+  // Payment method breakdown
+  const methodBreakdown = paymentMethodStats.map((m) => ({
+    method: m.paymentMethod ?? "inconnu",
+    count: m._count.id,
+    revenue: m._sum.totalAmount ?? 0,
+  }));
 
   return {
+    totalRevenue,
+    todayRevenue,
     monthRevenue,
     revenueGrowth,
+    avgOrderValue,
     totalOrders,
+    paidOrdersCount,
     pendingOrders,
+    awaitingVerification,
     deliveredOrders,
     totalUsers,
     newUsersThisMonth,
+    dailyRevenue,
+    methodBreakdown,
     topProducts: topProducts.map((p) => ({
       id: p.id,
       name: p.name,
@@ -86,6 +142,8 @@ async function getMetrics() {
       id: o.id,
       orderNumber: o.orderNumber,
       status: o.status,
+      paymentStatus: o.paymentStatus,
+      paymentMethod: o.paymentMethod,
       totalAmount: o.totalAmount,
       createdAt: o.createdAt.toISOString(),
       customerEmail: o.user?.email || o.guestEmail || "Invité",
@@ -93,84 +151,28 @@ async function getMetrics() {
     })),
     lowStockProducts: lowStockProducts
       .filter((p) => p.keys.length <= p.lowStockAlert)
+      .sort((a, b) => a.keys.length - b.keys.length)
+      .slice(0, 8)
       .map((p) => ({ id: p.id, name: p.name, stock: p.keys.length, alert: p.lowStockAlert })),
   };
 }
 
 export default async function AdminPage() {
   const session = await auth();
-  if (!session || !["admin", "support"].includes(session.user.role)) {
-    redirect("/");
-  }
+  if (!session || !["admin", "support"].includes(session.user.role)) redirect("/");
   if (session.user.role === "support") redirect("/admin/commandes");
 
   const metrics = await getMetrics();
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Dashboard Admin</h1>
-          <p className="text-gray-500 text-sm mt-1">Vue d&apos;ensemble des opérations</p>
-        </div>
-        {metrics.pendingOrders > 0 && (
-          <Link href="/admin/commandes">
-            <div className="flex items-center gap-2 bg-red-900/30 border border-red-700/50 text-red-300 px-4 py-2 rounded-xl animate-pulse">
-              <AlertCircle className="h-4 w-4" />
-              <span className="text-sm font-semibold">{metrics.pendingOrders} commande{metrics.pendingOrders > 1 ? "s" : ""} en attente</span>
-            </div>
-          </Link>
-        )}
-      </div>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {[
-          {
-            label: "Revenus ce mois",
-            value: formatPrice(metrics.monthRevenue),
-            sub: `${metrics.revenueGrowth >= 0 ? "+" : ""}${metrics.revenueGrowth}% vs mois dernier`,
-            positive: metrics.revenueGrowth >= 0,
-            icon: <TrendingUp className="h-5 w-5 text-purple-400" />,
-          },
-          {
-            label: "Commandes totales",
-            value: metrics.totalOrders.toString(),
-            sub: `${metrics.deliveredOrders} livrées`,
-            positive: true,
-            icon: <ShoppingCart className="h-5 w-5 text-purple-400" />,
-          },
-          {
-            label: "Clients",
-            value: metrics.totalUsers.toString(),
-            sub: `+${metrics.newUsersThisMonth} ce mois`,
-            positive: true,
-            icon: <Users className="h-5 w-5 text-purple-400" />,
-          },
-          {
-            label: "En attente",
-            value: metrics.pendingOrders.toString(),
-            sub: "À traiter maintenant",
-            positive: metrics.pendingOrders === 0,
-            icon: <AlertCircle className="h-5 w-5 text-purple-400" />,
-          },
-        ].map((kpi) => (
-          <div key={kpi.label} className="rounded-xl border border-gray-800 bg-gray-900 p-5">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">{kpi.label}</p>
-              {kpi.icon}
-            </div>
-            <p className="text-2xl font-bold text-white">{kpi.value}</p>
-            <p className={`text-xs mt-1 ${kpi.positive ? "text-green-400" : "text-red-400"}`}>{kpi.sub}</p>
-          </div>
-        ))}
-      </div>
-
-      <AdminMetricsClient
-        topProducts={metrics.topProducts}
-        recentOrders={metrics.recentOrders}
-        lowStockProducts={metrics.lowStockProducts}
-      />
-    </div>
+    <AdminDashboard
+      metrics={{
+        ...metrics,
+        totalRevenue: formatPrice(metrics.totalRevenue),
+        todayRevenue: formatPrice(metrics.todayRevenue),
+        monthRevenue: formatPrice(metrics.monthRevenue),
+        avgOrderValue: formatPrice(metrics.avgOrderValue),
+      }}
+    />
   );
 }
