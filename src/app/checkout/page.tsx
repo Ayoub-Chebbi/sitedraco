@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
-import { Loader2, CreditCard, Shield, Lock, Zap, Tag, X, CheckCircle, Gamepad2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  Loader2, CreditCard, Shield, Lock, Zap, Tag, X,
+  CheckCircle, Gamepad2, Upload, Copy, Check, Smartphone, Building2
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/lib/cart-store";
@@ -12,19 +16,101 @@ import { formatPrice } from "@/lib/utils";
 import { trackInitiateCheckout } from "@/components/shared/meta-pixel";
 
 type CouponResult = {
-  id: string;
-  code: string;
-  type: "percentage" | "fixed";
-  value: number;
-  discount: number;
+  id: string; code: string; type: "percentage" | "fixed"; value: number; discount: number;
 };
+
+type PaymentMethod = "carte" | "d17" | "flouci_app" | "virement";
+
+const PAYMENT_METHODS: { id: PaymentMethod; label: string; desc: string; icon: React.ReactNode; needsProof: boolean }[] = [
+  {
+    id: "carte",
+    label: "Carte bancaire",
+    desc: "Visa, Mastercard — Paiement sécurisé en ligne",
+    icon: <CreditCard className="h-5 w-5 text-purple-400" />,
+    needsProof: false,
+  },
+  {
+    id: "d17",
+    label: "D17",
+    desc: "56 190 577 — 96 780 440",
+    icon: <Smartphone className="h-5 w-5 text-blue-400" />,
+    needsProof: true,
+  },
+  {
+    id: "flouci_app",
+    label: "Flouci",
+    desc: "58 960 645",
+    icon: <Smartphone className="h-5 w-5 text-green-400" />,
+    needsProof: true,
+  },
+  {
+    id: "virement",
+    label: "Virement bancaire",
+    desc: "RIB : 24 031 201 5632 512201 69 — Trakioo",
+    icon: <Building2 className="h-5 w-5 text-amber-400" />,
+    needsProof: true,
+  },
+];
+
+function CopyBtn({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={() => { navigator.clipboard.writeText(value); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
+      className="ml-2 text-gray-500 hover:text-gray-300 transition-colors"
+      title="Copier"
+    >
+      {copied ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
+    </button>
+  );
+}
+
+function ManualPaymentDetails({ method }: { method: PaymentMethod }) {
+  if (method === "d17") return (
+    <div className="rounded-xl border border-blue-700/40 bg-blue-900/10 p-4 space-y-2 text-sm">
+      <p className="font-semibold text-blue-300">Envoyez le montant via D17 à :</p>
+      <div className="flex items-center"><span className="font-mono text-white">56 190 577</span><CopyBtn value="56190577" /></div>
+      <div className="flex items-center"><span className="font-mono text-white">96 780 440</span><CopyBtn value="96780440" /></div>
+      <p className="text-gray-400 text-xs pt-1">Prenez une capture d'écran de la transaction et téléchargez-la ci-dessous.</p>
+    </div>
+  );
+
+  if (method === "flouci_app") return (
+    <div className="rounded-xl border border-green-700/40 bg-green-900/10 p-4 space-y-2 text-sm">
+      <p className="font-semibold text-green-300">Envoyez le montant via Flouci à :</p>
+      <div className="flex items-center"><span className="font-mono text-white">58 960 645</span><CopyBtn value="58960645" /></div>
+      <p className="text-gray-400 text-xs pt-1">Prenez une capture d'écran de la transaction et téléchargez-la ci-dessous.</p>
+    </div>
+  );
+
+  if (method === "virement") return (
+    <div className="rounded-xl border border-amber-700/40 bg-amber-900/10 p-4 space-y-2 text-sm">
+      <p className="font-semibold text-amber-300">Effectuez un virement bancaire vers :</p>
+      <div>
+        <p className="text-xs text-gray-500">RIB</p>
+        <div className="flex items-center"><span className="font-mono text-white">24 031 201 5632 512201 69</span><CopyBtn value="24031201563251220169" /></div>
+      </div>
+      <div>
+        <p className="text-xs text-gray-500">Nom du bénéficiaire</p>
+        <p className="font-semibold text-white">Trakioo</p>
+      </div>
+      <p className="text-gray-400 text-xs pt-1">Prenez une capture d'écran / justificatif du virement et téléchargez-le ci-dessous.</p>
+    </div>
+  );
+
+  return null;
+}
 
 export default function CheckoutPage() {
   const { data: session } = useSession();
+  const router = useRouter();
   const { items, total, clearCart } = useCart();
+
   const [email, setEmail] = useState(session?.user?.email || "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("carte");
 
   const [couponInput, setCouponInput] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
@@ -33,6 +119,14 @@ export default function CheckoutPage() {
 
   const [steamUsername, setSteamUsername] = useState("");
   const needsSteam = items.some((i) => i.requiresSteamUsername);
+
+  // Proof upload
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofPreview, setProofPreview] = useState<string | null>(null);
+  const [uploadingProof, setUploadingProof] = useState(false);
+
+  const selectedMethod = PAYMENT_METHODS.find((m) => m.id === paymentMethod)!;
 
   useEffect(() => {
     if (items.length > 0) {
@@ -54,6 +148,25 @@ export default function CheckoutPage() {
   const discount = appliedCoupon?.discount ?? 0;
   const finalTotal = Math.max(0, subtotal - discount);
 
+  function handleProofFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setProofFile(f);
+    setProofPreview(URL.createObjectURL(f));
+  }
+
+  async function uploadProof(): Promise<string> {
+    if (!proofFile) throw new Error("Aucun justificatif sélectionné.");
+    setUploadingProof(true);
+    const fd = new FormData();
+    fd.append("file", proofFile);
+    const res = await fetch("/api/payment/proof", { method: "POST", body: fd });
+    setUploadingProof(false);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? "Échec de l'upload.");
+    return data.url;
+  }
+
   async function applyCode() {
     if (!couponInput.trim()) return;
     setCouponError("");
@@ -65,49 +178,56 @@ export default function CheckoutPage() {
     });
     const data = await res.json();
     setCouponLoading(false);
-    if (!res.ok) {
-      setCouponError(data.error || "Code invalide.");
-    } else {
-      setAppliedCoupon(data);
-      setCouponInput("");
-    }
+    if (!res.ok) setCouponError(data.error || "Code invalide.");
+    else { setAppliedCoupon(data); setCouponInput(""); }
   }
 
-  function removeCoupon() {
-    setAppliedCoupon(null);
-    setCouponError("");
-  }
+  function removeCoupon() { setAppliedCoupon(null); setCouponError(""); }
 
-  async function initiatePayment() {
+  async function handlePay() {
     setError("");
-    if (!email.includes("@")) {
-      setError("Entrez un email valide.");
-      return;
-    }
-    if (needsSteam && !steamUsername.trim()) {
-      setError("Veuillez entrer votre pseudo Steam.");
-      return;
-    }
+    if (!email.includes("@")) { setError("Entrez un email valide."); return; }
+    if (needsSteam && !steamUsername.trim()) { setError("Veuillez entrer votre pseudo Steam."); return; }
+    if (selectedMethod.needsProof && !proofFile) { setError("Veuillez télécharger le justificatif de paiement."); return; }
+
     setLoading(true);
     try {
-      const res = await fetch("/api/payment/flouci/initiate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          items: items.map((i) => ({
-            productId: i.productId,
-            quantity: i.quantity,
-            ...(i.variantId && { variantId: i.variantId }),
-          })),
-          ...(appliedCoupon && { couponCode: appliedCoupon.code }),
-          ...(needsSteam && steamUsername.trim() && { steamUsername: steamUsername.trim() }),
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Erreur de paiement.");
-      clearCart();
-      window.location.href = data.paymentUrl;
+      if (paymentMethod === "carte") {
+        // Flouci card payment
+        const res = await fetch("/api/payment/flouci/initiate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            items: items.map((i) => ({ productId: i.productId, quantity: i.quantity, ...(i.variantId && { variantId: i.variantId }) })),
+            ...(appliedCoupon && { couponCode: appliedCoupon.code }),
+            ...(needsSteam && steamUsername.trim() && { steamUsername: steamUsername.trim() }),
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Erreur de paiement.");
+        clearCart();
+        window.location.href = data.paymentUrl;
+      } else {
+        // Manual payment — upload proof then submit order
+        const proofUrl = await uploadProof();
+        const res = await fetch("/api/payment/manual", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            paymentMethod,
+            paymentProofUrl: proofUrl,
+            items: items.map((i) => ({ productId: i.productId, quantity: i.quantity, ...(i.variantId && { variantId: i.variantId }) })),
+            ...(appliedCoupon && { couponCode: appliedCoupon.code }),
+            ...(needsSteam && steamUsername.trim() && { steamUsername: steamUsername.trim() }),
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Erreur lors de la commande.");
+        clearCart();
+        router.push(`/checkout/en-attente?orderNumber=${data.orderNumber}`);
+      }
     } catch (e: any) {
       setError(e.message);
       setLoading(false);
@@ -119,53 +239,32 @@ export default function CheckoutPage() {
       <h1 className="text-2xl font-bold text-white mb-8">Finaliser la commande</h1>
 
       <div className="grid md:grid-cols-3 gap-6">
-        {/* Left: email + coupon + pay */}
         <div className="md:col-span-2 space-y-4">
           {/* Email */}
           <div className="rounded-xl border border-gray-800 bg-gray-900 p-6 space-y-4">
             <h2 className="text-base font-semibold text-white">Email de réception</h2>
-            <Input
-              type="email"
-              placeholder="vous@exemple.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
+            <Input type="email" placeholder="vous@exemple.com" value={email} onChange={(e) => setEmail(e.target.value)} />
             {!session && (
-              <p className="text-xs text-gray-500 bg-gray-800/50 rounded-lg p-3">
-                Pas de compte requis. Votre clé sera envoyée à cet email.
-              </p>
+              <p className="text-xs text-gray-500 bg-gray-800/50 rounded-lg p-3">Pas de compte requis. Votre clé sera envoyée à cet email.</p>
             )}
           </div>
 
-          {/* Steam username */}
+          {/* Steam */}
           {needsSteam && (
             <div className="rounded-xl border border-blue-800/50 bg-blue-900/10 p-6 space-y-3">
               <h2 className="text-base font-semibold text-white flex items-center gap-2">
-                <Gamepad2 className="h-4 w-4 text-blue-400" />
-                Pseudo Steam requis
+                <Gamepad2 className="h-4 w-4 text-blue-400" /> Pseudo Steam requis
               </h2>
-              <p className="text-sm text-gray-400">
-                Ce produit est offert en cadeau via Steam. Entrez votre pseudo Steam exact pour que nous puissions vous ajouter en ami et envoyer le cadeau.
-              </p>
-              <Input
-                placeholder="VotrePseudoSteam"
-                value={steamUsername}
-                onChange={(e) => setSteamUsername(e.target.value)}
-                className="font-mono"
-              />
-              <p className="text-xs text-gray-500">
-                Retrouvez votre pseudo dans votre profil Steam → <span className="text-blue-400">Modifier le profil → Nom d&apos;utilisateur</span>
-              </p>
+              <p className="text-sm text-gray-400">Ce produit est offert en cadeau via Steam. Entrez votre pseudo Steam exact.</p>
+              <Input placeholder="VotrePseudoSteam" value={steamUsername} onChange={(e) => setSteamUsername(e.target.value)} className="font-mono" />
             </div>
           )}
 
           {/* Coupon */}
           <div className="rounded-xl border border-gray-800 bg-gray-900 p-6 space-y-3">
             <h2 className="text-base font-semibold text-white flex items-center gap-2">
-              <Tag className="h-4 w-4 text-purple-400" />
-              Code promo
+              <Tag className="h-4 w-4 text-purple-400" /> Code promo
             </h2>
-
             {appliedCoupon ? (
               <div className="flex items-center justify-between rounded-lg bg-green-900/20 border border-green-700/40 px-4 py-3">
                 <div className="flex items-center gap-2.5">
@@ -173,20 +272,15 @@ export default function CheckoutPage() {
                   <div>
                     <p className="text-sm font-semibold text-green-300">{appliedCoupon.code}</p>
                     <p className="text-xs text-gray-400">
-                      {appliedCoupon.type === "percentage"
-                        ? `${appliedCoupon.value}% de réduction`
-                        : `${formatPrice(appliedCoupon.value)} de réduction`}
-                      {" · "}
-                      <span className="text-green-400">-{formatPrice(appliedCoupon.discount)}</span>
+                      {appliedCoupon.type === "percentage" ? `${appliedCoupon.value}%` : formatPrice(appliedCoupon.value)} de réduction
+                      {" · "}<span className="text-green-400">-{formatPrice(appliedCoupon.discount)}</span>
                     </p>
                   </div>
                 </div>
-                <button onClick={removeCoupon} className="text-gray-500 hover:text-red-400 transition-colors p-1">
-                  <X className="h-4 w-4" />
-                </button>
+                <button onClick={removeCoupon} className="text-gray-500 hover:text-red-400 transition-colors p-1"><X className="h-4 w-4" /></button>
               </div>
             ) : (
-              <div className="flex flex-col xs:flex-row gap-2">
+              <div className="flex gap-2">
                 <Input
                   placeholder="Ex : PROMO20"
                   value={couponInput}
@@ -194,63 +288,114 @@ export default function CheckoutPage() {
                   onKeyDown={(e) => e.key === "Enter" && applyCode()}
                   className="uppercase placeholder:normal-case"
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={applyCode}
-                  disabled={couponLoading || !couponInput.trim()}
-                  className="shrink-0"
-                >
+                <Button variant="outline" onClick={applyCode} disabled={couponLoading || !couponInput.trim()} className="shrink-0">
                   {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Appliquer"}
                 </Button>
               </div>
             )}
-
-            {couponError && (
-              <p className="text-xs text-red-400">{couponError}</p>
-            )}
+            {couponError && <p className="text-xs text-red-400">{couponError}</p>}
           </div>
 
-          {/* Payment */}
-          <div className="rounded-xl border border-purple-800/40 bg-gray-900 p-6 space-y-4">
-            <h2 className="text-base font-semibold text-white">Paiement sécurisé</h2>
+          {/* Payment method selector */}
+          <div className="rounded-xl border border-gray-800 bg-gray-900 p-6 space-y-4">
+            <h2 className="text-base font-semibold text-white">Mode de paiement</h2>
 
-            <div className="flex items-center gap-4 p-4 rounded-xl border border-purple-600 bg-purple-600/10">
-              <div className="w-10 h-10 rounded-lg bg-purple-900/50 flex items-center justify-center">
-                <CreditCard className="h-5 w-5 text-purple-400" />
-              </div>
-              <div>
-                <p className="font-semibold text-white text-sm">Carte bancaire</p>
-                <p className="text-xs text-gray-400">Visa, Mastercard — Paiement sécurisé</p>
-              </div>
+            <div className="grid grid-cols-1 gap-3">
+              {PAYMENT_METHODS.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => { setPaymentMethod(m.id); setProofFile(null); setProofPreview(null); setError(""); }}
+                  className={`flex items-center gap-4 p-4 rounded-xl border text-left transition-colors ${
+                    paymentMethod === m.id
+                      ? "border-purple-600 bg-purple-600/10"
+                      : "border-gray-700 bg-gray-800/40 hover:border-gray-600"
+                  }`}
+                >
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
+                    paymentMethod === m.id ? "bg-purple-900/50" : "bg-gray-700/50"
+                  }`}>
+                    {m.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-white text-sm">{m.label}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{m.desc}</p>
+                  </div>
+                  <div className={`w-4 h-4 rounded-full border-2 shrink-0 ${
+                    paymentMethod === m.id ? "border-purple-500 bg-purple-500" : "border-gray-600"
+                  }`} />
+                </button>
+              ))}
             </div>
 
-            {error && (
-              <p className="text-sm text-red-400 bg-red-900/20 rounded-lg px-4 py-2">{error}</p>
+            {/* Manual payment instructions */}
+            {selectedMethod.needsProof && (
+              <div className="space-y-3 pt-1">
+                <ManualPaymentDetails method={paymentMethod} />
+
+                {/* File upload */}
+                <div
+                  onClick={() => fileRef.current?.click()}
+                  className={`relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed cursor-pointer transition-colors p-6 ${
+                    proofFile ? "border-green-600/60 bg-green-900/10" : "border-gray-700 hover:border-gray-500 bg-gray-800/30"
+                  }`}
+                >
+                  {proofPreview ? (
+                    <div className="relative w-full max-w-xs mx-auto">
+                      <img src={proofPreview} alt="Justificatif" className="rounded-lg max-h-48 w-full object-contain" />
+                      <div className="absolute top-2 right-2 bg-green-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                        Sélectionné
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="h-8 w-8 text-gray-500" />
+                      <p className="text-sm font-medium text-gray-300">Télécharger le justificatif</p>
+                      <p className="text-xs text-gray-500">Capture d'écran de la transaction — JPG, PNG, WebP (max 10 Mo)</p>
+                    </>
+                  )}
+                  <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleProofFile} />
+                </div>
+
+                {proofFile && (
+                  <button
+                    onClick={() => { setProofFile(null); setProofPreview(null); if (fileRef.current) fileRef.current.value = ""; }}
+                    className="text-xs text-gray-500 hover:text-red-400 transition-colors flex items-center gap-1"
+                  >
+                    <X className="h-3 w-3" /> Supprimer le fichier
+                  </button>
+                )}
+              </div>
             )}
+
+            {error && <p className="text-sm text-red-400 bg-red-900/20 rounded-lg px-4 py-2">{error}</p>}
 
             <Button
               size="lg"
               className="w-full gap-2"
-              onClick={initiatePayment}
-              disabled={loading || !email.includes("@")}
+              onClick={handlePay}
+              disabled={loading || uploadingProof || !email.includes("@") || (selectedMethod.needsProof && !proofFile)}
             >
-              {loading ? (
-                <><Loader2 className="h-4 w-4 animate-spin" /> Redirection vers le paiement…</>
+              {loading || uploadingProof ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> {uploadingProof ? "Upload en cours…" : paymentMethod === "carte" ? "Redirection…" : "Envoi de la commande…"}</>
               ) : (
-                <><Lock className="h-4 w-4" /> Payer {formatPrice(finalTotal)} · Carte bancaire</>
+                <><Lock className="h-4 w-4" />
+                  {paymentMethod === "carte"
+                    ? `Payer ${formatPrice(finalTotal)} · Carte bancaire`
+                    : `Confirmer la commande · ${formatPrice(finalTotal)}`}
+                </>
               )}
             </Button>
 
+            {paymentMethod !== "carte" && (
+              <p className="text-xs text-gray-500 text-center">
+                Votre commande sera traitée après vérification du justificatif par notre équipe.
+              </p>
+            )}
+
             <div className="flex items-center justify-center gap-6 pt-1">
-              {[
-                { icon: Shield, text: "Paiement sécurisé SSL" },
-                { icon: Zap, text: "Livraison en 1h à 24h" },
-                { icon: Lock, text: "Données chiffrées" },
-              ].map(({ icon: Icon, text }) => (
+              {[{ icon: Shield, text: "Paiement sécurisé SSL" }, { icon: Zap, text: "Livraison en 1h à 24h" }, { icon: Lock, text: "Données chiffrées" }].map(({ icon: Icon, text }) => (
                 <div key={text} className="flex items-center gap-1.5 text-xs text-gray-500">
-                  <Icon className="h-3.5 w-3.5 text-green-500" />
-                  {text}
+                  <Icon className="h-3.5 w-3.5 text-green-500" /> {text}
                 </div>
               ))}
             </div>
@@ -289,9 +434,7 @@ export default function CheckoutPage() {
               </div>
               {discount > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-green-400 flex items-center gap-1">
-                    <Tag className="h-3 w-3" /> {appliedCoupon?.code}
-                  </span>
+                  <span className="text-green-400 flex items-center gap-1"><Tag className="h-3 w-3" /> {appliedCoupon?.code}</span>
                   <span className="text-green-400">-{formatPrice(discount)}</span>
                 </div>
               )}

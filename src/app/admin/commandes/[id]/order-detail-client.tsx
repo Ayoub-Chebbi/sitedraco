@@ -20,6 +20,7 @@ type OrderData = {
   status: string;
   paymentMethod: string | null;
   paymentStatus: string;
+  paymentProofUrl?: string | null;
   totalAmount: number;
   discountAmount?: number;
   steamUsername?: string | null;
@@ -383,6 +384,27 @@ export function OrderDetailClient({ order }: { order: OrderData }) {
               <p className="text-xs text-gray-600 text-center">
                 Un seul email récapitulatif sera envoyé avec tous les accès.
               </p>
+            </div>
+          )}
+
+          {/* Payment proof */}
+          {order.paymentProofUrl && (
+            <div className="rounded-xl border border-amber-700/30 bg-amber-900/10 p-5 space-y-3">
+              <h2 className="font-semibold text-white flex items-center gap-2">
+                <FileText className="h-4 w-4 text-amber-400" />
+                Justificatif de paiement
+                <span className="text-xs font-normal text-gray-500 capitalize">
+                  — {order.paymentMethod === "d17" ? "D17" : order.paymentMethod === "flouci_app" ? "Flouci" : order.paymentMethod === "virement" ? "Virement bancaire" : order.paymentMethod}
+                </span>
+              </h2>
+              <a href={order.paymentProofUrl} target="_blank" rel="noopener noreferrer" className="block">
+                <img
+                  src={order.paymentProofUrl}
+                  alt="Justificatif"
+                  className="rounded-lg max-h-80 w-full object-contain border border-gray-700 hover:border-amber-600 transition-colors cursor-zoom-in"
+                />
+              </a>
+              <p className="text-xs text-gray-500">Cliquez sur l'image pour l'ouvrir en plein écran</p>
             </div>
           )}
 

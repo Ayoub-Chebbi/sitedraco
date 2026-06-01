@@ -31,6 +31,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
     status: order.status,
     paymentMethod: order.paymentMethod,
     paymentStatus: order.paymentStatus,
+    paymentProofUrl: order.paymentProofUrl,
     totalAmount: order.totalAmount,
     discountAmount: order.discountAmount,
     steamUsername: order.steamUsername,

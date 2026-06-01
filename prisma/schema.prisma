@@ -193,6 +193,7 @@ model Order {
   couponId          String?
   steamUsername     String?
   paymentUrl        String?
+  paymentProofUrl   String?
   guestAutoCreated  Boolean  @default(false)
   notesInternal  String?
   agentId        String?

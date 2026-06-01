@@ -1,0 +1,132 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { randomBytes } from "crypto";
+import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { generateOrderNumber } from "@/lib/utils";
+import { notifyAdminsNewOrder } from "@/lib/push-notifications";
+
+const schema = z.object({
+  email: z.string().email(),
+  paymentMethod: z.enum(["d17", "flouci_app", "virement"]),
+  paymentProofUrl: z.string().url(),
+  items: z.array(z.object({
+    productId: z.string(),
+    variantId: z.string().optional(),
+    quantity: z.number().int().positive(),
+  })).min(1),
+  couponCode: z.string().optional(),
+  steamUsername: z.string().max(100).optional(),
+});
+
+export async function POST(req: NextRequest) {
+  const session = await auth();
+
+  let body: unknown;
+  try { body = await req.json(); } catch {
+    return NextResponse.json({ error: "Requête invalide." }, { status: 400 });
+  }
+
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Données invalides." }, { status: 422 });
+  }
+
+  const { email, paymentMethod, paymentProofUrl, items, couponCode, steamUsername } = parsed.data;
+
+  const [products, variants] = await Promise.all([
+    prisma.product.findMany({
+      where: { id: { in: items.map((i) => i.productId) }, isActive: true },
+    }),
+    prisma.productVariant.findMany({
+      where: { id: { in: items.flatMap((i) => i.variantId ? [i.variantId] : []) }, isActive: true },
+    }),
+  ]);
+
+  if (products.length !== items.length) {
+    return NextResponse.json({ error: "Produit introuvable." }, { status: 400 });
+  }
+
+  // Server-side total
+  const subtotal = items.reduce((sum, item) => {
+    if (item.variantId) {
+      const v = variants.find((v) => v.id === item.variantId);
+      return sum + (v ? (v.discountPrice ?? v.price) : 0) * item.quantity;
+    }
+    const p = products.find((p) => p.id === item.productId)!;
+    return sum + (p.discountPrice ?? p.price) * item.quantity;
+  }, 0);
+
+  // Resolve user
+  let userId = session?.user?.id ?? null;
+  let guestAutoCreated = false;
+  if (!userId) {
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      userId = existing.id;
+    } else {
+      const passwordHash = await bcrypt.hash(randomBytes(32).toString("hex"), 12);
+      const newUser = await prisma.user.create({ data: { email, passwordHash, role: "customer" } });
+      userId = newUser.id;
+      guestAutoCreated = true;
+    }
+  }
+
+  // Apply coupon if any
+  let discountAmount = 0;
+  let appliedCouponId: string | null = null;
+  if (couponCode && userId) {
+    const coupon = await prisma.coupon.findUnique({ where: { code: couponCode.toUpperCase().trim() } });
+    if (coupon && coupon.isActive && (!coupon.expiresAt || coupon.expiresAt > new Date()) && (coupon.maxUses === null || coupon.usedCount < coupon.maxUses)) {
+      const used = await prisma.order.count({ where: { userId, couponId: coupon.id, paymentStatus: "paid" } });
+      if (used === 0) {
+        discountAmount = coupon.type === "percentage"
+          ? Math.min(subtotal, (subtotal * coupon.value) / 100)
+          : Math.min(subtotal, coupon.value);
+        discountAmount = Math.round(discountAmount * 100) / 100;
+        appliedCouponId = coupon.id;
+      }
+    }
+  }
+
+  const totalAmount = Math.max(0, subtotal - discountAmount);
+  const orderNumber = generateOrderNumber();
+
+  const order = await prisma.order.create({
+    data: {
+      orderNumber,
+      userId,
+      status: "pending",
+      paymentMethod,
+      paymentStatus: "awaiting_verification",
+      totalAmount,
+      discountAmount,
+      paymentProofUrl,
+      guestAutoCreated,
+      ...(appliedCouponId && { couponId: appliedCouponId }),
+      ...(steamUsername && { steamUsername }),
+    },
+  });
+
+  for (const item of items) {
+    const unitPrice = item.variantId
+      ? (() => { const v = variants.find((v) => v.id === item.variantId)!; return v.discountPrice ?? v.price; })()
+      : (() => { const p = products.find((p) => p.id === item.productId)!; return p.discountPrice ?? p.price; })();
+
+    await prisma.orderItem.create({
+      data: { orderId: order.id, productId: item.productId, quantity: item.quantity, unitPrice },
+    });
+  }
+
+  notifyAdminsNewOrder({
+    orderNumber,
+    clientEmail: email,
+    clientName: session?.user?.name ?? null,
+    itemNames: products.map((p) => p.name),
+    totalAmount,
+    orderId: order.id,
+  }).catch(console.error);
+
+  return NextResponse.json({ orderNumber: order.orderNumber, orderId: order.id }, { status: 201 });
+}
