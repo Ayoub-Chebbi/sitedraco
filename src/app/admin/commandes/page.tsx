@@ -17,35 +17,53 @@ const METHOD_LABEL: Record<string, string> = {
 export default async function AdminCommandesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; payment?: string }>;
 }) {
   const session = await auth();
   if (!session || !["admin", "support"].includes(session.user.role)) redirect("/");
 
   const params = await searchParams;
-  const statusFilter = params.status || "all";
+  const statusFilter  = params.status  || "all";
+  const paymentFilter = params.payment || "";
 
-  const orders = await prisma.order.findMany({
-    where: statusFilter !== "all" ? { status: statusFilter } : undefined,
-    include: {
-      items: { include: { product: { select: { name: true, platform: true } } } },
-      user: { select: { email: true, name: true } },
-    },
-    orderBy: [
-      // Awaiting verification first
-      { paymentStatus: "asc" },
-      { createdAt: "desc" },
-    ],
-  });
+  // Build where clause — payment filter takes priority
+  const where =
+    paymentFilter === "awaiting_verification"
+      ? { paymentStatus: "awaiting_verification" }
+      : statusFilter !== "all"
+      ? { status: statusFilter }
+      : undefined;
 
-  const awaitingCount = orders.filter((o) => o.paymentStatus === "awaiting_verification").length;
+  const [orders, awaitingCount] = await Promise.all([
+    prisma.order.findMany({
+      where,
+      select: {
+        id: true,
+        orderNumber: true,
+        status: true,
+        paymentStatus: true,
+        paymentMethod: true,
+        paymentProofUrl: true,
+        totalAmount: true,
+        guestEmail: true,
+        createdAt: true,
+        items: { include: { product: { select: { name: true } } } },
+        user: { select: { email: true, name: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.order.count({ where: { paymentStatus: "awaiting_verification" } }),
+  ]);
+
+  const activeTab = paymentFilter === "awaiting_verification" ? "verif" : statusFilter;
 
   const TABS = [
-    { value: "all", label: "Toutes" },
-    { value: "pending", label: "En attente" },
-    { value: "processing", label: "En traitement" },
-    { value: "delivered", label: "Livrées" },
-    { value: "failed", label: "Échouées" },
+    { value: "all",        label: "Toutes",         href: "/admin/commandes" },
+    { value: "verif",      label: `À vérifier${awaitingCount > 0 ? ` (${awaitingCount})` : ""}`, href: "/admin/commandes?payment=awaiting_verification", amber: true },
+    { value: "pending",    label: "En attente",      href: "/admin/commandes?status=pending" },
+    { value: "processing", label: "En traitement",   href: "/admin/commandes?status=processing" },
+    { value: "delivered",  label: "Livrées",         href: "/admin/commandes?status=delivered" },
+    { value: "failed",     label: "Échouées",        href: "/admin/commandes?status=failed" },
   ];
 
   return (
@@ -58,24 +76,22 @@ export default async function AdminCommandesPage({
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="flex gap-1 bg-gray-900 border border-gray-800 rounded-xl p-1 overflow-x-auto scrollbar-none">
-          {TABS.map((tab) => (
-            <Link key={tab.value} href={`/admin/commandes${tab.value !== "all" ? `?status=${tab.value}` : ""}`}>
-              <button className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-                statusFilter === tab.value ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"
-              }`}>
-                {tab.label}
-              </button>
-            </Link>
-          ))}
-        </div>
-        {awaitingCount > 0 && (
-          <div className="flex items-center gap-1.5 bg-amber-900/30 border border-amber-700/50 text-amber-300 px-3 py-1.5 rounded-lg text-xs font-medium shrink-0">
-            <Clock className="h-3.5 w-3.5" />
-            {awaitingCount} justificatif{awaitingCount > 1 ? "s" : ""} à vérifier
-          </div>
-        )}
+      <div className="flex gap-1 mb-6 bg-gray-900 border border-gray-800 rounded-xl p-1 overflow-x-auto scrollbar-none">
+        {TABS.map((tab) => (
+          <Link key={tab.value} href={tab.href}>
+            <button className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+              activeTab === tab.value
+                ? tab.amber
+                  ? "bg-amber-600 text-white"
+                  : "bg-purple-600 text-white"
+                : tab.amber && awaitingCount > 0
+                ? "text-amber-400 hover:text-white hover:bg-amber-800/40"
+                : "text-gray-400 hover:text-white"
+            }`}>
+              {tab.label}
+            </button>
+          </Link>
+        ))}
       </div>
 
       <div className="rounded-xl border border-gray-800 bg-gray-900 overflow-hidden">
@@ -93,68 +109,82 @@ export default async function AdminCommandesPage({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-800/50">
-              {orders.map((order) => (
-                <tr key={order.id} className="hover:bg-gray-800/30 transition-colors">
-                  <td className="px-4 py-3">
-                    <p className="font-mono text-xs font-semibold text-gray-200">{order.orderNumber}</p>
-                    <p className="text-xs text-gray-600">{formatDate(order.createdAt)}</p>
-                  </td>
-                  <td className="px-4 py-3">
-                    <p className="text-xs text-gray-300 truncate max-w-[160px]">
-                      {order.user?.email || order.guestEmail || "Invité"}
-                    </p>
-                    {order.user?.name && <p className="text-xs text-gray-600">{order.user.name}</p>}
-                  </td>
-                  <td className="px-4 py-3">
-                    <p className="text-xs text-gray-400 truncate max-w-[200px]">
-                      {order.items.map((i) => i.product.name).join(", ")}
-                    </p>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="space-y-1">
-                      <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
-                        order.paymentStatus === "paid"
-                          ? "bg-green-600/20 text-green-400"
-                          : order.paymentStatus === "awaiting_verification"
-                          ? "bg-amber-600/20 text-amber-400"
-                          : "bg-yellow-600/20 text-yellow-400"
-                      }`}>
-                        {order.paymentStatus === "paid" ? "Payé" :
-                         order.paymentStatus === "awaiting_verification" ? (
-                           <><Clock className="h-2.5 w-2.5" /> Justificatif à vérifier</>
-                         ) : "En attente"}
-                      </span>
-                      {order.paymentMethod && (
-                        <p className="text-[10px] text-gray-600">
-                          {METHOD_LABEL[order.paymentMethod] ?? order.paymentMethod}
-                        </p>
-                      )}
-                      {order.paymentStatus === "awaiting_verification" && order.paymentProofUrl && (
-                        <span className="inline-flex items-center gap-1 text-[10px] text-amber-500">
-                          <ImageIcon className="h-2.5 w-2.5" /> Preuve disponible
+              {orders.map((order) => {
+                const isAwaiting = order.paymentStatus === "awaiting_verification";
+                return (
+                  <tr
+                    key={order.id}
+                    className={`transition-colors ${isAwaiting ? "bg-amber-900/5 hover:bg-amber-900/10" : "hover:bg-gray-800/30"}`}
+                  >
+                    <td className="px-4 py-3">
+                      <p className="font-mono text-xs font-semibold text-gray-200">{order.orderNumber}</p>
+                      <p className="text-xs text-gray-600">{formatDate(order.createdAt)}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="text-xs text-gray-300 truncate max-w-[160px]">
+                        {order.user?.email || order.guestEmail || "Invité"}
+                      </p>
+                      {order.user?.name && <p className="text-xs text-gray-600">{order.user.name}</p>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="text-xs text-gray-400 truncate max-w-[200px]">
+                        {order.items.map((i) => i.product.name).join(", ")}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="space-y-1">
+                        {/* Payment status badge */}
+                        <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
+                          order.paymentStatus === "paid"
+                            ? "bg-green-600/20 text-green-400"
+                            : isAwaiting
+                            ? "bg-amber-600/25 text-amber-300 border border-amber-700/40"
+                            : "bg-yellow-600/20 text-yellow-400"
+                        }`}>
+                          {order.paymentStatus === "paid" ? "Payé" :
+                           isAwaiting ? <><Clock className="h-3 w-3" /> Justificatif à vérifier</> :
+                           "En attente"}
                         </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <OrderStatusBadge status={order.status} />
-                  </td>
-                  <td className="px-4 py-3 text-right font-semibold text-white">
-                    {formatPrice(order.totalAmount)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link href={`/admin/commandes/${order.id}`}>
-                      <Button size="sm" variant={order.status === "pending" || order.status === "processing" ? "default" : "ghost"} className="gap-1">
-                        Traiter <ArrowRight className="h-3 w-3" />
-                      </Button>
-                    </Link>
-                  </td>
-                </tr>
-              ))}
+
+                        {/* Payment method */}
+                        {order.paymentMethod && (
+                          <p className="text-[10px] text-gray-500">
+                            {METHOD_LABEL[order.paymentMethod] ?? order.paymentMethod}
+                          </p>
+                        )}
+
+                        {/* Proof indicator */}
+                        {isAwaiting && order.paymentProofUrl && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-400">
+                            <ImageIcon className="h-2.5 w-2.5" /> Preuve jointe
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <OrderStatusBadge status={order.status} />
+                    </td>
+                    <td className="px-4 py-3 text-right font-semibold text-white">
+                      {formatPrice(order.totalAmount)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Link href={`/admin/commandes/${order.id}`}>
+                        <Button
+                          size="sm"
+                          variant={isAwaiting ? "default" : order.status === "pending" || order.status === "processing" ? "default" : "ghost"}
+                          className={`gap-1 ${isAwaiting ? "bg-amber-600 hover:bg-amber-700 text-white" : ""}`}
+                        >
+                          Traiter <ArrowRight className="h-3 w-3" />
+                        </Button>
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
               {orders.length === 0 && (
                 <tr>
                   <td colSpan={7} className="text-center py-12 text-gray-500">
-                    Aucune commande{statusFilter !== "all" ? ` avec ce statut` : ""}
+                    Aucune commande{activeTab !== "all" ? " dans cette catégorie" : ""}
                   </td>
                 </tr>
               )}
