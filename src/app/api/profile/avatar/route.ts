@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "Aucun fichier reçu" }, { status: 400 });
   }
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  const ext = (file.name.split(".").pop()?.toLowerCase() ?? "jpg") || "jpg";
   if (!ALLOWED_TYPES.includes(file.type) && !ALLOWED_EXTS.includes(ext)) {
     return NextResponse.json({ error: "Format non autorisé (JPG, PNG, WebP uniquement)" }, { status: 415 });
   }
@@ -37,7 +37,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Stockage non configuré" }, { status: 500 });
   }
 
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
   const filename = `avatars/${session.user.id}-${Date.now()}.${ext}`;
 
   const blob = await put(filename, file, { access: "public", contentType: file.type });
