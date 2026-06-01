@@ -5,7 +5,14 @@ import { prisma } from "@/lib/prisma";
 import { formatPrice, formatDate } from "@/lib/utils";
 import { OrderStatusBadge } from "@/components/shared/order-status-badge";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Clock, ImageIcon } from "lucide-react";
+
+const METHOD_LABEL: Record<string, string> = {
+  flouci:     "Carte bancaire",
+  d17:        "D17",
+  flouci_app: "Flouci",
+  virement:   "Virement",
+};
 
 export default async function AdminCommandesPage({
   searchParams,
@@ -24,8 +31,14 @@ export default async function AdminCommandesPage({
       items: { include: { product: { select: { name: true, platform: true } } } },
       user: { select: { email: true, name: true } },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: [
+      // Awaiting verification first
+      { paymentStatus: "asc" },
+      { createdAt: "desc" },
+    ],
   });
+
+  const awaitingCount = orders.filter((o) => o.paymentStatus === "awaiting_verification").length;
 
   const TABS = [
     { value: "all", label: "Toutes" },
@@ -45,16 +58,24 @@ export default async function AdminCommandesPage({
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-gray-900 border border-gray-800 rounded-xl p-1 overflow-x-auto scrollbar-none">
-        {TABS.map((tab) => (
-          <Link key={tab.value} href={`/admin/commandes${tab.value !== "all" ? `?status=${tab.value}` : ""}`}>
-            <button className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              statusFilter === tab.value ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"
-            }`}>
-              {tab.label}
-            </button>
-          </Link>
-        ))}
+      <div className="flex items-center gap-3 mb-6">
+        <div className="flex gap-1 bg-gray-900 border border-gray-800 rounded-xl p-1 overflow-x-auto scrollbar-none">
+          {TABS.map((tab) => (
+            <Link key={tab.value} href={`/admin/commandes${tab.value !== "all" ? `?status=${tab.value}` : ""}`}>
+              <button className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+                statusFilter === tab.value ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"
+              }`}>
+                {tab.label}
+              </button>
+            </Link>
+          ))}
+        </div>
+        {awaitingCount > 0 && (
+          <div className="flex items-center gap-1.5 bg-amber-900/30 border border-amber-700/50 text-amber-300 px-3 py-1.5 rounded-lg text-xs font-medium shrink-0">
+            <Clock className="h-3.5 w-3.5" />
+            {awaitingCount} justificatif{awaitingCount > 1 ? "s" : ""} à vérifier
+          </div>
+        )}
       </div>
 
       <div className="rounded-xl border border-gray-800 bg-gray-900 overflow-hidden">
@@ -90,11 +111,30 @@ export default async function AdminCommandesPage({
                     </p>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      order.paymentStatus === "paid" ? "bg-green-600/20 text-green-400" : "bg-yellow-600/20 text-yellow-400"
-                    }`}>
-                      {order.paymentStatus === "paid" ? "Payé" : "En attente"}
-                    </span>
+                    <div className="space-y-1">
+                      <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
+                        order.paymentStatus === "paid"
+                          ? "bg-green-600/20 text-green-400"
+                          : order.paymentStatus === "awaiting_verification"
+                          ? "bg-amber-600/20 text-amber-400"
+                          : "bg-yellow-600/20 text-yellow-400"
+                      }`}>
+                        {order.paymentStatus === "paid" ? "Payé" :
+                         order.paymentStatus === "awaiting_verification" ? (
+                           <><Clock className="h-2.5 w-2.5" /> Justificatif à vérifier</>
+                         ) : "En attente"}
+                      </span>
+                      {order.paymentMethod && (
+                        <p className="text-[10px] text-gray-600">
+                          {METHOD_LABEL[order.paymentMethod] ?? order.paymentMethod}
+                        </p>
+                      )}
+                      {order.paymentStatus === "awaiting_verification" && order.paymentProofUrl && (
+                        <span className="inline-flex items-center gap-1 text-[10px] text-amber-500">
+                          <ImageIcon className="h-2.5 w-2.5" /> Preuve disponible
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <OrderStatusBadge status={order.status} />
