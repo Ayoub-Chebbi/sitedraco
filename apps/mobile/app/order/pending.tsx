@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   title: { color: "#fff", fontSize: 26, fontWeight: "900", textAlign: "center" },
-  orderNum: { color: "#a78bfa", fontSize: 18, fontWeight: "800", fontFamily: "monospace" },
+  orderNum: { color: "#a78bfa", fontSize: 18, fontWeight: "800", fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" },
   infoBox: {
     flexDirection: "row", gap: 12, alignItems: "flex-start",
     backgroundColor: "#451a0330",

@@ -1,7 +1,7 @@
 import React from "react";
 import {
   View, Text, ScrollView, TouchableOpacity,
-  ActivityIndicator, StyleSheet, RefreshControl, Dimensions,
+  ActivityIndicator, StyleSheet, RefreshControl, Dimensions, Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
   // Recent orders
   orderRow: { flexDirection: "row", alignItems: "flex-start", gap: 10, paddingVertical: 10 },
   orderRowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "#2d2d4e" },
-  orderNum: { color: "#e5e7eb", fontSize: 13, fontWeight: "700", fontFamily: "monospace" },
+  orderNum: { color: "#e5e7eb", fontSize: 13, fontWeight: "700", fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" },
   orderCustomer: { color: "#6b7280", fontSize: 11, marginTop: 1 },
   orderProducts: { color: "#4b5563", fontSize: 11, marginTop: 1 },
   orderAmount: { color: "#a78bfa", fontSize: 14, fontWeight: "800" },

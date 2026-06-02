@@ -16,7 +16,13 @@
       "supportsTablet": false,
       "bundleIdentifier": "tn.lootstore.app",
       "infoPlist": {
-        "UIViewControllerBasedStatusBarAppearance": false
+        "UIViewControllerBasedStatusBarAppearance": false,
+        "NSPhotoLibraryUsageDescription": "Sélectionnez une capture d'écran de votre paiement pour confirmer votre commande.",
+        "NSPhotoLibraryAddUsageDescription": "Accès à la galerie pour joindre un justificatif de paiement.",
+        "NSCameraUsageDescription": "Prenez une photo de votre reçu de paiement."
+      },
+      "entitlements": {
+        "aps-environment": "production"
       }
     },
     "android": {
@@ -28,6 +34,8 @@
       "package": "tn.lootstore.app",
       "googleServicesFile": "./google-services.json",
       "permissions": [
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
@@ -50,7 +58,14 @@
           ]
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Sélectionnez une capture d'écran de votre paiement pour confirmer votre commande.",
+          "cameraPermission": "Prenez une photo de votre reçu de paiement."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
