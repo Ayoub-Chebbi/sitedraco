@@ -1,15 +1,29 @@
 import { api } from "./client";
 
 export type AdminStats = {
-  totalOrders: number;
-  monthOrders: number;
+  // Revenue
   totalRevenue: number;
+  todayRevenue: number;
   monthRevenue: number;
+  revenueGrowth: number;
+  avgOrderValue: number;
+  // Orders
+  totalOrders: number;
+  paidOrdersCount: number;
+  pendingOrders: number;
+  awaitingVerification: number;
+  deliveredOrders: number;
+  // Users & products
   totalUsers: number;
   newUsersMonth: number;
   totalProducts: number;
   openTickets: number;
-  pendingOrders: number;
+  // Charts
+  dailyRevenue: { date: string; revenue: number; orders: number }[];
+  methodBreakdown: { method: string; count: number; revenue: number }[];
+  // Lists
+  recentOrders: { id: string; orderNumber: string; status: string; paymentStatus: string; paymentMethod: string | null; totalAmount: number; createdAt: string; customerEmail: string; products: string }[];
+  lowStock: { id: string; name: string; stock: number; alert: number }[];
 };
 
 export type AdminOrder = {

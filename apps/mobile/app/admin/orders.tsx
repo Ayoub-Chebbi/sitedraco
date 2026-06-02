@@ -50,7 +50,7 @@ function OrderRow({ order, onUpdate }: { order: AdminOrder; onUpdate: (id: strin
       <View style={styles.orderTop}>
         <View style={{ flex: 1 }}>
           <Text style={styles.orderNumber}>#{order.orderNumber}</Text>
-          <Text style={styles.orderUser}>{order.user.name ?? order.user.email}</Text>
+          <Text style={styles.orderUser}>{order.user?.name ?? order.user?.email ?? "Invité"}</Text>
         </View>
         <View style={[styles.badge, { backgroundColor: color + "22" }]}>
           <Text style={[styles.badgeText, { color }]}>{label}</Text>
