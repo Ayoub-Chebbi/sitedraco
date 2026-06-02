@@ -26,10 +26,12 @@ export default async function AdminCommandesPage({
   const statusFilter  = params.status  || "all";
   const paymentFilter = params.payment || "";
 
-  // Build where clause — payment filter takes priority
+  // Build where clause
   const where =
     paymentFilter === "awaiting_verification"
-      ? { paymentStatus: "awaiting_verification" }
+      ? { paymentStatus: "awaiting_verification", NOT: { status: "failed" } }
+      : statusFilter === "failed"
+      ? { OR: [{ status: "failed" }, { status: { not: "failed" }, paymentStatus: "failed" }] }
       : statusFilter !== "all"
       ? { status: statusFilter }
       : undefined;
@@ -52,7 +54,7 @@ export default async function AdminCommandesPage({
       },
       orderBy: { createdAt: "desc" },
     }),
-    prisma.order.count({ where: { paymentStatus: "awaiting_verification" } }),
+    prisma.order.count({ where: { paymentStatus: "awaiting_verification", NOT: { status: "failed" } } }),
   ]);
 
   const activeTab = paymentFilter === "awaiting_verification" ? "verif" : statusFilter;
