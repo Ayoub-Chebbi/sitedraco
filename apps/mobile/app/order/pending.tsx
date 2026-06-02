@@ -3,11 +3,21 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useAuthStore } from "@/store/auth";
 
 export default function OrderPendingScreen() {
   const { orderNumber } = useLocalSearchParams<{ orderNumber: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useAuthStore();
+
+  function handleTrack() {
+    if (!user) {
+      router.push("/(auth)/login");
+    } else {
+      router.push(`/order/${orderNumber}`);
+    }
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
@@ -32,7 +42,7 @@ export default function OrderPendingScreen() {
 
       <View style={styles.actions}>
         <TouchableOpacity
-          onPress={() => router.push(`/order/${orderNumber}`)}
+          onPress={handleTrack}
           style={styles.primaryBtn}
         >
           <Text style={styles.primaryBtnText}>Suivre ma commande</Text>
