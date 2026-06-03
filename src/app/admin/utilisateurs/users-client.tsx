@@ -244,7 +244,7 @@ export function UsersClient({ initialUsers, isAdmin }: { initialUsers: UserRow[]
               <div className="flex items-center gap-3 px-4 py-3.5">
                 {/* Avatar */}
                 <button className="w-9 h-9 rounded-full bg-purple-900/50 border border-purple-700/40 flex items-center justify-center text-purple-300 font-bold text-sm shrink-0" onClick={() => toggleExpand(user.id)}>
-                  {(user.name ?? user.email)[0].toUpperCase()}
+                  {(user.name ?? user.email ?? "?")[0].toUpperCase()}
                 </button>
 
                 {/* Info */}
