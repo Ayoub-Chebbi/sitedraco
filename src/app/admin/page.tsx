@@ -36,6 +36,8 @@ async function getMetrics() {
     recentOrders,
     // Low stock
     lowStockProducts,
+    // LTV — per-customer revenue aggregation
+    ltvData,
   ] = await Promise.all([
     prisma.order.findMany({ where: { paymentStatus: "paid" }, select: { totalAmount: true } }),
     prisma.order.findMany({ where: { paymentStatus: "paid", createdAt: { gte: startOfToday } }, select: { totalAmount: true } }),
@@ -79,6 +81,13 @@ async function getMetrics() {
       where: { isActive: true },
       include: { keys: { where: { status: "available" }, select: { id: true } } },
     }),
+    prisma.order.groupBy({
+      by: ["userId"],
+      where: { paymentStatus: "paid", userId: { not: null } },
+      _sum: { totalAmount: true },
+      _count: { id: true },
+      orderBy: { _sum: { totalAmount: "desc" } },
+    }),
   ]);
 
   // Calculate revenues
@@ -115,7 +124,33 @@ async function getMetrics() {
     revenue: m._sum.totalAmount ?? 0,
   }));
 
+  // LTV calculations
+  const payingCustomers = ltvData.length; // unique customers who paid
+  const avgLTV = payingCustomers > 0 ? totalRevenue / payingCustomers : 0;
+  const repeatCustomers = ltvData.filter(c => (c._count.id ?? 0) > 1).length;
+  const repeatRate = payingCustomers > 0 ? Math.round((repeatCustomers / payingCustomers) * 100) : 0;
+
+  // Fetch names for top LTV customers
+  const top5UserIds = ltvData.slice(0, 5).map(c => c.userId).filter(Boolean) as string[];
+  const top5Users = await prisma.user.findMany({
+    where: { id: { in: top5UserIds } },
+    select: { id: true, name: true, email: true },
+  });
+  const topLTVCustomers = ltvData.slice(0, 5).map(c => {
+    const u = top5Users.find(u => u.id === c.userId);
+    return {
+      email: u?.email ?? "Invité",
+      name: u?.name ?? null,
+      totalSpent: c._sum.totalAmount ?? 0,
+      orderCount: c._count.id ?? 0,
+    };
+  });
+
   return {
+    avgLTV,
+    repeatRate,
+    payingCustomers,
+    topLTVCustomers,
     totalRevenue,
     todayRevenue,
     monthRevenue,
@@ -172,6 +207,7 @@ export default async function AdminPage() {
         todayRevenue: formatPrice(metrics.todayRevenue),
         monthRevenue: formatPrice(metrics.monthRevenue),
         avgOrderValue: formatPrice(metrics.avgOrderValue),
+        avgLTV: formatPrice(metrics.avgLTV),
       }}
     />
   );

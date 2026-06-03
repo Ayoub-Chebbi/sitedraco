@@ -4,7 +4,7 @@ import Link from "next/link";
 import {
   ArrowRight, AlertTriangle, TrendingUp, TrendingDown, Users,
   ShoppingCart, AlertCircle, DollarSign, BarChart3, Clock, CheckCircle2,
-  CreditCard, Smartphone, Building2,
+  CreditCard, Smartphone, Building2, Repeat2, Crown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OrderStatusBadge } from "@/components/shared/order-status-badge";
@@ -17,6 +17,10 @@ type Metrics = {
   monthRevenue: string;
   revenueGrowth: number;
   avgOrderValue: string;
+  avgLTV: string;
+  repeatRate: number;
+  payingCustomers: number;
+  topLTVCustomers: { email: string; name: string | null; totalSpent: number; orderCount: number }[];
   totalOrders: number;
   paidOrdersCount: number;
   pendingOrders: number;
@@ -160,6 +164,46 @@ export function AdminDashboard({ metrics }: { metrics: Metrics }) {
           icon={<Users className="h-4 w-4 text-purple-400" />}
           href="/admin/utilisateurs"
         />
+      </div>
+
+      {/* LTV row */}
+      <div className="grid lg:grid-cols-3 gap-4 mb-4">
+        <KPICard
+          label="LTV moyen / client"
+          value={metrics.avgLTV}
+          sub={`${metrics.payingCustomers} clients payants`}
+          positive={true}
+          icon={<Crown className="h-4 w-4 text-yellow-400" />}
+          href="/admin/utilisateurs"
+        />
+        <KPICard
+          label="Taux de rétention"
+          value={`${metrics.repeatRate}%`}
+          sub="Clients avec 2+ commandes"
+          positive={metrics.repeatRate > 20}
+          icon={<Repeat2 className="h-4 w-4 text-green-400" />}
+        />
+        <div className="rounded-xl border border-gray-800 bg-gray-900 p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Crown className="h-4 w-4 text-yellow-400" />
+            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Top clients LTV</p>
+          </div>
+          <div className="space-y-2">
+            {metrics.topLTVCustomers.slice(0, 4).map((c, i) => (
+              <div key={c.email} className="flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-600 w-4">#{i + 1}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-gray-300 truncate">{c.name ?? c.email}</p>
+                  <p className="text-[10px] text-gray-600">{c.orderCount} commande{c.orderCount > 1 ? "s" : ""}</p>
+                </div>
+                <span className="text-xs font-bold text-purple-300 shrink-0">{formatPrice(c.totalSpent)}</span>
+              </div>
+            ))}
+            {metrics.topLTVCustomers.length === 0 && (
+              <p className="text-xs text-gray-600">Aucune donnée</p>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Charts row */}
