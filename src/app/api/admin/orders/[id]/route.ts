@@ -26,7 +26,7 @@ const deliverSchema = z.object({
 });
 
 const statusSchema = z.object({
-  action: z.enum(["mark_failed", "mark_processing", "mark_refunded"]),
+  action: z.enum(["mark_failed", "mark_processing", "mark_refunded", "confirm_payment"]),
   notes: z.string().optional(),
 });
 
@@ -137,6 +137,24 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const parsed = statusSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Données invalides" }, { status: 400 });
+
+  // Confirm manual payment proof — mark as paid and move to processing
+  if (parsed.data.action === "confirm_payment") {
+    await prisma.order.update({
+      where: { id },
+      data: { paymentStatus: "paid", status: "processing", agentId: session.user.id },
+    });
+    await prisma.auditLog.create({
+      data: {
+        actorId: session.user.id,
+        action: "confirm_payment",
+        targetType: "order",
+        targetId: id,
+        metadata: JSON.stringify({ agentEmail: session.user.email }),
+      },
+    });
+    return NextResponse.json({ success: true });
+  }
 
   const statusMap: Record<string, string> = {
     mark_failed: "failed",

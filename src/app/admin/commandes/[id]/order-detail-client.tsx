@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft, CheckCircle, XCircle, Clock, Send, Loader2, Key, User, FileText, Lock, Gamepad2, Copy, Check, MessageSquarePlus, X
+  ArrowLeft, CheckCircle, XCircle, Clock, Send, Loader2, Key, User, FileText, Lock, Gamepad2, Copy, Check, MessageSquarePlus, X, BadgeCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -51,6 +51,7 @@ const ACTION_LABELS: Record<string, string> = {
   mark_failed: "Marquée échouée",
   mark_processing: "Marquée en traitement",
   mark_refunded: "Remboursée",
+  confirm_payment: "Paiement confirmé",
 };
 
 type ItemDelivery = { keyValue: string; email: string; password: string };
@@ -229,9 +230,11 @@ export function OrderDetailClient({ order }: { order: OrderData }) {
     await callAPI({ action: "deliver", items }, "deliver");
   }
 
-  const canDeliver = (order.status === "processing" || order.status === "pending") && pendingItems.length > 0;
+  const isAwaitingVerification = order.paymentStatus === "awaiting_verification";
+  const canConfirmPayment = isAwaitingVerification && order.status !== "failed";
+  const canDeliver = (order.status === "processing" || order.status === "pending") && pendingItems.length > 0 && !isAwaitingVerification;
   const canFail = order.status !== "failed" && order.status !== "delivered" && order.status !== "refunded";
-  const canProcess = order.status === "pending";
+  const canProcess = order.status === "pending" && !isAwaitingVerification;
 
   return (
     <>
@@ -451,6 +454,18 @@ export function OrderDetailClient({ order }: { order: OrderData }) {
 
           <div className="rounded-xl border border-gray-800 bg-gray-900 p-5 space-y-3">
             <h2 className="font-semibold text-white">Actions</h2>
+
+            {/* Confirm manual payment proof */}
+            {canConfirmPayment && (
+              <Button
+                className="w-full gap-2 bg-green-700 hover:bg-green-600 text-white"
+                disabled={!!loading}
+                onClick={() => callAPI({ action: "confirm_payment" }, "confirm_payment")}
+              >
+                {loading === "confirm_payment" ? <Loader2 className="h-4 w-4 animate-spin" /> : <BadgeCheck className="h-4 w-4" />}
+                Confirmer le paiement
+              </Button>
+            )}
 
             {/* Open ticket with customer */}
             <Button
