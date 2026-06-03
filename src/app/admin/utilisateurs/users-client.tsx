@@ -151,23 +151,26 @@ export function UsersClient({ initialUsers, isAdmin }: { initialUsers: UserRow[]
   }
 
   const filtered = users.filter((u) => {
+    if (!u) return false;
     if (roleFilter !== "all" && u.role !== roleFilter) return false;
     if (search.trim()) {
       const q = search.toLowerCase();
-      return u.email.toLowerCase().includes(q) || (u.name ?? "").toLowerCase().includes(q);
+      return (u.email ?? "").toLowerCase().includes(q) || (u.name ?? "").toLowerCase().includes(q);
     }
     return true;
   });
 
-  const recentOrderCount = users.reduce(
-    (acc, u) => acc + u.orders.filter((o) => isRecent(o.createdAt)).length, 0
+  const validUsers = users.filter(Boolean);
+
+  const recentOrderCount = validUsers.reduce(
+    (acc, u) => acc + (u.orders ?? []).filter((o) => isRecent(o.createdAt)).length, 0
   );
 
   const counts = {
-    all: users.length,
-    customer: users.filter(u => u.role === "customer").length,
-    support: users.filter(u => u.role === "support").length,
-    admin: users.filter(u => u.role === "admin").length,
+    all: validUsers.length,
+    customer: validUsers.filter(u => u.role === "customer").length,
+    support: validUsers.filter(u => u.role === "support").length,
+    admin: validUsers.filter(u => u.role === "admin").length,
   };
 
   return (
@@ -244,7 +247,7 @@ export function UsersClient({ initialUsers, isAdmin }: { initialUsers: UserRow[]
               <div className="flex items-center gap-3 px-4 py-3.5">
                 {/* Avatar */}
                 <button className="w-9 h-9 rounded-full bg-purple-900/50 border border-purple-700/40 flex items-center justify-center text-purple-300 font-bold text-sm shrink-0" onClick={() => toggleExpand(user.id)}>
-                  {(user.name ?? user.email ?? "?")[0].toUpperCase()}
+                  {(user.name || user.email || "?").charAt(0).toUpperCase()}
                 </button>
 
                 {/* Info */}
