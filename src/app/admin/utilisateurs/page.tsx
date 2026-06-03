@@ -10,7 +10,7 @@ export default async function AdminUsersPage() {
   }
 
   const users = await prisma.user.findMany({
-    where: { role: "customer" },
+    where: { role: { in: ["customer", "support", "admin"] } },
     include: {
       orders: {
         include: {
@@ -31,6 +31,7 @@ export default async function AdminUsersPage() {
     name: u.name,
     email: u.email,
     phone: u.phone,
+    role: u.role,
     isVerified: u.isVerified,
     createdAt: u.createdAt.toISOString(),
     lastLogin: u.lastLogin?.toISOString() ?? null,
@@ -38,8 +39,9 @@ export default async function AdminUsersPage() {
       id: o.id,
       orderNumber: o.orderNumber,
       status: o.status,
-      totalAmount: o.totalAmount,
+      paymentStatus: o.paymentStatus,
       paymentMethod: o.paymentMethod,
+      totalAmount: o.totalAmount,
       createdAt: o.createdAt.toISOString(),
       items: o.items.map((i) => ({
         id: i.id,
@@ -51,5 +53,5 @@ export default async function AdminUsersPage() {
     })),
   }));
 
-  return <UsersClient initialUsers={serialized} />;
+  return <UsersClient initialUsers={serialized} isAdmin={session.user.role === "admin"} />;
 }
