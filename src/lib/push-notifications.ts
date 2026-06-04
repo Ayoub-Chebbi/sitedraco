@@ -85,9 +85,9 @@ export async function notifySupportNewTicket(params: {
     to: s.pushToken!,
     title: "🎫 Nouveau ticket support",
     body: `${from} — ${params.subject}`,
-    sound: "default",
-    channelId: "new-orders",
-    priority: "high",
+    sound: null,
+    channelId: "tickets",
+    priority: "normal",
     data: {
       type: "new_ticket",
       ticketId: params.ticketId,
