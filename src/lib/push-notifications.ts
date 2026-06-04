@@ -6,7 +6,7 @@ interface PushMessage {
   to: string;
   title: string;
   body: string;
-  sound: string;
+  sound: string | null;
   data?: Record<string, unknown>;
   channelId?: string;
   priority?: "default" | "normal" | "high";
