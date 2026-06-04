@@ -26,6 +26,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       slug = `${baseSlug}-${suffix++}`;
     }
 
+    // Create product without nested variants — Neon HTTP adapter doesn't support implicit transactions
     const duplicate = await prisma.product.create({
       data: {
         name: `${source.name} (Copie)`,
@@ -49,17 +50,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         rating: source.rating,
         reviewCount: source.reviewCount,
         urgencyHours: source.urgencyHours,
-        variants: source.variants.length > 0 ? {
-          create: source.variants.map((v) => ({
-            name: v.name,
-            price: v.price,
-            discountPrice: v.discountPrice,
-            displayOrder: v.displayOrder,
-            isActive: v.isActive,
-          })),
-        } : undefined,
       },
     });
+
+    // Create variants individually
+    for (const v of source.variants) {
+      await prisma.productVariant.create({
+        data: {
+          productId: duplicate.id,
+          name: v.name,
+          price: v.price,
+          discountPrice: v.discountPrice,
+          displayOrder: v.displayOrder,
+          isActive: v.isActive,
+        },
+      });
+    }
 
     return NextResponse.json({ id: duplicate.id }, { status: 201 });
   } catch (err) {
