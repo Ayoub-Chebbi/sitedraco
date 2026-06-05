@@ -33,6 +33,8 @@ type OrderData = {
     quantity: number;
     unitPrice: number;
     hasKey: boolean;
+    deliveredAt: string | null;
+    deliveredKey: { type: "key"; value: string } | { type: "account"; email: string; password: string } | null;
     productType: string;
     product: { id: string; name: string; platform: string; imageUrl: string | null };
   }[];
@@ -311,6 +313,50 @@ export function OrderDetailClient({ order }: { order: OrderData }) {
               ))}
             </div>
           </div>
+
+          {/* Delivered keys — visible to admin */}
+          {order.items.some((i) => i.deliveredKey) && (
+            <div className="rounded-xl border border-green-800/40 bg-green-900/10 p-5 space-y-4">
+              <h2 className="font-semibold text-white flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-400" />
+                Clés / Accès livrés
+                {order.items.find(i => i.deliveredAt) && (
+                  <span className="text-xs font-normal text-gray-500">
+                    · {formatDate(order.items.find(i => i.deliveredAt)!.deliveredAt!)}
+                  </span>
+                )}
+              </h2>
+              {order.items.filter((i) => i.deliveredKey).map((item) => (
+                <div key={item.id} className="space-y-2">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{item.product.name}</p>
+                  {item.deliveredKey?.type === "key" ? (
+                    <div className="flex items-center gap-2 bg-gray-800 rounded-lg px-4 py-3 border border-gray-700">
+                      <Key className="h-4 w-4 text-purple-400 shrink-0" />
+                      <span className="font-mono text-sm text-white flex-1 select-all">{item.deliveredKey.value}</span>
+                      <CopyButton value={item.deliveredKey.value} />
+                    </div>
+                  ) : item.deliveredKey?.type === "account" ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-gray-800 rounded-lg px-4 py-3 border border-gray-700">
+                        <p className="text-xs text-gray-500 mb-1 flex items-center gap-1"><User className="h-3 w-3" /> Email</p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-white font-mono flex-1 select-all">{item.deliveredKey.email}</span>
+                          <CopyButton value={item.deliveredKey.email} />
+                        </div>
+                      </div>
+                      <div className="bg-gray-800 rounded-lg px-4 py-3 border border-gray-700">
+                        <p className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Lock className="h-3 w-3" /> Mot de passe</p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-white font-mono flex-1 select-all">{item.deliveredKey.password}</span>
+                          <CopyButton value={item.deliveredKey.password} />
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Delivery section — per item */}
           {canDeliver && (
