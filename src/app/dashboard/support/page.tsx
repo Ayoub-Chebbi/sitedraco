@@ -23,7 +23,7 @@ export default async function SupportPage() {
       _count: { select: { messages: true } },
       messages: { orderBy: { createdAt: "desc" }, take: 1, select: { message: true, createdAt: true } },
     },
-    orderBy: { lastMessageAt: "desc" },
+    orderBy: { lastMessageAt: { sort: "desc", nulls: "last" } },
   });
 
   return (

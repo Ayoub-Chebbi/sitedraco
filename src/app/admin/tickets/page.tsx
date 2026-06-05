@@ -43,7 +43,7 @@ export default async function AdminTicketsPage({
       },
       _count: { select: { messages: true } },
     },
-    orderBy: { lastMessageAt: "desc" },
+    orderBy: { lastMessageAt: { sort: "desc", nulls: "last" } },
   });
 
   const activeTickets = tickets.filter((t) => t.status === "open" || t.status === "in_progress");

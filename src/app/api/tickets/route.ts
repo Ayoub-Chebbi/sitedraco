@@ -27,7 +27,7 @@ export async function GET() {
       messages: { orderBy: { createdAt: "desc" }, take: 1, include: { sender: { select: { role: true } } } },
       _count: { select: { messages: true } },
     },
-    orderBy: { lastMessageAt: "desc" },
+    orderBy: { lastMessageAt: { sort: "desc", nulls: "last" } },
   });
 
   return NextResponse.json(tickets);
