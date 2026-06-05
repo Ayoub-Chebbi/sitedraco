@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { formatPrice, formatDate } from "@/lib/utils";
 import { OrderStatusBadge } from "@/components/shared/order-status-badge";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Clock, ImageIcon } from "lucide-react";
+import { ArrowRight, Clock, ImageIcon, Search } from "lucide-react";
 
 const METHOD_LABEL: Record<string, string> = {
   flouci:     "Carte bancaire",
@@ -17,7 +17,7 @@ const METHOD_LABEL: Record<string, string> = {
 export default async function AdminCommandesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; payment?: string }>;
+  searchParams: Promise<{ status?: string; payment?: string; q?: string }>;
 }) {
   const session = await auth();
   if (!session || !["admin", "support"].includes(session.user.role)) redirect("/");
@@ -25,16 +25,30 @@ export default async function AdminCommandesPage({
   const params = await searchParams;
   const statusFilter  = params.status  || "all";
   const paymentFilter = params.payment || "";
+  const query         = (params.q || "").trim();
 
-  // Build where clause
-  const where =
+  // Build where clause — search takes priority over status/payment filters
+  const searchWhere = query ? {
+    OR: [
+      { orderNumber: { contains: query, mode: "insensitive" as const } },
+      { user: { email: { contains: query, mode: "insensitive" as const } } },
+      { user: { name: { contains: query, mode: "insensitive" as const } } },
+      { guestEmail: { contains: query, mode: "insensitive" as const } },
+    ],
+  } : null;
+
+  const statusWhere =
     paymentFilter === "awaiting_verification"
       ? { paymentStatus: "awaiting_verification", NOT: { status: "failed" } }
       : statusFilter === "failed"
       ? { OR: [{ status: "failed" }, { status: { not: "failed" }, paymentStatus: "failed" }] }
       : statusFilter !== "all"
       ? { status: statusFilter }
-      : undefined;
+      : null;
+
+  const where = searchWhere && statusWhere
+    ? { AND: [searchWhere, statusWhere] }
+    : searchWhere ?? statusWhere ?? undefined;
 
   const [orders, awaitingCount] = await Promise.all([
     prisma.order.findMany({
@@ -76,6 +90,32 @@ export default async function AdminCommandesPage({
         <h1 className="text-xl font-bold text-white">Commandes</h1>
         <span className="text-gray-500 text-sm">({orders.length})</span>
       </div>
+
+      {/* Search bar */}
+      <form method="GET" action="/admin/commandes" className="mb-4">
+        <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+          <input
+            name="q"
+            defaultValue={query}
+            placeholder="N° commande ou email client…"
+            className="w-full pl-9 pr-4 py-2 text-sm rounded-xl border border-gray-700 bg-gray-800 text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500"
+          />
+          {query && (
+            <Link
+              href="/admin/commandes"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white text-xs"
+            >
+              ✕
+            </Link>
+          )}
+        </div>
+        {query && (
+          <p className="text-xs text-gray-500 mt-2">
+            {orders.length} résultat{orders.length !== 1 ? "s" : ""} pour « {query} »
+          </p>
+        )}
+      </form>
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-gray-900 border border-gray-800 rounded-xl p-1 overflow-x-auto scrollbar-none">
