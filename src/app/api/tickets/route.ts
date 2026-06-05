@@ -24,10 +24,10 @@ export async function GET() {
       user: { select: { name: true, email: true } },
       agent: { select: { name: true, email: true } },
       order: { select: { orderNumber: true } },
-      messages: { orderBy: { createdAt: "desc" }, take: 1 },
+      messages: { orderBy: { createdAt: "desc" }, take: 1, include: { sender: { select: { role: true } } } },
       _count: { select: { messages: true } },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { lastMessageAt: "desc" },
   });
 
   return NextResponse.json(tickets);
@@ -81,6 +81,7 @@ export async function POST(req: NextRequest) {
         priority,
         userId,
         orderId: orderId || null,
+        lastMessageAt: new Date(),
       },
     });
 

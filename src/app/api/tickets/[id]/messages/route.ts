@@ -47,14 +47,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     include: { sender: { select: { id: true, name: true, email: true, role: true } } },
   });
 
-  // Update ticket status
+  // Update ticket status + bump lastMessageAt so it floats to top
+  const now = new Date();
   if (!isStaff && ticket.status === "resolved") {
-    await prisma.supportTicket.update({ where: { id }, data: { status: "open", resolvedAt: null } });
+    await prisma.supportTicket.update({ where: { id }, data: { status: "open", resolvedAt: null, lastMessageAt: now } });
   } else if (isStaff && ticket.status === "open") {
-    await prisma.supportTicket.update({
-      where: { id },
-      data: { status: "in_progress", agentId: session.user.id },
-    });
+    await prisma.supportTicket.update({ where: { id }, data: { status: "in_progress", agentId: session.user.id, lastMessageAt: now } });
+  } else {
+    await prisma.supportTicket.update({ where: { id }, data: { lastMessageAt: now } });
   }
 
   // Notify support team when a customer replies

@@ -232,7 +232,8 @@ model SupportTicket {
   priority   String    @default("normal")
   status     String    @default("open")
   createdAt  DateTime  @default(now())
-  resolvedAt DateTime?
+  resolvedAt    DateTime?
+  lastMessageAt DateTime?
 
   order    Order?          @relation(fields: [orderId], references: [id])
   user     User?           @relation("UserTickets", fields: [userId], references: [id])
