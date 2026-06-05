@@ -80,7 +80,7 @@ export function AdminDashboard({ metrics }: { metrics: Metrics }) {
         </div>
         <div className="flex items-center gap-2">
           {metrics.awaitingVerification > 0 && (
-            <Link href="/admin/commandes?status=awaiting_verification">
+            <Link href="/admin/commandes?payment=awaiting_verification">
               <div className="flex items-center gap-2 bg-amber-900/30 border border-amber-700/50 text-amber-300 px-3 py-1.5 rounded-lg text-sm font-medium">
                 <Clock className="h-4 w-4" />
                 {metrics.awaitingVerification} justificatif{metrics.awaitingVerification > 1 ? "s" : ""} à vérifier
@@ -154,7 +154,7 @@ export function AdminDashboard({ metrics }: { metrics: Metrics }) {
           sub="Justificatifs manuels"
           positive={metrics.awaitingVerification === 0}
           icon={<Clock className="h-4 w-4 text-amber-400" />}
-          href="/admin/commandes"
+          href="/admin/commandes?payment=awaiting_verification"
         />
         <KPICard
           label="Clients"

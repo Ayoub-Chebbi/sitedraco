@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/utils";
 import { AdminDashboard } from "./admin-metrics-client";
 
+export const dynamic = "force-dynamic";
+
 async function getMetrics() {
   const now = new Date();
   const startOfToday    = new Date(now.getFullYear(), now.getMonth(), now.getDate());

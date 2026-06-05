@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { encryptKey } from "@/lib/crypto";
@@ -132,6 +133,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       );
     }
 
+    revalidatePath("/admin");
+    revalidatePath("/admin/commandes");
     return NextResponse.json({ success: true });
   }
 
@@ -153,6 +156,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         metadata: JSON.stringify({ agentEmail: session.user.email }),
       },
     });
+    revalidatePath("/admin");
+    revalidatePath("/admin/commandes");
     return NextResponse.json({ success: true });
   }
 
@@ -181,5 +186,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     },
   });
 
+  revalidatePath("/admin");
+  revalidatePath("/admin/commandes");
   return NextResponse.json({ success: true });
 }
