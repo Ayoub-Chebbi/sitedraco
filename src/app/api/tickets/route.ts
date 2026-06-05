@@ -61,6 +61,17 @@ export async function POST(req: NextRequest) {
 
   const { subject, message, category, priority, orderId } = parsed.data;
 
+  // Enforce max 2 open tickets per user
+  const openCount = await prisma.supportTicket.count({
+    where: { userId, status: { in: ["open", "in_progress"] } },
+  });
+  if (openCount >= 2) {
+    return NextResponse.json(
+      { error: "Vous avez déjà 2 tickets ouverts. Veuillez attendre qu'un ticket soit résolu avant d'en ouvrir un nouveau." },
+      { status: 429 }
+    );
+  }
+
   try {
     // Two separate queries — avoids nested write issues with the Neon HTTP adapter
     const ticket = await prisma.supportTicket.create({
