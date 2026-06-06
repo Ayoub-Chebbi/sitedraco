@@ -233,7 +233,8 @@ export function OrderDetailClient({ order }: { order: OrderData }) {
   }
 
   const isAwaitingVerification = order.paymentStatus === "awaiting_verification";
-  const canConfirmPayment = isAwaitingVerification && order.status !== "failed";
+  const isUnpaid = order.paymentStatus !== "paid";
+  const canConfirmPayment = isUnpaid && !["failed", "refunded", "delivered"].includes(order.status);
   const canDeliver = (order.status === "processing" || order.status === "pending") && pendingItems.length > 0 && !isAwaitingVerification;
   const canFail = order.status !== "failed" && order.status !== "delivered" && order.status !== "refunded";
   const canProcess = order.status === "pending" && !isAwaitingVerification;

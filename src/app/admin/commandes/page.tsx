@@ -4,17 +4,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { formatPrice, formatDate } from "@/lib/utils";
-import { OrderStatusBadge } from "@/components/shared/order-status-badge";
-import { Button } from "@/components/ui/button";
-import { ArrowRight, Clock, ImageIcon, Search } from "lucide-react";
-
-const METHOD_LABEL: Record<string, string> = {
-  flouci:     "Carte bancaire",
-  d17:        "D17",
-  flouci_app: "Flouci",
-  virement:   "Virement",
-};
+import { Search } from "lucide-react";
+import { CommandesTable } from "./commandes-table";
 
 export default async function AdminCommandesPage({
   searchParams,
@@ -138,104 +129,10 @@ export default async function AdminCommandesPage({
         ))}
       </div>
 
-      <div className="rounded-xl border border-gray-800 bg-gray-900 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-800 bg-gray-900/50">
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Commande</th>
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Client</th>
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Produits</th>
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Paiement</th>
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Statut</th>
-                <th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Montant</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-800/50">
-              {orders.map((order) => {
-                const isAwaiting = order.paymentStatus === "awaiting_verification";
-                return (
-                  <tr
-                    key={order.id}
-                    className={`transition-colors ${isAwaiting ? "bg-amber-900/5 hover:bg-amber-900/10" : "hover:bg-gray-800/30"}`}
-                  >
-                    <td className="px-4 py-3">
-                      <p className="font-mono text-xs font-semibold text-gray-200">{order.orderNumber}</p>
-                      <p className="text-xs text-gray-600">{formatDate(order.createdAt)}</p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="text-xs text-gray-300 truncate max-w-[160px]">
-                        {order.user?.email || order.guestEmail || "Invité"}
-                      </p>
-                      {order.user?.name && <p className="text-xs text-gray-600">{order.user.name}</p>}
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="text-xs text-gray-400 truncate max-w-[200px]">
-                        {order.items.map((i) => i.product.name).join(", ")}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="space-y-1">
-                        {/* Payment status badge */}
-                        <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
-                          order.paymentStatus === "paid"
-                            ? "bg-green-600/20 text-green-400"
-                            : isAwaiting
-                            ? "bg-amber-600/25 text-amber-300 border border-amber-700/40"
-                            : "bg-yellow-600/20 text-yellow-400"
-                        }`}>
-                          {order.paymentStatus === "paid" ? "Payé" :
-                           isAwaiting ? <><Clock className="h-3 w-3" /> Justificatif à vérifier</> :
-                           "En attente"}
-                        </span>
-
-                        {/* Payment method */}
-                        {order.paymentMethod && (
-                          <p className="text-[10px] text-gray-500">
-                            {METHOD_LABEL[order.paymentMethod] ?? order.paymentMethod}
-                          </p>
-                        )}
-
-                        {/* Proof indicator */}
-                        {isAwaiting && order.paymentProofUrl && (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-400">
-                            <ImageIcon className="h-2.5 w-2.5" /> Preuve jointe
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <OrderStatusBadge status={order.status} />
-                    </td>
-                    <td className="px-4 py-3 text-right font-semibold text-white">
-                      {formatPrice(order.totalAmount)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Link href={`/admin/commandes/${order.id}`}>
-                        <Button
-                          size="sm"
-                          variant={isAwaiting ? "default" : order.status === "pending" || order.status === "processing" ? "default" : "ghost"}
-                          className={`gap-1 ${isAwaiting ? "bg-amber-600 hover:bg-amber-700 text-white" : ""}`}
-                        >
-                          Traiter <ArrowRight className="h-3 w-3" />
-                        </Button>
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })}
-              {orders.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="text-center py-12 text-gray-500">
-                    Aucune commande{activeTab !== "all" ? " dans cette catégorie" : ""}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <CommandesTable
+        activeTab={activeTab}
+        orders={orders.map((o) => ({ ...o, createdAt: o.createdAt.toISOString() }))}
+      />
     </div>
   );
 }
