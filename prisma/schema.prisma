@@ -197,6 +197,7 @@ model Order {
   guestAutoCreated  Boolean  @default(false)
   notesInternal  String?
   agentId        String?
+  paidAt         DateTime?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

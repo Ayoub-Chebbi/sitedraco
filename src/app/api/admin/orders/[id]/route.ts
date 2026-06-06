@@ -145,7 +145,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (parsed.data.action === "confirm_payment") {
     await prisma.order.update({
       where: { id },
-      data: { paymentStatus: "paid", status: "processing", agentId: session.user.id },
+      data: { paymentStatus: "paid", status: "processing", paidAt: new Date(), agentId: session.user.id },
     });
     await prisma.auditLog.create({
       data: {

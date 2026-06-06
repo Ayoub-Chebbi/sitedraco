@@ -42,9 +42,9 @@ async function getMetrics() {
     ltvData,
   ] = await Promise.all([
     prisma.order.findMany({ where: { paymentStatus: "paid" }, select: { totalAmount: true } }),
-    prisma.order.findMany({ where: { paymentStatus: "paid", createdAt: { gte: startOfToday } }, select: { totalAmount: true } }),
-    prisma.order.findMany({ where: { paymentStatus: "paid", createdAt: { gte: startOfMonth } }, select: { totalAmount: true } }),
-    prisma.order.findMany({ where: { paymentStatus: "paid", createdAt: { gte: startOfLastMonth, lt: startOfMonth } }, select: { totalAmount: true } }),
+    prisma.order.findMany({ where: { paymentStatus: "paid", paidAt: { gte: startOfToday } }, select: { totalAmount: true } }),
+    prisma.order.findMany({ where: { paymentStatus: "paid", paidAt: { gte: startOfMonth } }, select: { totalAmount: true } }),
+    prisma.order.findMany({ where: { paymentStatus: "paid", paidAt: { gte: startOfLastMonth, lt: startOfMonth } }, select: { totalAmount: true } }),
     prisma.order.count(),
     prisma.order.count({ where: { paymentStatus: "paid" } }),
     prisma.order.count({ where: { status: { in: ["pending", "processing"] }, paymentStatus: "paid" } }),
@@ -53,8 +53,8 @@ async function getMetrics() {
     prisma.user.count({ where: { role: "customer" } }),
     prisma.user.count({ where: { role: "customer", createdAt: { gte: startOfMonth } } }),
     prisma.order.findMany({
-      where: { paymentStatus: "paid", createdAt: { gte: start7DaysAgo } },
-      select: { totalAmount: true, createdAt: true },
+      where: { paymentStatus: "paid", paidAt: { gte: start7DaysAgo } },
+      select: { totalAmount: true, paidAt: true },
     }),
     prisma.order.groupBy({
       by: ["paymentMethod"],
@@ -110,7 +110,7 @@ async function getMetrics() {
     const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
     const dayEnd   = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
     const dayOrders = last7DaysPaidOrders.filter(
-      (o) => o.createdAt >= dayStart && o.createdAt < dayEnd
+      (o) => o.paidAt && o.paidAt >= dayStart && o.paidAt < dayEnd
     );
     dailyRevenue.push({
       date: dayStart.toLocaleDateString("fr-TN", { weekday: "short", day: "numeric" }),

@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
 
   await prisma.order.update({
     where: { id: orderId },
-    data: { paymentStatus: "paid", paymentRef: paymentId, status: "processing" },
+    data: { paymentStatus: "paid", paymentRef: paymentId, status: "processing", paidAt: new Date() },
   });
 
   // Increment coupon usedCount only after payment is confirmed
