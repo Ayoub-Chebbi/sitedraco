@@ -176,7 +176,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (orderForEmail.userId) {
         const referral = await prisma.referral.findUnique({ where: { referredUserId: orderForEmail.userId } });
         if (referral && referral.status === "pending") {
-          const reward = 5;
+          const reward = 2;
           prisma.referral.update({
             where: { id: referral.id },
             data: { status: "completed", orderId: id, rewardGiven: reward, completedAt: new Date() },

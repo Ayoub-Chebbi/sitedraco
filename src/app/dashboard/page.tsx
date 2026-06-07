@@ -174,7 +174,7 @@ export default async function DashboardPage() {
             </div>
             <div>
               <p className="text-sm font-bold text-white">Parrainez vos amis</p>
-              <p className="text-xs text-gray-500">Ils ont -5% · Vous gagnez 5 TND fidélité par parrainage complété</p>
+              <p className="text-xs text-gray-500">Ils ont -5% · Vous gagnez 2 TND fidélité par parrainage complété</p>
             </div>
           </div>
           <div className="flex items-center gap-3 flex-wrap">

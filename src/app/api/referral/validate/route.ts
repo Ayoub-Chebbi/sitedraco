@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 const REFERRAL_DISCOUNT_PCT = 5; // 5% off for the referred friend
-const REFERRER_REWARD = 5;       // 5 TND loyalty credit for the referrer
+const REFERRER_REWARD = 2;       // 2 TND loyalty credit for the referrer
 
 // POST /api/referral/validate  { code, orderTotal }
 export async function POST(req: NextRequest) {

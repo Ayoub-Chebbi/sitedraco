@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
       where: { referredUserId: order.userId },
     });
     if (referral && referral.status === "pending") {
-      const reward = 5;
+      const reward = 2;
       prisma.referral.update({
         where: { id: referral.id },
         data: { status: "completed", orderId: orderId, rewardGiven: reward, completedAt: new Date() },
