@@ -213,6 +213,10 @@ export function AdminDashboard({ metrics }: { metrics: Metrics }) {
   const [period, setPeriod] = useState<Period>("week");
   const [periodData, setPeriodData] = useState<PeriodData | null>(null);
   const [periodLoading, setPeriodLoading] = useState(true);
+  const [liveCounts, setLiveCounts] = useState({
+    awaitingVerification: metrics.awaitingVerification,
+    pendingOrders: metrics.pendingOrders,
+  });
 
   useEffect(() => {
     setPeriodLoading(true);
@@ -221,6 +225,19 @@ export function AdminDashboard({ metrics }: { metrics: Metrics }) {
       .then((data) => { setPeriodData(data); setPeriodLoading(false); })
       .catch(() => setPeriodLoading(false));
   }, [period]);
+
+  useEffect(() => {
+    const fetchCounts = () =>
+      fetch("/api/admin/counts")
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.awaitingVerification !== undefined) setLiveCounts(data);
+        })
+        .catch(() => {});
+    fetchCounts();
+    const id = setInterval(fetchCounts, 15_000);
+    return () => clearInterval(id);
+  }, []);
 
   const chartBars: Bar[] = periodData?.bars ?? metrics.dailyRevenue.map((d) => ({ label: d.date, revenue: d.revenue, orders: d.orders }));
 
@@ -233,19 +250,19 @@ export function AdminDashboard({ metrics }: { metrics: Metrics }) {
           <p className="text-gray-500 text-sm mt-0.5">Statistiques basées sur les paiements confirmés uniquement</p>
         </div>
         <div className="flex items-center gap-2">
-          {metrics.awaitingVerification > 0 && (
+          {liveCounts.awaitingVerification > 0 && (
             <Link href="/admin/commandes?payment=awaiting_verification">
               <div className="flex items-center gap-2 bg-amber-900/30 border border-amber-700/50 text-amber-300 px-3 py-1.5 rounded-lg text-sm font-medium">
                 <Clock className="h-4 w-4" />
-                {metrics.awaitingVerification} justificatif{metrics.awaitingVerification > 1 ? "s" : ""} à vérifier
+                {liveCounts.awaitingVerification} justificatif{liveCounts.awaitingVerification > 1 ? "s" : ""} à vérifier
               </div>
             </Link>
           )}
-          {metrics.pendingOrders > 0 && (
+          {liveCounts.pendingOrders > 0 && (
             <Link href="/admin/commandes">
               <div className="flex items-center gap-2 bg-red-900/30 border border-red-700/50 text-red-300 px-3 py-1.5 rounded-lg text-sm font-medium animate-pulse">
                 <AlertCircle className="h-4 w-4" />
-                {metrics.pendingOrders} commande{metrics.pendingOrders > 1 ? "s" : ""} en attente
+                {liveCounts.pendingOrders} commande{liveCounts.pendingOrders > 1 ? "s" : ""} en attente
               </div>
             </Link>
           )}
@@ -296,17 +313,17 @@ export function AdminDashboard({ metrics }: { metrics: Metrics }) {
         />
         <KPICard
           label="En attente livraison"
-          value={metrics.pendingOrders.toString()}
-          sub={metrics.pendingOrders === 0 ? "Tout est traité ✓" : "À traiter maintenant"}
-          positive={metrics.pendingOrders === 0}
+          value={liveCounts.pendingOrders.toString()}
+          sub={liveCounts.pendingOrders === 0 ? "Tout est traité ✓" : "À traiter maintenant"}
+          positive={liveCounts.pendingOrders === 0}
           icon={<AlertCircle className="h-4 w-4 text-red-400" />}
           href="/admin/commandes"
         />
         <KPICard
           label="À vérifier"
-          value={metrics.awaitingVerification.toString()}
+          value={liveCounts.awaitingVerification.toString()}
           sub="Justificatifs manuels"
-          positive={metrics.awaitingVerification === 0}
+          positive={liveCounts.awaitingVerification === 0}
           icon={<Clock className="h-4 w-4 text-amber-400" />}
           href="/admin/commandes?payment=awaiting_verification"
         />
