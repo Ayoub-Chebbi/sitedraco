@@ -1,10 +1,11 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   ArrowRight, AlertTriangle, TrendingUp, TrendingDown, Users,
   ShoppingCart, AlertCircle, DollarSign, BarChart3, Clock, CheckCircle2,
-  CreditCard, Smartphone, Building2, Repeat2, Crown,
+  CreditCard, Smartphone, Building2, Repeat2, Crown, Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OrderStatusBadge } from "@/components/shared/order-status-badge";
@@ -67,8 +68,32 @@ function KPICard({
   return content;
 }
 
+type Period = "today" | "yesterday" | "week" | "month";
+type PeriodData = { totalRevenue: number; totalOrders: number; bars: { label: string; revenue: number; orders: number }[] };
+
+const PERIOD_LABELS: Record<Period, string> = {
+  today: "Aujourd'hui",
+  yesterday: "Hier",
+  week: "7 jours",
+  month: "Ce mois",
+};
+
 export function AdminDashboard({ metrics }: { metrics: Metrics }) {
-  const maxRevenue = Math.max(...metrics.dailyRevenue.map((d) => d.revenue), 1);
+  const [period, setPeriod] = useState<Period>("week");
+  const [periodData, setPeriodData] = useState<PeriodData | null>(null);
+  const [periodLoading, setPeriodLoading] = useState(true);
+
+  useEffect(() => {
+    setPeriodLoading(true);
+    fetch(`/api/admin/revenue?period=${period}`)
+      .then((r) => r.json())
+      .then((data) => { setPeriodData(data); setPeriodLoading(false); })
+      .catch(() => setPeriodLoading(false));
+  }, [period]);
+
+  const chartBars = periodData?.bars ?? metrics.dailyRevenue;
+  const maxChartRevenue = Math.max(...chartBars.map((d) => d.revenue), 1);
+  const isHourly = period === "today" || period === "yesterday";
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -208,26 +233,68 @@ export function AdminDashboard({ metrics }: { metrics: Metrics }) {
 
       {/* Charts row */}
       <div className="grid lg:grid-cols-3 gap-6 mb-6">
-        {/* Revenue chart (7 days) */}
+        {/* Revenue chart — interactive period selector */}
         <div className="lg:col-span-2 rounded-xl border border-gray-800 bg-gray-900 p-5">
-          <h2 className="font-semibold text-white mb-1 text-sm">Revenus — 7 derniers jours</h2>
-          <p className="text-xs text-gray-600 mb-5">Paiements confirmés uniquement</p>
-          <div className="flex items-end gap-2 h-32">
-            {metrics.dailyRevenue.map((d) => (
-              <div key={d.date} className="flex-1 flex flex-col items-center gap-1">
-                <div className="w-full flex-1 flex items-end">
-                  <SparkBar
-                    value={d.revenue}
-                    max={maxRevenue}
-                    color={d.revenue > 0 ? "bg-purple-500" : "bg-gray-800"}
-                  />
-                </div>
-                <p className="text-[9px] text-gray-600 text-center leading-tight">{d.date}</p>
-                {d.revenue > 0 && (
-                  <p className="text-[9px] text-purple-400 font-semibold">{d.revenue.toFixed(0)}</p>
-                )}
+          <div className="flex items-start justify-between mb-4 gap-3">
+            <div>
+              <h2 className="font-semibold text-white text-sm">Revenus — {PERIOD_LABELS[period]}</h2>
+              <p className="text-xs text-gray-600">Paiements confirmés uniquement</p>
+            </div>
+            {/* Period tabs */}
+            <div className="flex gap-1 bg-gray-800 rounded-lg p-1 shrink-0">
+              {(["today", "yesterday", "week", "month"] as Period[]).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPeriod(p)}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                    period === p ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"
+                  }`}
+                >
+                  {p === "today" ? "Auj." : p === "yesterday" ? "Hier" : p === "week" ? "7j" : "Mois"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Period total */}
+          <div className="mb-4">
+            {periodLoading ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
+                <span className="text-sm text-gray-500">Chargement…</span>
               </div>
-            ))}
+            ) : periodData ? (
+              <div className="flex items-baseline gap-3">
+                <p className="text-2xl font-bold text-white">{periodData.totalRevenue.toFixed(3)} TND</p>
+                <p className="text-xs text-gray-500">{periodData.totalOrders} commande{periodData.totalOrders !== 1 ? "s" : ""}</p>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Bar chart */}
+          <div className={`flex items-end gap-1 h-28 transition-opacity ${periodLoading ? "opacity-30" : ""}`}>
+            {chartBars.map((d, i) => {
+              const showLabel = isHourly
+                ? parseInt(d.label) % 6 === 0
+                : period === "month" ? parseInt(d.label) % 5 === 1 : true;
+              return (
+                <div key={`${d.label}-${i}`} className="flex-1 flex flex-col items-center gap-0.5 min-w-0">
+                  <div className="w-full flex-1 flex items-end">
+                    <SparkBar
+                      value={d.revenue}
+                      max={maxChartRevenue}
+                      color={d.revenue > 0 ? "bg-purple-500" : "bg-gray-800"}
+                    />
+                  </div>
+                  <p className="text-[8px] text-gray-600 text-center leading-tight truncate w-full">
+                    {showLabel ? d.label : ""}
+                  </p>
+                  {d.revenue > 0 && !isHourly && (
+                    <p className="text-[8px] text-purple-400 font-semibold">{d.revenue.toFixed(0)}</p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
