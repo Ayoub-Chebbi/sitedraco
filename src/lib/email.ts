@@ -270,6 +270,61 @@ export async function sendTicketReplyEmail({
   if (error) throw new Error(error.message);
 }
 
+export async function sendReviewRequestEmail({
+  to,
+  orderNumber,
+  productNames,
+  reviewUrl,
+}: {
+  to: string;
+  orderNumber: string;
+  productNames: string[];
+  reviewUrl: string;
+}) {
+  const productsHtml = productNames
+    .map((name) => `<li style="margin:0 0 6px;color:#e5e7eb">${h(name)}</li>`)
+    .join("");
+
+  const stars = [1, 2, 3, 4, 5]
+    .map(
+      (n) =>
+        `<a href="${reviewUrl}&rating=${n}" style="display:inline-block;font-size:28px;text-decoration:none;margin:0 2px">⭐</a>`
+    )
+    .join("");
+
+  const html = `${base}
+    <h2 style="color:#fff;margin:0 0 8px">Votre avis compte ! 🎮</h2>
+    <p style="color:#9ca3af;margin:0 0 20px">
+      Commande <strong style="color:#fff">#${h(orderNumber)}</strong> — merci pour votre achat !<br>
+      Comment évaluez-vous votre expérience ?
+    </p>
+    <ul style="margin:0 0 20px;padding-left:20px">
+      ${productsHtml}
+    </ul>
+    <div style="text-align:center;margin:0 0 24px">
+      <p style="color:#9ca3af;font-size:13px;margin:0 0 12px">Cliquez sur une étoile pour laisser votre avis :</p>
+      <div style="font-size:0">${stars}</div>
+    </div>
+    <div style="text-align:center">
+      <a href="${reviewUrl}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">
+        Laisser un avis →
+      </a>
+    </div>
+    <p style="color:#6b7280;font-size:12px;margin:20px 0 0;text-align:center">
+      Votre avis aide d'autres joueurs à faire leur choix. Merci ! 🙏
+    </p>
+  ${foot}`;
+
+  const { error } = await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `⭐ Votre avis sur la commande #${orderNumber} — LootStore`,
+    html,
+  });
+
+  if (error) throw new Error(error.message);
+}
+
 export async function sendPasswordResetEmail(email: string, resetUrl: string) {
   const html = `${base}
     <h2 style="color:#fff;margin:0 0 12px">Réinitialisation du mot de passe</h2>

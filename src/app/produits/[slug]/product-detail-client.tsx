@@ -39,9 +39,12 @@ type ExtProduct = Product & {
   variants?: ProductVariant[];
 };
 
+type ReviewData = { id: string; name: string; rating: number; text: string; date: string };
+
 type Props = {
   product: ExtProduct;
   upsells: UpsellProduct[];
+  reviews?: ReviewData[];
 };
 
 const STATIC_REVIEWS = [
@@ -50,7 +53,7 @@ const STATIC_REVIEWS = [
   { name: "Karim T.", rating: 4, text: "Très bon service. La clé a fonctionné du premier coup. Livraison rapide.", date: "Il y a 1 semaine", platform: "LootStore" },
 ];
 
-export function ProductDetailClient({ product, upsells }: Props) {
+export function ProductDetailClient({ product, upsells, reviews = [] }: Props) {
   const router = useRouter();
   const [qty, setQty] = useState(1);
   const addItem = useCart((s) => s.addItem);
@@ -330,14 +333,14 @@ export function ProductDetailClient({ product, upsells }: Props) {
         <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="text-lg font-bold text-white">Avis clients</h2>
-            {product.reviewCount && product.reviewCount > 0 && (
-              <p className="text-sm text-gray-500">{product.reviewCount} avis · Note moyenne : {product.rating?.toFixed(1)}/5</p>
+            {reviews.length > 0 && (
+              <p className="text-sm text-gray-500">{reviews.length} avis · Note moyenne : {(reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)}/5</p>
             )}
           </div>
         </div>
         <div className="grid md:grid-cols-3 gap-4">
-          {STATIC_REVIEWS.map((r) => (
-            <ReviewCard key={r.name} {...r} />
+          {(reviews.length > 0 ? reviews : STATIC_REVIEWS).map((r, i) => (
+            <ReviewCard key={reviews.length > 0 ? r.id : i} name={r.name} rating={r.rating} text={r.text} date={r.date} platform="LootStore" />
           ))}
         </div>
       </div>
