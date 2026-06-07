@@ -8,16 +8,22 @@ import { useRouter } from "next/navigation";
 import {
   Loader2, CreditCard, Shield, Lock, Zap, Tag, X,
   CheckCircle, Gamepad2, Upload, Copy, Check, Smartphone,
-  Building2, ChevronRight, ImageIcon, Package,
+  Building2, ChevronRight, ImageIcon, Package, Gift,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/lib/cart-store";
 import { formatPrice } from "@/lib/utils";
 import { trackInitiateCheckout } from "@/components/shared/meta-pixel";
+import { UpsellSection } from "@/components/shared/upsell-section";
 
 type CouponResult = {
   id: string; code: string; type: "percentage" | "fixed"; value: number; discount: number;
+};
+
+type UpsellProduct = {
+  id: string; name: string; slug: string; price: number; discountPrice: number | null;
+  imageUrl: string | null; platform: string; category: string; availableKeys: number;
 };
 
 type PaymentMethod = "carte" | "d17" | "flouci_app" | "virement";
@@ -149,6 +155,13 @@ export default function CheckoutPage() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<CouponResult | null>(null);
+  const [upsells, setUpsells] = useState<UpsellProduct[]>([]);
+  const [loyaltyBalance, setLoyaltyBalance] = useState(0);
+  const [useLoyalty, setUseLoyalty] = useState(false);
+  const [referralInput, setReferralInput] = useState("");
+  const [referralLoading, setReferralLoading] = useState(false);
+  const [referralError, setReferralError] = useState("");
+  const [appliedReferral, setAppliedReferral] = useState<{ code: string; discountPct: number; discount: number; referrerName: string } | null>(null);
   const [steamUsername, setSteamUsername] = useState("");
   const needsSteam = items.some((i) => i.requiresSteamUsername);
 
@@ -162,6 +175,17 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (items.length > 0) {
       trackInitiateCheckout(total(), items.reduce((s, i) => s + i.quantity, 0));
+      const ids = items.map((i) => i.productId).join(",");
+      fetch(`/api/upsells?productIds=${ids}`)
+        .then((r) => r.json())
+        .then((data) => { if (Array.isArray(data)) setUpsells(data); })
+        .catch(() => {});
+      if (session) {
+        fetch("/api/loyalty")
+          .then((r) => r.json())
+          .then((data) => { if (data.balance > 0) setLoyaltyBalance(data.balance); })
+          .catch(() => {});
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -176,7 +200,9 @@ export default function CheckoutPage() {
 
   const subtotal = total();
   const discount = appliedCoupon?.discount ?? 0;
-  const finalTotal = Math.max(0, subtotal - discount);
+  const referralDiscount = appliedReferral?.discount ?? 0;
+  const loyaltyApplied = useLoyalty ? Math.min(loyaltyBalance, Math.max(0, subtotal - discount - referralDiscount)) : 0;
+  const finalTotal = Math.max(0, subtotal - discount - referralDiscount - loyaltyApplied);
 
   function handleProofFile(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -214,6 +240,26 @@ export default function CheckoutPage() {
 
   function removeCoupon() { setAppliedCoupon(null); setCouponError(""); }
 
+  async function applyReferral() {
+    if (!referralInput.trim()) return;
+    setReferralError("");
+    setReferralLoading(true);
+    const res = await fetch("/api/referral/validate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: referralInput.trim(), orderTotal: subtotal - discount }),
+    });
+    const data = await res.json();
+    setReferralLoading(false);
+    if (!res.ok) setReferralError(data.error ?? "Code invalide.");
+    else {
+      setAppliedReferral({ code: referralInput.trim().toUpperCase(), discountPct: data.discountPct, discount: data.discount, referrerName: data.referrerName });
+      setReferralInput("");
+    }
+  }
+
+  function removeReferral() { setAppliedReferral(null); setReferralError(""); }
+
   async function handlePay() {
     setError("");
     if (!email.includes("@")) { setError("Entrez un email valide."); return; }
@@ -231,6 +277,8 @@ export default function CheckoutPage() {
             items: items.map((i) => ({ productId: i.productId, quantity: i.quantity, ...(i.variantId && { variantId: i.variantId }) })),
             ...(appliedCoupon && { couponCode: appliedCoupon.code }),
             ...(needsSteam && steamUsername.trim() && { steamUsername: steamUsername.trim() }),
+            ...(useLoyalty && loyaltyBalance > 0 && { useLoyalty: true }),
+            ...(appliedReferral && { referralCode: appliedReferral.code }),
           }),
         });
         const data = await res.json();
@@ -249,6 +297,8 @@ export default function CheckoutPage() {
             items: items.map((i) => ({ productId: i.productId, quantity: i.quantity, ...(i.variantId && { variantId: i.variantId }) })),
             ...(appliedCoupon && { couponCode: appliedCoupon.code }),
             ...(needsSteam && steamUsername.trim() && { steamUsername: steamUsername.trim() }),
+            ...(useLoyalty && loyaltyBalance > 0 && { useLoyalty: true }),
+            ...(appliedReferral && { referralCode: appliedReferral.code }),
           }),
         });
         const data = await res.json();
@@ -362,6 +412,86 @@ export default function CheckoutPage() {
                 )}
               </div>
             </div>
+
+            {/* Referral code */}
+            <div className="rounded-2xl border border-gray-800 bg-gray-900 overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-800/80 flex items-center gap-3">
+                <Gift className="h-4 w-4 text-pink-400" />
+                <h2 className="font-semibold text-white text-sm">Code de parrainage</h2>
+                <span className="text-xs text-gray-600 font-normal">(optionnel)</span>
+              </div>
+              <div className="p-5">
+                {appliedReferral ? (
+                  <div className="flex items-center justify-between rounded-xl bg-pink-900/20 border border-pink-700/40 px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-pink-900/50 flex items-center justify-center">
+                        <CheckCircle className="h-4 w-4 text-pink-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-pink-300">{appliedReferral.code}</p>
+                        <p className="text-xs text-gray-400">
+                          Parrainé par <span className="text-white font-medium">{appliedReferral.referrerName}</span>
+                          {" · "}<span className="text-pink-400 font-semibold">-{appliedReferral.discountPct}% appliqué</span>
+                        </p>
+                      </div>
+                    </div>
+                    <button onClick={removeReferral} className="p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-900/20 transition-colors">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Ex : LOOT8X2K"
+                      value={referralInput}
+                      onChange={(e) => { setReferralInput(e.target.value.toUpperCase()); setReferralError(""); }}
+                      onKeyDown={(e) => e.key === "Enter" && applyReferral()}
+                      className="uppercase placeholder:normal-case h-11 font-mono tracking-widest"
+                    />
+                    <Button variant="outline" onClick={applyReferral} disabled={referralLoading || !referralInput.trim()} className="shrink-0 h-11 px-5">
+                      {referralLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Appliquer"}
+                    </Button>
+                  </div>
+                )}
+                {referralError && (
+                  <p className="text-xs text-red-400 mt-2 flex items-center gap-1.5">
+                    <X className="h-3 w-3" /> {referralError}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Loyalty points */}
+            {loyaltyBalance > 0 && (
+              <button
+                type="button"
+                onClick={() => setUseLoyalty((v) => !v)}
+                className={`w-full flex items-center justify-between gap-3 px-5 py-4 rounded-2xl border transition-all text-left ${
+                  useLoyalty
+                    ? "border-yellow-500/60 bg-yellow-900/15"
+                    : "border-gray-800 bg-gray-900 hover:border-yellow-700/40"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${useLoyalty ? "bg-yellow-500/20" : "bg-gray-800"}`}>
+                    <Gift className={`h-4.5 w-4.5 ${useLoyalty ? "text-yellow-400" : "text-gray-500"}`} />
+                  </div>
+                  <div>
+                    <p className={`text-sm font-semibold ${useLoyalty ? "text-yellow-300" : "text-white"}`}>
+                      Points de fidélité
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {useLoyalty
+                        ? `−${loyaltyApplied.toFixed(3)} TND appliqués`
+                        : `${loyaltyBalance.toFixed(3)} TND disponibles — cliquez pour utiliser`}
+                    </p>
+                  </div>
+                </div>
+                <div className={`w-10 h-6 rounded-full transition-colors flex items-center shrink-0 ${useLoyalty ? "bg-yellow-500" : "bg-gray-700"}`}>
+                  <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform mx-1 ${useLoyalty ? "translate-x-4" : "translate-x-0"}`} />
+                </div>
+              </button>
+            )}
 
             {/* Step 3 — Payment */}
             <div className="rounded-2xl border border-gray-800 bg-gray-900 overflow-hidden">
@@ -496,9 +626,10 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          {/* Right — order summary */}
+          {/* Right — order summary + upsells */}
           <div className="lg:col-span-2">
-            <div className="sticky top-20 rounded-2xl border border-gray-800 bg-gray-900 overflow-hidden">
+            <div className="sticky top-20 space-y-0">
+            <div className="rounded-2xl border border-gray-800 bg-gray-900 overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-800 flex items-center gap-2">
                 <Package className="h-4 w-4 text-purple-400" />
                 <h3 className="font-semibold text-white text-sm">Votre commande</h3>
@@ -545,6 +676,22 @@ export default function CheckoutPage() {
                     <span className="text-green-400 font-semibold">-{formatPrice(discount)}</span>
                   </div>
                 )}
+                {referralDiscount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-pink-400 flex items-center gap-1.5">
+                      <Gift className="h-3 w-3" /> Parrainage -{appliedReferral?.discountPct}%
+                    </span>
+                    <span className="text-pink-400 font-semibold">-{formatPrice(referralDiscount)}</span>
+                  </div>
+                )}
+                {loyaltyApplied > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-yellow-400 flex items-center gap-1.5">
+                      <Gift className="h-3 w-3" /> Points fidélité
+                    </span>
+                    <span className="text-yellow-400 font-semibold">-{loyaltyApplied.toFixed(3)} TND</span>
+                  </div>
+                )}
 
                 <div className="border-t border-gray-800 pt-3 flex justify-between items-baseline">
                   <span className="font-bold text-white">Total</span>
@@ -559,6 +706,11 @@ export default function CheckoutPage() {
                   <p className="text-xs text-gray-400">Paiement 100% sécurisé · Données chiffrées</p>
                 </div>
               </div>
+            </div>
+
+            {upsells.length > 0 && (
+              <UpsellSection products={upsells} variant="checkout" />
+            )}
             </div>
           </div>
         </div>

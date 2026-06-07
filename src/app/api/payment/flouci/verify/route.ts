@@ -3,7 +3,7 @@ import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { verifyFlouciPayment } from "@/lib/flouci";
 import { notifyAdminsNewOrder } from "@/lib/push-notifications";
-import { sendWelcomeEmail } from "@/lib/email";
+import { sendWelcomeEmail, sendPaymentConfirmedEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   let body: { paymentId?: string; orderId?: string };
@@ -61,6 +61,35 @@ export async function POST(req: NextRequest) {
     }).catch((err) => console.error("[verify] coupon increment failed:", err));
   }
 
+  // Complete pending referral if this is the referred user's first paid order
+  if (order.userId) {
+    const referral = await prisma.referral.findUnique({
+      where: { referredUserId: order.userId },
+    });
+    if (referral && referral.status === "pending") {
+      const reward = 2;
+      prisma.referral.update({
+        where: { id: referral.id },
+        data: { status: "completed", orderId: orderId, rewardGiven: reward, completedAt: new Date() },
+      }).then(() => prisma.user.update({
+        where: { id: referral.referrerId },
+        data: { loyaltyPoints: { increment: reward } },
+      })).then(() => prisma.loyaltyTransaction.create({
+        data: { userId: referral.referrerId, orderRef: orderId, type: "earned", amount: reward, description: `Parrainage complété — +${reward} TND` },
+      })).catch((err) => console.error("[verify] referral complete failed:", err));
+    }
+  }
+
+  // Award 1% loyalty cashback for logged-in users
+  if (order.userId) {
+    const earned = Math.round(order.totalAmount * 0.01 * 1000) / 1000;
+    prisma.user.update({ where: { id: order.userId }, data: { loyaltyPoints: { increment: earned } } })
+      .then(() => prisma.loyaltyTransaction.create({
+        data: { userId: order.userId!, orderRef: order.id, type: "earned", amount: earned, description: `1% cashback — commande #${order.orderNumber}` },
+      }))
+      .catch((err) => console.error("[verify] loyalty award failed:", err));
+  }
+
   notifyAdminsNewOrder({
     orderNumber: order.orderNumber,
     clientEmail: order.user?.email ?? order.guestEmail ?? "guest",
@@ -70,7 +99,18 @@ export async function POST(req: NextRequest) {
     orderId: order.id,
   }).catch(console.error);
 
+  // Payment confirmed email — sent to all customers
+  const confirmedTo = order.user?.email ?? order.guestEmail;
+  if (confirmedTo && !order.guestAutoCreated) {
+    sendPaymentConfirmedEmail({
+      to: confirmedTo,
+      orderNumber: order.orderNumber,
+      totalAmount: order.totalAmount,
+    }).catch((err) => console.error("[verify] payment confirmed email failed:", err));
+  }
+
   // Send welcome email to auto-created guest accounts only after payment confirmed
+  // (welcome email already contains payment confirmation, so skip the duplicate)
   if (order.guestAutoCreated && order.user?.email) {
     const base = process.env.SITE_URL ?? process.env.NEXTAUTH_URL ?? "https://loot.tn";
     const token = randomBytes(32).toString("hex");

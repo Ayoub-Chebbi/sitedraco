@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { encryptKey } from "@/lib/crypto";
-import { sendDeliveryEmail } from "@/lib/email";
+import { sendDeliveryEmail, sendPaymentConfirmedEmail } from "@/lib/email";
 import { z } from "zod";
 
 async function checkAdminOrSupport() {
@@ -143,6 +143,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   // Confirm manual payment proof — mark as paid and move to processing
   if (parsed.data.action === "confirm_payment") {
+    const orderForEmail = await prisma.order.findUnique({
+      where: { id },
+      select: { orderNumber: true, totalAmount: true, guestAutoCreated: true, guestEmail: true, userId: true, user: { select: { email: true } } },
+    });
+
     await prisma.order.update({
       where: { id },
       data: { paymentStatus: "paid", status: "processing", paidAt: new Date(), agentId: session.user.id },
@@ -156,6 +161,45 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         metadata: JSON.stringify({ agentEmail: session.user.email }),
       },
     });
+
+    if (orderForEmail) {
+      const customerEmail = orderForEmail.user?.email ?? orderForEmail.guestEmail;
+      if (customerEmail) {
+        sendPaymentConfirmedEmail({
+          to: customerEmail,
+          orderNumber: orderForEmail.orderNumber,
+          totalAmount: orderForEmail.totalAmount,
+        }).catch((err) => console.error("[confirm_payment] email failed:", err));
+      }
+
+      // Complete pending referral
+      if (orderForEmail.userId) {
+        const referral = await prisma.referral.findUnique({ where: { referredUserId: orderForEmail.userId } });
+        if (referral && referral.status === "pending") {
+          const reward = 2;
+          prisma.referral.update({
+            where: { id: referral.id },
+            data: { status: "completed", orderId: id, rewardGiven: reward, completedAt: new Date() },
+          }).then(() => prisma.user.update({
+            where: { id: referral.referrerId },
+            data: { loyaltyPoints: { increment: reward } },
+          })).then(() => prisma.loyaltyTransaction.create({
+            data: { userId: referral.referrerId, orderRef: id, type: "earned", amount: reward, description: `Parrainage complété — +${reward} TND` },
+          })).catch((err) => console.error("[confirm_payment] referral complete failed:", err));
+        }
+      }
+
+      // Award 1% loyalty cashback for logged-in users
+      if (orderForEmail.userId) {
+        const earned = Math.round(orderForEmail.totalAmount * 0.01 * 1000) / 1000;
+        prisma.user.update({ where: { id: orderForEmail.userId }, data: { loyaltyPoints: { increment: earned } } })
+          .then(() => prisma.loyaltyTransaction.create({
+            data: { userId: orderForEmail.userId!, orderRef: id, type: "earned", amount: earned, description: `1% cashback — commande #${orderForEmail.orderNumber}` },
+          }))
+          .catch((err) => console.error("[confirm_payment] loyalty award failed:", err));
+      }
+    }
+
     revalidatePath("/admin");
     revalidatePath("/admin/commandes");
     return NextResponse.json({ success: true });

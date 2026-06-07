@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { randomBytes } from "crypto";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatPrice, formatDate } from "@/lib/utils";
 import { OrderStatusBadge } from "@/components/shared/order-status-badge";
-import { Package, Key, ArrowRight, MessageCircle, Plus, Clock, AlertCircle, ExternalLink } from "lucide-react";
+import { Package, Key, ArrowRight, MessageCircle, Plus, Clock, AlertCircle, ExternalLink, Gift, TrendingUp, Users } from "lucide-react";
+import { CopyReferralCode } from "./copy-referral-code";
 import { Button } from "@/components/ui/button";
 
 const TICKET_STATUS: Record<string, { label: string; color: string }> = {
@@ -18,7 +20,7 @@ export default async function DashboardPage() {
   const session = await auth();
   if (!session) redirect("/connexion");
 
-  const [orders, tickets, pendingOrders] = await Promise.all([
+  const [orders, tickets, pendingOrders, loyaltyData] = await Promise.all([
     prisma.order.findMany({
       where: { userId: session.user.id },
       include: { items: { include: { product: true } } },
@@ -45,7 +47,29 @@ export default async function DashboardPage() {
       include: { items: { include: { product: true } } },
       orderBy: { createdAt: "desc" },
     }),
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        loyaltyPoints: true,
+        referralCode: true,
+        loyaltyTransactions: { orderBy: { createdAt: "desc" }, take: 5, select: { type: true, amount: true, description: true, createdAt: true } },
+        referralsMade: { select: { status: true, rewardGiven: true }, orderBy: { createdAt: "desc" } },
+      },
+    }),
   ]);
+
+  // Auto-generate referral code for existing users who don't have one yet
+  let referralCode = loyaltyData?.referralCode ?? null;
+  if (!referralCode) {
+    let code = "LOOT" + randomBytes(3).toString("hex").toUpperCase().slice(0, 4);
+    let attempts = 0;
+    while (attempts < 5 && await prisma.user.findUnique({ where: { referralCode: code } })) {
+      code = "LOOT" + randomBytes(3).toString("hex").toUpperCase().slice(0, 4);
+      attempts++;
+    }
+    await prisma.user.update({ where: { id: session.user.id }, data: { referralCode: code } });
+    referralCode = code;
+  }
 
   const totalSpent = orders
     .filter((o) => o.paymentStatus === "paid" || o.status === "delivered")
@@ -96,7 +120,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         {[
           { label: "Commandes",  value: orders.length,       icon: <Package className="h-5 w-5 text-purple-400" />,       href: "/dashboard/commandes" },
-          { label: "Total dépensé", value: formatPrice(totalSpent), icon: <Key className="h-5 w-5 text-purple-400" />,    href: "/dashboard/cles" },
+          { label: "Total dépensé", value: formatPrice(totalSpent), icon: <TrendingUp className="h-5 w-5 text-purple-400" />, href: "/dashboard/commandes" },
           { label: "Tickets ouverts", value: openTickets,    icon: <MessageCircle className="h-5 w-5 text-yellow-400" />, href: "/dashboard/support" },
           { label: "Mes clés",   value: "Voir",              icon: <Key className="h-5 w-5 text-green-400" />,            href: "/dashboard/cles" },
         ].map((stat) => (
@@ -111,6 +135,87 @@ export default async function DashboardPage() {
             </div>
           </Link>
         ))}
+      </div>
+
+      {/* Loyalty card */}
+      {(loyaltyData?.loyaltyPoints ?? 0) >= 0 && (
+        <div className="mb-8 rounded-2xl border border-yellow-700/40 bg-yellow-950/10 overflow-hidden">
+          <div className="px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center">
+                <Gift className="h-5 w-5 text-yellow-400" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white">Programme de fidélité</p>
+                <p className="text-xs text-gray-500">1% de cashback sur chaque commande payée</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-black text-yellow-300">{(loyaltyData?.loyaltyPoints ?? 0).toFixed(3)} TND</p>
+              <p className="text-xs text-gray-500">solde disponible</p>
+            </div>
+          </div>
+          {(loyaltyData?.loyaltyTransactions?.length ?? 0) > 0 && (
+            <div className="border-t border-yellow-800/30 px-5 py-3 space-y-2">
+              {loyaltyData!.loyaltyTransactions.map((t, i) => (
+                <div key={i} className="flex items-center justify-between text-xs">
+                  <span className="text-gray-400">{t.description}</span>
+                  <span className={`font-semibold ${t.type === "earned" ? "text-green-400" : "text-red-400"}`}>
+                    {t.type === "earned" ? "+" : "-"}{t.amount.toFixed(3)} TND
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          {(loyaltyData?.loyaltyPoints ?? 0) > 0 && (
+            <div className="border-t border-yellow-800/30 px-5 py-3">
+              <Link href="/checkout">
+                <span className="text-xs text-yellow-400 hover:text-yellow-300 font-semibold transition-colors">
+                  Utiliser mes points au prochain achat →
+                </span>
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Referral card */}
+      <div className="mb-8 rounded-2xl border border-pink-700/40 bg-pink-950/10 overflow-hidden">
+        <div className="px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-pink-500/20 flex items-center justify-center">
+              <Users className="h-5 w-5 text-pink-400" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-white">Parrainez vos amis</p>
+              <p className="text-xs text-gray-500">Ils ont -5% · Vous gagnez 2 TND fidélité par parrainage complété</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            {referralCode
+              ? <CopyReferralCode code={referralCode} />
+              : <span className="text-xs text-gray-500 italic">Code généré à votre premier accès</span>
+            }
+          </div>
+        </div>
+        {(loyaltyData?.referralsMade?.length ?? 0) > 0 && (
+          <div className="border-t border-pink-800/30 px-5 py-3 flex items-center gap-6 text-sm">
+            <div>
+              <span className="text-white font-bold">{loyaltyData!.referralsMade.filter(r => r.status === "completed").length}</span>
+              <span className="text-gray-500 ml-1.5">parrainages complétés</span>
+            </div>
+            <div>
+              <span className="text-pink-300 font-bold">{loyaltyData!.referralsMade.reduce((s, r) => s + r.rewardGiven, 0).toFixed(0)} TND</span>
+              <span className="text-gray-500 ml-1.5">gagnés</span>
+            </div>
+            {loyaltyData!.referralsMade.some(r => r.status === "pending") && (
+              <div>
+                <span className="text-yellow-400 font-bold">{loyaltyData!.referralsMade.filter(r => r.status === "pending").length}</span>
+                <span className="text-gray-500 ml-1.5">en attente</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
