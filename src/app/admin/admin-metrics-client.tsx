@@ -43,9 +43,140 @@ const METHOD_LABEL: Record<string, { label: string; icon: React.ReactNode }> = {
   virement:    { label: "Virement",       icon: <Building2 className="h-3.5 w-3.5" /> },
 };
 
-function SparkBar({ value, max, color = "bg-purple-500" }: { value: number; max: number; color?: string }) {
-  const pct = max > 0 ? Math.max(4, (value / max) * 100) : 4;
-  return <div className={`${color} rounded-sm w-full transition-all`} style={{ height: `${pct}%` }} />;
+type Bar = { label: string; revenue: number; orders: number };
+
+function RevenueChart({ bars, loading, period }: { bars: Bar[]; loading: boolean; period: Period }) {
+  const [hovered, setHovered] = useState<number | null>(null);
+
+  const SVG_W = 600;
+  const SVG_H = 160;
+  const PL = 44; // left padding (y-axis labels)
+  const PR = 8;
+  const PT = 12;
+  const PB = 28; // bottom padding (x-axis labels)
+  const CW = SVG_W - PL - PR;
+  const CH = SVG_H - PT - PB;
+
+  const maxRev = Math.max(...bars.map((b) => b.revenue), 0.001);
+  const isHourly = period === "today" || period === "yesterday";
+
+  const xOf = (i: number) => bars.length < 2 ? PL + CW / 2 : PL + (i / (bars.length - 1)) * CW;
+  const yOf = (rev: number) => PT + CH * (1 - rev / maxRev);
+
+  // Straight-line path
+  const linePath = bars.map((b, i) => `${i === 0 ? "M" : "L"} ${xOf(i).toFixed(1)} ${yOf(b.revenue).toFixed(1)}`).join(" ");
+  const areaPath = bars.length < 2
+    ? ""
+    : `${linePath} L ${xOf(bars.length - 1).toFixed(1)} ${(PT + CH).toFixed(1)} L ${xOf(0).toFixed(1)} ${(PT + CH).toFixed(1)} Z`;
+
+  // Y gridlines: nice round values
+  const yTicks = [0.25, 0.5, 0.75, 1].map((f) => ({ y: yOf(maxRev * f), val: maxRev * f }));
+
+  const showXLabel = (i: number) => {
+    if (bars.length <= 8) return true;
+    if (isHourly) return i % 6 === 0;
+    if (bars.length > 20) return (i + 1) % 5 === 1 || i === bars.length - 1;
+    return true;
+  };
+
+  return (
+    <div className="relative select-none" onMouseLeave={() => setHovered(null)}>
+      <svg
+        viewBox={`0 0 ${SVG_W} ${SVG_H}`}
+        className={`w-full transition-opacity duration-300 ${loading ? "opacity-25" : "opacity-100"}`}
+        style={{ height: 160, overflow: "visible" }}
+      >
+        <defs>
+          <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.01" />
+          </linearGradient>
+          <clipPath id="chartArea">
+            <rect x={PL} y={PT} width={CW} height={CH + 1} />
+          </clipPath>
+        </defs>
+
+        {/* Y gridlines + labels */}
+        {yTicks.map((t, i) => (
+          <g key={i}>
+            <line x1={PL} y1={t.y} x2={PL + CW} y2={t.y} stroke="#1f2937" strokeWidth="1" />
+            <text x={PL - 6} y={t.y + 4} textAnchor="end" fontSize="9" fill="#6b7280">
+              {t.val >= 1000 ? `${(t.val / 1000).toFixed(1)}k` : t.val.toFixed(0)}
+            </text>
+          </g>
+        ))}
+
+        {/* Baseline */}
+        <line x1={PL} y1={PT + CH} x2={PL + CW} y2={PT + CH} stroke="#374151" strokeWidth="1" />
+
+        {/* Area fill */}
+        {bars.length >= 2 && <path d={areaPath} fill="url(#areaGrad)" clipPath="url(#chartArea)" />}
+
+        {/* Line */}
+        {bars.length >= 2 && (
+          <path d={linePath} fill="none" stroke="#8b5cf6" strokeWidth="2" strokeLinejoin="round" clipPath="url(#chartArea)" />
+        )}
+
+        {/* X labels */}
+        {bars.map((b, i) =>
+          showXLabel(i) ? (
+            <text key={i} x={xOf(i)} y={SVG_H - 6} textAnchor="middle" fontSize="9" fill="#6b7280">
+              {b.label}
+            </text>
+          ) : null
+        )}
+
+        {/* Hover cursor */}
+        {hovered !== null && (
+          <>
+            <line
+              x1={xOf(hovered)} y1={PT} x2={xOf(hovered)} y2={PT + CH}
+              stroke="#7c3aed" strokeWidth="1" strokeDasharray="3 3"
+            />
+            <circle
+              cx={xOf(hovered)} cy={yOf(bars[hovered].revenue)}
+              r="5" fill="#8b5cf6" stroke="#e9d5ff" strokeWidth="2"
+            />
+          </>
+        )}
+
+        {/* Invisible hover strips */}
+        {bars.map((_, i) => {
+          const segW = bars.length < 2 ? CW : CW / (bars.length - 1);
+          return (
+            <rect
+              key={i}
+              x={xOf(i) - segW / 2}
+              y={PT}
+              width={segW}
+              height={CH}
+              fill="transparent"
+              onMouseEnter={() => setHovered(i)}
+            />
+          );
+        })}
+      </svg>
+
+      {/* Tooltip */}
+      {hovered !== null && (
+        <div
+          className="absolute top-0 z-20 pointer-events-none"
+          style={{
+            left: `${((xOf(hovered) - PL) / CW) * 100}%`,
+            transform: hovered > bars.length * 0.6 ? "translate(-110%, 0)" : "translate(8px, 0)",
+          }}
+        >
+          <div className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 shadow-xl text-xs whitespace-nowrap">
+            <p className="font-semibold text-white mb-1">{bars[hovered].label}</p>
+            <p className="text-purple-300 font-bold">{bars[hovered].revenue.toFixed(3)} TND</p>
+            <p className="text-gray-400 mt-0.5">
+              {bars[hovered].orders} commande{bars[hovered].orders !== 1 ? "s" : ""}
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function KPICard({
@@ -91,9 +222,7 @@ export function AdminDashboard({ metrics }: { metrics: Metrics }) {
       .catch(() => setPeriodLoading(false));
   }, [period]);
 
-  const chartBars = periodData?.bars ?? metrics.dailyRevenue;
-  const maxChartRevenue = Math.max(...chartBars.map((d) => d.revenue), 1);
-  const isHourly = period === "today" || period === "yesterday";
+  const chartBars: Bar[] = periodData?.bars ?? metrics.dailyRevenue.map((d) => ({ label: d.date, revenue: d.revenue, orders: d.orders }));
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -271,31 +400,7 @@ export function AdminDashboard({ metrics }: { metrics: Metrics }) {
             ) : null}
           </div>
 
-          {/* Bar chart */}
-          <div className={`flex items-end gap-1 h-28 transition-opacity ${periodLoading ? "opacity-30" : ""}`}>
-            {chartBars.map((d, i) => {
-              const showLabel = isHourly
-                ? parseInt(d.label) % 6 === 0
-                : period === "month" ? parseInt(d.label) % 5 === 1 : true;
-              return (
-                <div key={`${d.label}-${i}`} className="flex-1 flex flex-col items-center gap-0.5 min-w-0">
-                  <div className="w-full flex-1 flex items-end">
-                    <SparkBar
-                      value={d.revenue}
-                      max={maxChartRevenue}
-                      color={d.revenue > 0 ? "bg-purple-500" : "bg-gray-800"}
-                    />
-                  </div>
-                  <p className="text-[8px] text-gray-600 text-center leading-tight truncate w-full">
-                    {showLabel ? d.label : ""}
-                  </p>
-                  {d.revenue > 0 && !isHourly && (
-                    <p className="text-[8px] text-purple-400 font-semibold">{d.revenue.toFixed(0)}</p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <RevenueChart bars={chartBars} loading={periodLoading} period={period} />
         </div>
 
         {/* Payment method breakdown */}
