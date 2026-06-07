@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { randomBytes } from "crypto";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatPrice, formatDate } from "@/lib/utils";
@@ -56,6 +57,19 @@ export default async function DashboardPage() {
       },
     }),
   ]);
+
+  // Auto-generate referral code for existing users who don't have one yet
+  let referralCode = loyaltyData?.referralCode ?? null;
+  if (!referralCode) {
+    let code = "LOOT" + randomBytes(3).toString("hex").toUpperCase().slice(0, 4);
+    let attempts = 0;
+    while (attempts < 5 && await prisma.user.findUnique({ where: { referralCode: code } })) {
+      code = "LOOT" + randomBytes(3).toString("hex").toUpperCase().slice(0, 4);
+      attempts++;
+    }
+    await prisma.user.update({ where: { id: session.user.id }, data: { referralCode: code } });
+    referralCode = code;
+  }
 
   const totalSpent = orders
     .filter((o) => o.paymentStatus === "paid" || o.status === "delivered")
@@ -178,8 +192,8 @@ export default async function DashboardPage() {
             </div>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
-            {loyaltyData?.referralCode
-              ? <CopyReferralCode code={loyaltyData.referralCode} />
+            {referralCode
+              ? <CopyReferralCode code={referralCode} />
               : <span className="text-xs text-gray-500 italic">Code généré à votre premier accès</span>
             }
           </div>
