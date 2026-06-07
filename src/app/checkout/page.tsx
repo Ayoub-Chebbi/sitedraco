@@ -15,9 +15,15 @@ import { Input } from "@/components/ui/input";
 import { useCart } from "@/lib/cart-store";
 import { formatPrice } from "@/lib/utils";
 import { trackInitiateCheckout } from "@/components/shared/meta-pixel";
+import { UpsellSection } from "@/components/shared/upsell-section";
 
 type CouponResult = {
   id: string; code: string; type: "percentage" | "fixed"; value: number; discount: number;
+};
+
+type UpsellProduct = {
+  id: string; name: string; slug: string; price: number; discountPrice: number | null;
+  imageUrl: string | null; platform: string; category: string; availableKeys: number;
 };
 
 type PaymentMethod = "carte" | "d17" | "flouci_app" | "virement";
@@ -149,6 +155,7 @@ export default function CheckoutPage() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<CouponResult | null>(null);
+  const [upsells, setUpsells] = useState<UpsellProduct[]>([]);
   const [steamUsername, setSteamUsername] = useState("");
   const needsSteam = items.some((i) => i.requiresSteamUsername);
 
@@ -162,6 +169,11 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (items.length > 0) {
       trackInitiateCheckout(total(), items.reduce((s, i) => s + i.quantity, 0));
+      const ids = items.map((i) => i.productId).join(",");
+      fetch(`/api/upsells?productIds=${ids}`)
+        .then((r) => r.json())
+        .then((data) => { if (Array.isArray(data)) setUpsells(data); })
+        .catch(() => {});
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -496,9 +508,10 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          {/* Right — order summary */}
+          {/* Right — order summary + upsells */}
           <div className="lg:col-span-2">
-            <div className="sticky top-20 rounded-2xl border border-gray-800 bg-gray-900 overflow-hidden">
+            <div className="sticky top-20 space-y-0">
+            <div className="rounded-2xl border border-gray-800 bg-gray-900 overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-800 flex items-center gap-2">
                 <Package className="h-4 w-4 text-purple-400" />
                 <h3 className="font-semibold text-white text-sm">Votre commande</h3>
@@ -559,6 +572,11 @@ export default function CheckoutPage() {
                   <p className="text-xs text-gray-400">Paiement 100% sécurisé · Données chiffrées</p>
                 </div>
               </div>
+            </div>
+
+            {upsells.length > 0 && (
+              <UpsellSection products={upsells} variant="checkout" />
+            )}
             </div>
           </div>
         </div>
