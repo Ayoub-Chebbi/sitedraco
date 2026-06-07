@@ -145,7 +145,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (parsed.data.action === "confirm_payment") {
     const orderForEmail = await prisma.order.findUnique({
       where: { id },
-      select: { orderNumber: true, totalAmount: true, guestAutoCreated: true, guestEmail: true, user: { select: { email: true } } },
+      select: { orderNumber: true, totalAmount: true, guestAutoCreated: true, guestEmail: true, userId: true, user: { select: { email: true } } },
     });
 
     await prisma.order.update({
@@ -170,6 +170,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           orderNumber: orderForEmail.orderNumber,
           totalAmount: orderForEmail.totalAmount,
         }).catch((err) => console.error("[confirm_payment] email failed:", err));
+      }
+
+      // Award 1% loyalty cashback for logged-in users
+      if (orderForEmail.userId) {
+        const earned = Math.round(orderForEmail.totalAmount * 0.01 * 1000) / 1000;
+        prisma.user.update({ where: { id: orderForEmail.userId }, data: { loyaltyPoints: { increment: earned } } })
+          .then(() => prisma.loyaltyTransaction.create({
+            data: { userId: orderForEmail.userId!, orderRef: id, type: "earned", amount: earned, description: `1% cashback — commande #${orderForEmail.orderNumber}` },
+          }))
+          .catch((err) => console.error("[confirm_payment] loyalty award failed:", err));
       }
     }
 

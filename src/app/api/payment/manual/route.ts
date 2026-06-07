@@ -22,6 +22,7 @@ const schema = z.object({
   })).min(1),
   couponCode: z.string().optional(),
   steamUsername: z.string().max(100).optional(),
+  useLoyalty: z.boolean().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Données invalides." }, { status: 422 });
   }
 
-  const { email, paymentMethod, paymentProofUrl, items, couponCode, steamUsername } = parsed.data;
+  const { email, paymentMethod, paymentProofUrl, items, couponCode, steamUsername, useLoyalty } = parsed.data;
 
   const [products, variants] = await Promise.all([
     prisma.product.findMany({
@@ -94,8 +95,28 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const totalAmount = Math.max(0, subtotal - discountAmount);
+  // Apply loyalty points if requested (logged-in users only)
+  let loyaltyDiscount = 0;
+  if (useLoyalty && userId && !guestAutoCreated) {
+    const loyaltyUser = await prisma.user.findUnique({ where: { id: userId }, select: { loyaltyPoints: true } });
+    const balance = loyaltyUser?.loyaltyPoints ?? 0;
+    if (balance >= 0.001) {
+      loyaltyDiscount = Math.min(balance, Math.max(0, subtotal - discountAmount));
+      loyaltyDiscount = Math.round(loyaltyDiscount * 1000) / 1000;
+    }
+  }
+
+  const totalAmount = Math.max(0, subtotal - discountAmount - loyaltyDiscount);
   const orderNumber = generateOrderNumber();
+
+  // Atomically deduct loyalty points (prevents double-spend)
+  if (loyaltyDiscount > 0 && userId) {
+    const deducted = await prisma.user.updateMany({
+      where: { id: userId, loyaltyPoints: { gte: loyaltyDiscount } },
+      data: { loyaltyPoints: { decrement: loyaltyDiscount } },
+    });
+    if (deducted.count === 0) loyaltyDiscount = 0;
+  }
 
   const order = await prisma.order.create({
     data: {
@@ -106,12 +127,19 @@ export async function POST(req: NextRequest) {
       paymentStatus: "awaiting_verification",
       totalAmount,
       discountAmount,
+      loyaltyPointsUsed: loyaltyDiscount,
       paymentProofUrl,
       guestAutoCreated,
       ...(appliedCouponId && { couponId: appliedCouponId }),
       ...(steamUsername && { steamUsername }),
     },
   });
+
+  if (loyaltyDiscount > 0 && userId) {
+    prisma.loyaltyTransaction.create({
+      data: { userId, orderRef: order.id, type: "redeemed", amount: loyaltyDiscount, description: `Utilisé sur commande #${orderNumber}` },
+    }).catch(console.error);
+  }
 
   for (const item of items) {
     const unitPrice = item.variantId

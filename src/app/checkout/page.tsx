@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import {
   Loader2, CreditCard, Shield, Lock, Zap, Tag, X,
   CheckCircle, Gamepad2, Upload, Copy, Check, Smartphone,
-  Building2, ChevronRight, ImageIcon, Package,
+  Building2, ChevronRight, ImageIcon, Package, Gift,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -156,6 +156,8 @@ export default function CheckoutPage() {
   const [couponError, setCouponError] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<CouponResult | null>(null);
   const [upsells, setUpsells] = useState<UpsellProduct[]>([]);
+  const [loyaltyBalance, setLoyaltyBalance] = useState(0);
+  const [useLoyalty, setUseLoyalty] = useState(false);
   const [steamUsername, setSteamUsername] = useState("");
   const needsSteam = items.some((i) => i.requiresSteamUsername);
 
@@ -174,6 +176,12 @@ export default function CheckoutPage() {
         .then((r) => r.json())
         .then((data) => { if (Array.isArray(data)) setUpsells(data); })
         .catch(() => {});
+      if (session) {
+        fetch("/api/loyalty")
+          .then((r) => r.json())
+          .then((data) => { if (data.balance > 0) setLoyaltyBalance(data.balance); })
+          .catch(() => {});
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -188,7 +196,8 @@ export default function CheckoutPage() {
 
   const subtotal = total();
   const discount = appliedCoupon?.discount ?? 0;
-  const finalTotal = Math.max(0, subtotal - discount);
+  const loyaltyApplied = useLoyalty ? Math.min(loyaltyBalance, Math.max(0, subtotal - discount)) : 0;
+  const finalTotal = Math.max(0, subtotal - discount - loyaltyApplied);
 
   function handleProofFile(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -243,6 +252,7 @@ export default function CheckoutPage() {
             items: items.map((i) => ({ productId: i.productId, quantity: i.quantity, ...(i.variantId && { variantId: i.variantId }) })),
             ...(appliedCoupon && { couponCode: appliedCoupon.code }),
             ...(needsSteam && steamUsername.trim() && { steamUsername: steamUsername.trim() }),
+            ...(useLoyalty && loyaltyBalance > 0 && { useLoyalty: true }),
           }),
         });
         const data = await res.json();
@@ -261,6 +271,7 @@ export default function CheckoutPage() {
             items: items.map((i) => ({ productId: i.productId, quantity: i.quantity, ...(i.variantId && { variantId: i.variantId }) })),
             ...(appliedCoupon && { couponCode: appliedCoupon.code }),
             ...(needsSteam && steamUsername.trim() && { steamUsername: steamUsername.trim() }),
+            ...(useLoyalty && loyaltyBalance > 0 && { useLoyalty: true }),
           }),
         });
         const data = await res.json();
@@ -374,6 +385,38 @@ export default function CheckoutPage() {
                 )}
               </div>
             </div>
+
+            {/* Loyalty points */}
+            {loyaltyBalance > 0 && (
+              <button
+                type="button"
+                onClick={() => setUseLoyalty((v) => !v)}
+                className={`w-full flex items-center justify-between gap-3 px-5 py-4 rounded-2xl border transition-all text-left ${
+                  useLoyalty
+                    ? "border-yellow-500/60 bg-yellow-900/15"
+                    : "border-gray-800 bg-gray-900 hover:border-yellow-700/40"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${useLoyalty ? "bg-yellow-500/20" : "bg-gray-800"}`}>
+                    <Gift className={`h-4.5 w-4.5 ${useLoyalty ? "text-yellow-400" : "text-gray-500"}`} />
+                  </div>
+                  <div>
+                    <p className={`text-sm font-semibold ${useLoyalty ? "text-yellow-300" : "text-white"}`}>
+                      Points de fidélité
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {useLoyalty
+                        ? `−${loyaltyApplied.toFixed(3)} TND appliqués`
+                        : `${loyaltyBalance.toFixed(3)} TND disponibles — cliquez pour utiliser`}
+                    </p>
+                  </div>
+                </div>
+                <div className={`w-10 h-6 rounded-full transition-colors flex items-center shrink-0 ${useLoyalty ? "bg-yellow-500" : "bg-gray-700"}`}>
+                  <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform mx-1 ${useLoyalty ? "translate-x-4" : "translate-x-0"}`} />
+                </div>
+              </button>
+            )}
 
             {/* Step 3 — Payment */}
             <div className="rounded-2xl border border-gray-800 bg-gray-900 overflow-hidden">
@@ -556,6 +599,14 @@ export default function CheckoutPage() {
                       <Tag className="h-3 w-3" /> {appliedCoupon?.code}
                     </span>
                     <span className="text-green-400 font-semibold">-{formatPrice(discount)}</span>
+                  </div>
+                )}
+                {loyaltyApplied > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-yellow-400 flex items-center gap-1.5">
+                      <Gift className="h-3 w-3" /> Points fidélité
+                    </span>
+                    <span className="text-yellow-400 font-semibold">-{loyaltyApplied.toFixed(3)} TND</span>
                   </div>
                 )}
 

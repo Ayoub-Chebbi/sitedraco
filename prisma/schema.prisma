@@ -19,16 +19,18 @@ model User {
 
   avatarUrl      String?
   pushToken      String?
+  loyaltyPoints  Float    @default(0)
 
-  orders         Order[]
-  assignedOrders Order[]         @relation("AgentOrders")
-  tickets        SupportTicket[] @relation("UserTickets")
-  agentTickets   SupportTicket[] @relation("AgentTickets")
-  ticketMessages TicketMessage[]
-  auditLogs      AuditLog[]
-  addedKeys      ProductKey[]    @relation("KeyAddedBy")
-  accounts       Account[]
-  sessions       Session[]
+  orders              Order[]
+  assignedOrders      Order[]              @relation("AgentOrders")
+  tickets             SupportTicket[]      @relation("UserTickets")
+  agentTickets        SupportTicket[]      @relation("AgentTickets")
+  ticketMessages      TicketMessage[]
+  auditLogs           AuditLog[]
+  addedKeys           ProductKey[]         @relation("KeyAddedBy")
+  accounts            Account[]
+  sessions            Session[]
+  loyaltyTransactions LoyaltyTransaction[]
 }
 
 model Account {
@@ -191,6 +193,7 @@ model Order {
   paymentRef     String?
   totalAmount    Float
   discountAmount    Float    @default(0)
+  loyaltyPointsUsed Float    @default(0)
   couponId          String?
   steamUsername     String?
   paymentUrl        String?
@@ -305,4 +308,16 @@ model Review {
 
   order   Order   @relation(fields: [orderId], references: [id])
   product Product @relation(fields: [productId], references: [id])
+}
+
+model LoyaltyTransaction {
+  id          String   @id @default(cuid())
+  userId      String
+  orderRef    String?
+  type        String   // "earned" | "redeemed"
+  amount      Float
+  description String
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

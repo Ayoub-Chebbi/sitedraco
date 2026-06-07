@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatPrice, formatDate } from "@/lib/utils";
 import { OrderStatusBadge } from "@/components/shared/order-status-badge";
-import { Package, Key, ArrowRight, MessageCircle, Plus, Clock, AlertCircle, ExternalLink } from "lucide-react";
+import { Package, Key, ArrowRight, MessageCircle, Plus, Clock, AlertCircle, ExternalLink, Gift, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const TICKET_STATUS: Record<string, { label: string; color: string }> = {
@@ -18,7 +18,7 @@ export default async function DashboardPage() {
   const session = await auth();
   if (!session) redirect("/connexion");
 
-  const [orders, tickets, pendingOrders] = await Promise.all([
+  const [orders, tickets, pendingOrders, loyaltyData] = await Promise.all([
     prisma.order.findMany({
       where: { userId: session.user.id },
       include: { items: { include: { product: true } } },
@@ -44,6 +44,13 @@ export default async function DashboardPage() {
       },
       include: { items: { include: { product: true } } },
       orderBy: { createdAt: "desc" },
+    }),
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        loyaltyPoints: true,
+        loyaltyTransactions: { orderBy: { createdAt: "desc" }, take: 5, select: { type: true, amount: true, description: true, createdAt: true } },
+      },
     }),
   ]);
 
@@ -96,7 +103,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         {[
           { label: "Commandes",  value: orders.length,       icon: <Package className="h-5 w-5 text-purple-400" />,       href: "/dashboard/commandes" },
-          { label: "Total dépensé", value: formatPrice(totalSpent), icon: <Key className="h-5 w-5 text-purple-400" />,    href: "/dashboard/cles" },
+          { label: "Total dépensé", value: formatPrice(totalSpent), icon: <TrendingUp className="h-5 w-5 text-purple-400" />, href: "/dashboard/commandes" },
           { label: "Tickets ouverts", value: openTickets,    icon: <MessageCircle className="h-5 w-5 text-yellow-400" />, href: "/dashboard/support" },
           { label: "Mes clés",   value: "Voir",              icon: <Key className="h-5 w-5 text-green-400" />,            href: "/dashboard/cles" },
         ].map((stat) => (
@@ -112,6 +119,48 @@ export default async function DashboardPage() {
           </Link>
         ))}
       </div>
+
+      {/* Loyalty card */}
+      {(loyaltyData?.loyaltyPoints ?? 0) >= 0 && (
+        <div className="mb-8 rounded-2xl border border-yellow-700/40 bg-yellow-950/10 overflow-hidden">
+          <div className="px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center">
+                <Gift className="h-5 w-5 text-yellow-400" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white">Programme de fidélité</p>
+                <p className="text-xs text-gray-500">1% de cashback sur chaque commande payée</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-black text-yellow-300">{(loyaltyData?.loyaltyPoints ?? 0).toFixed(3)} TND</p>
+              <p className="text-xs text-gray-500">solde disponible</p>
+            </div>
+          </div>
+          {(loyaltyData?.loyaltyTransactions?.length ?? 0) > 0 && (
+            <div className="border-t border-yellow-800/30 px-5 py-3 space-y-2">
+              {loyaltyData!.loyaltyTransactions.map((t, i) => (
+                <div key={i} className="flex items-center justify-between text-xs">
+                  <span className="text-gray-400">{t.description}</span>
+                  <span className={`font-semibold ${t.type === "earned" ? "text-green-400" : "text-red-400"}`}>
+                    {t.type === "earned" ? "+" : "-"}{t.amount.toFixed(3)} TND
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          {(loyaltyData?.loyaltyPoints ?? 0) > 0 && (
+            <div className="border-t border-yellow-800/30 px-5 py-3">
+              <Link href="/checkout">
+                <span className="text-xs text-yellow-400 hover:text-yellow-300 font-semibold transition-colors">
+                  Utiliser mes points au prochain achat →
+                </span>
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Recent orders */}

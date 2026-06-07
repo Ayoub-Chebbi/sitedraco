@@ -61,6 +61,16 @@ export async function POST(req: NextRequest) {
     }).catch((err) => console.error("[verify] coupon increment failed:", err));
   }
 
+  // Award 1% loyalty cashback for logged-in users
+  if (order.userId) {
+    const earned = Math.round(order.totalAmount * 0.01 * 1000) / 1000;
+    prisma.user.update({ where: { id: order.userId }, data: { loyaltyPoints: { increment: earned } } })
+      .then(() => prisma.loyaltyTransaction.create({
+        data: { userId: order.userId!, orderRef: order.id, type: "earned", amount: earned, description: `1% cashback — commande #${order.orderNumber}` },
+      }))
+      .catch((err) => console.error("[verify] loyalty award failed:", err));
+  }
+
   notifyAdminsNewOrder({
     orderNumber: order.orderNumber,
     clientEmail: order.user?.email ?? order.guestEmail ?? "guest",
