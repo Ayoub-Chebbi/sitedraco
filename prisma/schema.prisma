@@ -20,6 +20,7 @@ model User {
   avatarUrl      String?
   pushToken      String?
   loyaltyPoints  Float    @default(0)
+  referralCode   String?  @unique
 
   orders              Order[]
   assignedOrders      Order[]              @relation("AgentOrders")
@@ -31,6 +32,8 @@ model User {
   accounts            Account[]
   sessions            Session[]
   loyaltyTransactions LoyaltyTransaction[]
+  referralsMade       Referral[]           @relation("ReferrerReferrals")
+  referredByReferral  Referral?            @relation("ReferredUser")
 }
 
 model Account {
@@ -194,6 +197,7 @@ model Order {
   totalAmount    Float
   discountAmount    Float    @default(0)
   loyaltyPointsUsed Float    @default(0)
+  referralDiscount  Float    @default(0)
   couponId          String?
   steamUsername     String?
   paymentUrl        String?
@@ -308,6 +312,21 @@ model Review {
 
   order   Order   @relation(fields: [orderId], references: [id])
   product Product @relation(fields: [productId], references: [id])
+}
+
+model Referral {
+  id             String    @id @default(cuid())
+  referrerId     String
+  referredUserId String    @unique
+  orderId        String?
+  status         String    @default("pending")  // pending | completed
+  discountGiven  Float     @default(0)
+  rewardGiven    Float     @default(0)
+  createdAt      DateTime  @default(now())
+  completedAt    DateTime?
+
+  referrer     User @relation("ReferrerReferrals", fields: [referrerId], references: [id], onDelete: Cascade)
+  referredUser User @relation("ReferredUser", fields: [referredUserId], references: [id], onDelete: Cascade)
 }
 
 model LoyaltyTransaction {

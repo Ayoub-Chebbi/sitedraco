@@ -61,6 +61,25 @@ export async function POST(req: NextRequest) {
     }).catch((err) => console.error("[verify] coupon increment failed:", err));
   }
 
+  // Complete pending referral if this is the referred user's first paid order
+  if (order.userId) {
+    const referral = await prisma.referral.findUnique({
+      where: { referredUserId: order.userId },
+    });
+    if (referral && referral.status === "pending") {
+      const reward = 5;
+      prisma.referral.update({
+        where: { id: referral.id },
+        data: { status: "completed", orderId: orderId, rewardGiven: reward, completedAt: new Date() },
+      }).then(() => prisma.user.update({
+        where: { id: referral.referrerId },
+        data: { loyaltyPoints: { increment: reward } },
+      })).then(() => prisma.loyaltyTransaction.create({
+        data: { userId: referral.referrerId, orderRef: orderId, type: "earned", amount: reward, description: `Parrainage complété — +${reward} TND` },
+      })).catch((err) => console.error("[verify] referral complete failed:", err));
+    }
+  }
+
   // Award 1% loyalty cashback for logged-in users
   if (order.userId) {
     const earned = Math.round(order.totalAmount * 0.01 * 1000) / 1000;

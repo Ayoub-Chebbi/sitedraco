@@ -4,7 +4,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatPrice, formatDate } from "@/lib/utils";
 import { OrderStatusBadge } from "@/components/shared/order-status-badge";
-import { Package, Key, ArrowRight, MessageCircle, Plus, Clock, AlertCircle, ExternalLink, Gift, TrendingUp } from "lucide-react";
+import { Package, Key, ArrowRight, MessageCircle, Plus, Clock, AlertCircle, ExternalLink, Gift, TrendingUp, Users } from "lucide-react";
+import { CopyReferralCode } from "./copy-referral-code";
 import { Button } from "@/components/ui/button";
 
 const TICKET_STATUS: Record<string, { label: string; color: string }> = {
@@ -49,7 +50,9 @@ export default async function DashboardPage() {
       where: { id: session.user.id },
       select: {
         loyaltyPoints: true,
+        referralCode: true,
         loyaltyTransactions: { orderBy: { createdAt: "desc" }, take: 5, select: { type: true, amount: true, description: true, createdAt: true } },
+        referralsMade: { select: { status: true, rewardGiven: true }, orderBy: { createdAt: "desc" } },
       },
     }),
   ]);
@@ -161,6 +164,45 @@ export default async function DashboardPage() {
           )}
         </div>
       )}
+
+      {/* Referral card */}
+      <div className="mb-8 rounded-2xl border border-pink-700/40 bg-pink-950/10 overflow-hidden">
+        <div className="px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-pink-500/20 flex items-center justify-center">
+              <Users className="h-5 w-5 text-pink-400" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-white">Parrainez vos amis</p>
+              <p className="text-xs text-gray-500">Ils ont -5% · Vous gagnez 5 TND fidélité par parrainage complété</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            {loyaltyData?.referralCode
+              ? <CopyReferralCode code={loyaltyData.referralCode} />
+              : <span className="text-xs text-gray-500 italic">Code généré à votre premier accès</span>
+            }
+          </div>
+        </div>
+        {(loyaltyData?.referralsMade?.length ?? 0) > 0 && (
+          <div className="border-t border-pink-800/30 px-5 py-3 flex items-center gap-6 text-sm">
+            <div>
+              <span className="text-white font-bold">{loyaltyData!.referralsMade.filter(r => r.status === "completed").length}</span>
+              <span className="text-gray-500 ml-1.5">parrainages complétés</span>
+            </div>
+            <div>
+              <span className="text-pink-300 font-bold">{loyaltyData!.referralsMade.reduce((s, r) => s + r.rewardGiven, 0).toFixed(0)} TND</span>
+              <span className="text-gray-500 ml-1.5">gagnés</span>
+            </div>
+            {loyaltyData!.referralsMade.some(r => r.status === "pending") && (
+              <div>
+                <span className="text-yellow-400 font-bold">{loyaltyData!.referralsMade.filter(r => r.status === "pending").length}</span>
+                <span className="text-gray-500 ml-1.5">en attente</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Recent orders */}

@@ -18,6 +18,7 @@ const schema = z.object({
   couponCode: z.string().optional(),
   steamUsername: z.string().max(100).optional(),
   useLoyalty: z.boolean().optional(),
+  referralCode: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Données invalides.", detail: parsed.error.flatten() }, { status: 400 });
     }
 
-    const { email, items, couponCode, steamUsername, useLoyalty } = parsed.data;
+    const { email, items, couponCode, steamUsername, useLoyalty, referralCode } = parsed.data;
 
     const [products, variants] = await Promise.all([
       prisma.product.findMany({
@@ -150,18 +151,36 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const totalAmount = Math.max(0, subtotal - discountAmount - loyaltyDiscount);
-
     // Atomically deduct loyalty points (prevents double-spend)
     if (loyaltyDiscount > 0 && userId) {
       const deducted = await prisma.user.updateMany({
         where: { id: userId, loyaltyPoints: { gte: loyaltyDiscount } },
         data: { loyaltyPoints: { decrement: loyaltyDiscount } },
       });
-      if (deducted.count === 0) {
-        loyaltyDiscount = 0; // balance changed between check and deduct
+      if (deducted.count === 0) loyaltyDiscount = 0;
+    }
+
+    // Validate referral code (only for first-time buyers)
+    let referralDiscount = 0;
+    let referrerId: string | null = null;
+    if (referralCode && userId) {
+      const referrer = await prisma.user.findUnique({
+        where: { referralCode: referralCode.trim().toUpperCase() },
+        select: { id: true },
+      });
+      if (referrer && referrer.id !== userId) {
+        const [priorPaid, existingReferral] = await Promise.all([
+          prisma.order.count({ where: { userId, paymentStatus: "paid" } }),
+          prisma.referral.findUnique({ where: { referredUserId: userId } }),
+        ]);
+        if (priorPaid === 0 && !existingReferral) {
+          referralDiscount = Math.round(Math.max(0, subtotal - discountAmount - loyaltyDiscount) * 0.05 * 1000) / 1000;
+          referrerId = referrer.id;
+        }
       }
     }
+
+    const totalAmount = Math.max(0, subtotal - discountAmount - loyaltyDiscount - referralDiscount);
 
     const order = await prisma.order.create({
       data: {
@@ -173,6 +192,7 @@ export async function POST(req: NextRequest) {
         totalAmount,
         discountAmount,
         loyaltyPointsUsed: loyaltyDiscount,
+        referralDiscount,
         guestAutoCreated,
         ...(appliedCouponId && { couponId: appliedCouponId }),
         ...(steamUsername && { steamUsername }),
@@ -182,6 +202,13 @@ export async function POST(req: NextRequest) {
     if (loyaltyDiscount > 0 && userId) {
       prisma.loyaltyTransaction.create({
         data: { userId, orderRef: order.id, type: "redeemed", amount: loyaltyDiscount, description: `Utilisé sur commande #${orderNumber}` },
+      }).catch(console.error);
+    }
+
+    // Create pending referral record
+    if (referrerId && userId && referralDiscount > 0) {
+      prisma.referral.create({
+        data: { referrerId, referredUserId: userId, status: "pending", discountGiven: referralDiscount },
       }).catch(console.error);
     }
 

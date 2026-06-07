@@ -158,6 +158,10 @@ export default function CheckoutPage() {
   const [upsells, setUpsells] = useState<UpsellProduct[]>([]);
   const [loyaltyBalance, setLoyaltyBalance] = useState(0);
   const [useLoyalty, setUseLoyalty] = useState(false);
+  const [referralInput, setReferralInput] = useState("");
+  const [referralLoading, setReferralLoading] = useState(false);
+  const [referralError, setReferralError] = useState("");
+  const [appliedReferral, setAppliedReferral] = useState<{ code: string; discountPct: number; discount: number; referrerName: string } | null>(null);
   const [steamUsername, setSteamUsername] = useState("");
   const needsSteam = items.some((i) => i.requiresSteamUsername);
 
@@ -196,8 +200,9 @@ export default function CheckoutPage() {
 
   const subtotal = total();
   const discount = appliedCoupon?.discount ?? 0;
-  const loyaltyApplied = useLoyalty ? Math.min(loyaltyBalance, Math.max(0, subtotal - discount)) : 0;
-  const finalTotal = Math.max(0, subtotal - discount - loyaltyApplied);
+  const referralDiscount = appliedReferral?.discount ?? 0;
+  const loyaltyApplied = useLoyalty ? Math.min(loyaltyBalance, Math.max(0, subtotal - discount - referralDiscount)) : 0;
+  const finalTotal = Math.max(0, subtotal - discount - referralDiscount - loyaltyApplied);
 
   function handleProofFile(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -235,6 +240,26 @@ export default function CheckoutPage() {
 
   function removeCoupon() { setAppliedCoupon(null); setCouponError(""); }
 
+  async function applyReferral() {
+    if (!referralInput.trim()) return;
+    setReferralError("");
+    setReferralLoading(true);
+    const res = await fetch("/api/referral/validate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: referralInput.trim(), orderTotal: subtotal - discount }),
+    });
+    const data = await res.json();
+    setReferralLoading(false);
+    if (!res.ok) setReferralError(data.error ?? "Code invalide.");
+    else {
+      setAppliedReferral({ code: referralInput.trim().toUpperCase(), discountPct: data.discountPct, discount: data.discount, referrerName: data.referrerName });
+      setReferralInput("");
+    }
+  }
+
+  function removeReferral() { setAppliedReferral(null); setReferralError(""); }
+
   async function handlePay() {
     setError("");
     if (!email.includes("@")) { setError("Entrez un email valide."); return; }
@@ -253,6 +278,7 @@ export default function CheckoutPage() {
             ...(appliedCoupon && { couponCode: appliedCoupon.code }),
             ...(needsSteam && steamUsername.trim() && { steamUsername: steamUsername.trim() }),
             ...(useLoyalty && loyaltyBalance > 0 && { useLoyalty: true }),
+            ...(appliedReferral && { referralCode: appliedReferral.code }),
           }),
         });
         const data = await res.json();
@@ -272,6 +298,7 @@ export default function CheckoutPage() {
             ...(appliedCoupon && { couponCode: appliedCoupon.code }),
             ...(needsSteam && steamUsername.trim() && { steamUsername: steamUsername.trim() }),
             ...(useLoyalty && loyaltyBalance > 0 && { useLoyalty: true }),
+            ...(appliedReferral && { referralCode: appliedReferral.code }),
           }),
         });
         const data = await res.json();
@@ -381,6 +408,54 @@ export default function CheckoutPage() {
                 {couponError && (
                   <p className="text-xs text-red-400 mt-2 flex items-center gap-1.5">
                     <X className="h-3 w-3" /> {couponError}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Referral code */}
+            <div className="rounded-2xl border border-gray-800 bg-gray-900 overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-800/80 flex items-center gap-3">
+                <Gift className="h-4 w-4 text-pink-400" />
+                <h2 className="font-semibold text-white text-sm">Code de parrainage</h2>
+                <span className="text-xs text-gray-600 font-normal">(optionnel)</span>
+              </div>
+              <div className="p-5">
+                {appliedReferral ? (
+                  <div className="flex items-center justify-between rounded-xl bg-pink-900/20 border border-pink-700/40 px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-pink-900/50 flex items-center justify-center">
+                        <CheckCircle className="h-4 w-4 text-pink-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-pink-300">{appliedReferral.code}</p>
+                        <p className="text-xs text-gray-400">
+                          Parrainé par <span className="text-white font-medium">{appliedReferral.referrerName}</span>
+                          {" · "}<span className="text-pink-400 font-semibold">-{appliedReferral.discountPct}% appliqué</span>
+                        </p>
+                      </div>
+                    </div>
+                    <button onClick={removeReferral} className="p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-900/20 transition-colors">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Ex : LOOT8X2K"
+                      value={referralInput}
+                      onChange={(e) => { setReferralInput(e.target.value.toUpperCase()); setReferralError(""); }}
+                      onKeyDown={(e) => e.key === "Enter" && applyReferral()}
+                      className="uppercase placeholder:normal-case h-11 font-mono tracking-widest"
+                    />
+                    <Button variant="outline" onClick={applyReferral} disabled={referralLoading || !referralInput.trim()} className="shrink-0 h-11 px-5">
+                      {referralLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Appliquer"}
+                    </Button>
+                  </div>
+                )}
+                {referralError && (
+                  <p className="text-xs text-red-400 mt-2 flex items-center gap-1.5">
+                    <X className="h-3 w-3" /> {referralError}
                   </p>
                 )}
               </div>
@@ -599,6 +674,14 @@ export default function CheckoutPage() {
                       <Tag className="h-3 w-3" /> {appliedCoupon?.code}
                     </span>
                     <span className="text-green-400 font-semibold">-{formatPrice(discount)}</span>
+                  </div>
+                )}
+                {referralDiscount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-pink-400 flex items-center gap-1.5">
+                      <Gift className="h-3 w-3" /> Parrainage -{appliedReferral?.discountPct}%
+                    </span>
+                    <span className="text-pink-400 font-semibold">-{formatPrice(referralDiscount)}</span>
                   </div>
                 )}
                 {loyaltyApplied > 0 && (

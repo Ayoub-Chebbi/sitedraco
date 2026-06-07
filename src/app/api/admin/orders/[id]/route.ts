@@ -172,6 +172,23 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         }).catch((err) => console.error("[confirm_payment] email failed:", err));
       }
 
+      // Complete pending referral
+      if (orderForEmail.userId) {
+        const referral = await prisma.referral.findUnique({ where: { referredUserId: orderForEmail.userId } });
+        if (referral && referral.status === "pending") {
+          const reward = 5;
+          prisma.referral.update({
+            where: { id: referral.id },
+            data: { status: "completed", orderId: id, rewardGiven: reward, completedAt: new Date() },
+          }).then(() => prisma.user.update({
+            where: { id: referral.referrerId },
+            data: { loyaltyPoints: { increment: reward } },
+          })).then(() => prisma.loyaltyTransaction.create({
+            data: { userId: referral.referrerId, orderRef: id, type: "earned", amount: reward, description: `Parrainage complété — +${reward} TND` },
+          })).catch((err) => console.error("[confirm_payment] referral complete failed:", err));
+        }
+      }
+
       // Award 1% loyalty cashback for logged-in users
       if (orderForEmail.userId) {
         const earned = Math.round(orderForEmail.totalAmount * 0.01 * 1000) / 1000;
