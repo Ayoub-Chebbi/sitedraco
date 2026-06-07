@@ -325,6 +325,129 @@ export async function sendReviewRequestEmail({
   if (error) throw new Error(error.message);
 }
 
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  d17: "D17",
+  flouci_app: "Flouci App",
+  virement: "Virement bancaire",
+};
+
+export async function sendOrderConfirmationEmail({
+  to,
+  orderNumber,
+  items,
+  totalAmount,
+  paymentMethod,
+}: {
+  to: string;
+  orderNumber: string;
+  items: { name: string; quantity: number; unitPrice: number }[];
+  totalAmount: number;
+  paymentMethod: string;
+}) {
+  const siteUrl = process.env.SITE_URL ?? "https://loot.tn";
+  const methodLabel = PAYMENT_METHOD_LABELS[paymentMethod] ?? paymentMethod;
+
+  const itemsHtml = items
+    .map(
+      (item) => `
+      <tr>
+        <td style="padding:8px 0;color:#e5e7eb;font-size:14px;border-bottom:1px solid #1f2035">${h(item.name)}${item.quantity > 1 ? ` ×${item.quantity}` : ""}</td>
+        <td style="padding:8px 0;color:#a78bfa;font-size:14px;font-weight:700;text-align:right;border-bottom:1px solid #1f2035">${(item.unitPrice * item.quantity).toFixed(3)} TND</td>
+      </tr>`
+    )
+    .join("");
+
+  const html = `${base}
+    <h2 style="color:#fff;margin:0 0 8px">Commande reçue ! ✅</h2>
+    <p style="color:#9ca3af;margin:0 0 24px">
+      Votre commande <strong style="color:#fff">#${h(orderNumber)}</strong> a bien été enregistrée.<br>
+      Nous avons reçu votre justificatif de paiement (<strong style="color:#fff">${h(methodLabel)}</strong>) et allons le vérifier sous peu.
+    </p>
+
+    <div style="background:#1a1a2e;border:1px solid #2d2d4e;border-radius:10px;padding:20px;margin-bottom:24px">
+      <p style="margin:0 0 14px;font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:.5px">Récapitulatif</p>
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        ${itemsHtml}
+        <tr>
+          <td style="padding-top:12px;color:#9ca3af;font-size:13px;font-weight:700;text-transform:uppercase">Total</td>
+          <td style="padding-top:12px;color:#fff;font-size:16px;font-weight:900;text-align:right">${totalAmount.toFixed(3)} TND</td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="background:#1f1a35;border:1px solid #4c1d95;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+      <p style="margin:0;font-size:13px;color:#c4b5fd">⏱️ Délai de vérification : <strong>2–24 heures</strong> en général. Vous recevrez un email dès que votre paiement est confirmé.</p>
+    </div>
+
+    <a href="${siteUrl}/dashboard/commandes"
+       style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">
+      Suivre ma commande →
+    </a>
+    <p style="color:#6b7280;font-size:12px;margin:20px 0 0">Support disponible 7j/7 via votre espace client.</p>
+  ${foot}`;
+
+  const { error } = await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `✅ Commande LootStore #${orderNumber} reçue — vérification en cours`,
+    html,
+  });
+
+  if (error) throw new Error(error.message);
+}
+
+export async function sendPaymentConfirmedEmail({
+  to,
+  orderNumber,
+  totalAmount,
+}: {
+  to: string;
+  orderNumber: string;
+  totalAmount: number;
+}) {
+  const siteUrl = process.env.SITE_URL ?? "https://loot.tn";
+
+  const html = `${base}
+    <h2 style="color:#fff;margin:0 0 8px">Paiement confirmé ! 🎉</h2>
+    <p style="color:#9ca3af;margin:0 0 24px">
+      Bonne nouvelle ! Votre paiement pour la commande <strong style="color:#fff">#${h(orderNumber)}</strong> a été validé.<br>
+      Votre commande est maintenant en cours de traitement.
+    </p>
+
+    <div style="background:#1a1a2e;border:1px solid #2d2d4e;border-radius:10px;padding:20px;margin-bottom:24px">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="color:#9ca3af;font-size:13px">Numéro de commande</td>
+          <td style="color:#fff;font-size:14px;font-weight:700;text-align:right">#${h(orderNumber)}</td>
+        </tr>
+        <tr>
+          <td style="padding-top:10px;color:#9ca3af;font-size:13px">Montant payé</td>
+          <td style="padding-top:10px;color:#a78bfa;font-size:16px;font-weight:900;text-align:right">${totalAmount.toFixed(3)} TND</td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="background:#0d2818;border:1px solid #166534;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+      <p style="margin:0;font-size:13px;color:#86efac">⚡ Votre clé / accès sera envoyé(e) dès que notre équipe aura traité votre commande. En général sous <strong>1–24h</strong>.</p>
+    </div>
+
+    <a href="${siteUrl}/dashboard/commandes"
+       style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">
+      Voir ma commande →
+    </a>
+    <p style="color:#6b7280;font-size:12px;margin:20px 0 0">Des questions ? Notre support est disponible 7j/7 via votre espace client.</p>
+  ${foot}`;
+
+  const { error } = await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `🎉 Paiement confirmé — commande LootStore #${orderNumber} en traitement`,
+    html,
+  });
+
+  if (error) throw new Error(error.message);
+}
+
 export async function sendPasswordResetEmail(email: string, resetUrl: string) {
   const html = `${base}
     <h2 style="color:#fff;margin:0 0 12px">Réinitialisation du mot de passe</h2>

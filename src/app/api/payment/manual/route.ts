@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { generateOrderNumber } from "@/lib/utils";
 import { notifyAdminsNewOrder } from "@/lib/push-notifications";
+import { sendOrderConfirmationEmail } from "@/lib/email";
 
 const schema = z.object({
   email: z.string().email(),
@@ -130,6 +131,20 @@ export async function POST(req: NextRequest) {
     totalAmount,
     orderId: order.id,
   }).catch(console.error);
+
+  sendOrderConfirmationEmail({
+    to: email,
+    orderNumber,
+    items: items.map((item) => {
+      const product = products.find((p) => p.id === item.productId)!;
+      const variant = item.variantId ? variants.find((v) => v.id === item.variantId) : null;
+      const name = variant ? `${product.name} — ${variant.name}` : product.name;
+      const unitPrice = variant ? (variant.discountPrice ?? variant.price) : (product.discountPrice ?? product.price);
+      return { name, quantity: item.quantity, unitPrice };
+    }),
+    totalAmount,
+    paymentMethod,
+  }).catch((err) => console.error("[manual] confirmation email failed:", err));
 
   return NextResponse.json({ orderNumber: order.orderNumber, orderId: order.id }, { status: 201 });
 }

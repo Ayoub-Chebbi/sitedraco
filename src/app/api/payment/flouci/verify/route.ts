@@ -3,7 +3,7 @@ import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { verifyFlouciPayment } from "@/lib/flouci";
 import { notifyAdminsNewOrder } from "@/lib/push-notifications";
-import { sendWelcomeEmail } from "@/lib/email";
+import { sendWelcomeEmail, sendPaymentConfirmedEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   let body: { paymentId?: string; orderId?: string };
@@ -70,7 +70,18 @@ export async function POST(req: NextRequest) {
     orderId: order.id,
   }).catch(console.error);
 
+  // Payment confirmed email — sent to all customers
+  const confirmedTo = order.user?.email ?? order.guestEmail;
+  if (confirmedTo && !order.guestAutoCreated) {
+    sendPaymentConfirmedEmail({
+      to: confirmedTo,
+      orderNumber: order.orderNumber,
+      totalAmount: order.totalAmount,
+    }).catch((err) => console.error("[verify] payment confirmed email failed:", err));
+  }
+
   // Send welcome email to auto-created guest accounts only after payment confirmed
+  // (welcome email already contains payment confirmation, so skip the duplicate)
   if (order.guestAutoCreated && order.user?.email) {
     const base = process.env.SITE_URL ?? process.env.NEXTAUTH_URL ?? "https://loot.tn";
     const token = randomBytes(32).toString("hex");

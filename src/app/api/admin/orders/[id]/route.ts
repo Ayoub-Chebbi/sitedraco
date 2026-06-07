@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { encryptKey } from "@/lib/crypto";
-import { sendDeliveryEmail } from "@/lib/email";
+import { sendDeliveryEmail, sendPaymentConfirmedEmail } from "@/lib/email";
 import { z } from "zod";
 
 async function checkAdminOrSupport() {
@@ -143,6 +143,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   // Confirm manual payment proof — mark as paid and move to processing
   if (parsed.data.action === "confirm_payment") {
+    const orderForEmail = await prisma.order.findUnique({
+      where: { id },
+      select: { orderNumber: true, totalAmount: true, guestAutoCreated: true, guestEmail: true, user: { select: { email: true } } },
+    });
+
     await prisma.order.update({
       where: { id },
       data: { paymentStatus: "paid", status: "processing", paidAt: new Date(), agentId: session.user.id },
@@ -156,6 +161,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         metadata: JSON.stringify({ agentEmail: session.user.email }),
       },
     });
+
+    if (orderForEmail) {
+      const customerEmail = orderForEmail.user?.email ?? orderForEmail.guestEmail;
+      if (customerEmail) {
+        sendPaymentConfirmedEmail({
+          to: customerEmail,
+          orderNumber: orderForEmail.orderNumber,
+          totalAmount: orderForEmail.totalAmount,
+        }).catch((err) => console.error("[confirm_payment] email failed:", err));
+      }
+    }
+
     revalidatePath("/admin");
     revalidatePath("/admin/commandes");
     return NextResponse.json({ success: true });
