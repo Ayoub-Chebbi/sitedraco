@@ -180,7 +180,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  notifyAdminsNewOrder({
+  await notifyAdminsNewOrder({
     orderNumber,
     clientEmail: email,
     clientName: session?.user?.name ?? null,

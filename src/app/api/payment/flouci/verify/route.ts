@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
       .catch((err) => console.error("[verify] loyalty award failed:", err));
   }
 
-  notifyAdminsNewOrder({
+  await notifyAdminsNewOrder({
     orderNumber: order.orderNumber,
     clientEmail: order.user?.email ?? order.guestEmail ?? "guest",
     clientName: order.user?.name ?? null,
