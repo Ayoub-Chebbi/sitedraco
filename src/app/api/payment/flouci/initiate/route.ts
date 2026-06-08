@@ -232,8 +232,7 @@ export async function POST(req: NextRequest) {
           data: { userId, orderRef: order.id, type: "redeemed", amount: loyaltyDiscount, description: `Utilisé sur commande #${orderNumber}` },
         }).catch(console.error);
       }
-      const base = process.env.SITE_URL ?? process.env.NEXTAUTH_URL ?? "https://loot.tn";
-      return NextResponse.json({ paymentUrl: `${base}/checkout/success?orderId=${order.id}`, orderId: order.id });
+      return NextResponse.json({ paymentUrl: `/checkout/success?orderId=${order.id}`, orderId: order.id });
     }
 
     const base = process.env.SITE_URL ?? process.env.NEXTAUTH_URL ?? "https://loot.tn";
