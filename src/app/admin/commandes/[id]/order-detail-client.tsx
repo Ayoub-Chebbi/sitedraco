@@ -23,6 +23,10 @@ type OrderData = {
   paymentProofUrl?: string | null;
   totalAmount: number;
   discountAmount?: number;
+  loyaltyPointsUsed?: number;
+  referralDiscount?: number;
+  couponCode?: string | null;
+  referralCode?: string | null;
   steamUsername?: string | null;
   notesInternal: string | null;
   createdAt: string;
@@ -280,6 +284,24 @@ export function OrderDetailClient({ order }: { order: OrderData }) {
                   {order.paymentStatus === "paid" ? "Confirmé" : "En attente"}
                 </span>
               </div>
+              {(order.discountAmount ?? 0) > 0 && (
+                <div>
+                  <p className="text-gray-500 text-xs mb-0.5">Code promo {order.couponCode && <span className="font-mono text-purple-400 ml-1">{order.couponCode}</span>}</p>
+                  <p className="text-green-400 font-medium">−{formatPrice(order.discountAmount!)}</p>
+                </div>
+              )}
+              {(order.loyaltyPointsUsed ?? 0) > 0 && (
+                <div>
+                  <p className="text-gray-500 text-xs mb-0.5">Crédits fidélité</p>
+                  <p className="text-purple-400 font-medium">−{formatPrice(order.loyaltyPointsUsed!)}</p>
+                </div>
+              )}
+              {(order.referralDiscount ?? 0) > 0 && (
+                <div>
+                  <p className="text-gray-500 text-xs mb-0.5">Code parrainage {order.referralCode && <span className="font-mono text-blue-400 ml-1">{order.referralCode}</span>}</p>
+                  <p className="text-blue-400 font-medium">−{formatPrice(order.referralDiscount!)}</p>
+                </div>
+              )}
               <div>
                 <p className="text-gray-500 text-xs mb-0.5">Total</p>
                 <p className="text-white font-bold">{formatPrice(order.totalAmount)}</p>
