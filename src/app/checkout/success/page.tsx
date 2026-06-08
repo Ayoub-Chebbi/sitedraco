@@ -18,9 +18,30 @@ export default function CheckoutSuccessPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!orderId || !paymentId) {
+    if (!orderId) {
       setError("Paramètres de paiement manquants.");
       setState("error");
+      return;
+    }
+
+    // No paymentId = order was fully covered by loyalty credits (totalAmount = 0), already marked paid
+    if (!paymentId) {
+      fetch(`/api/checkout/order?orderId=${orderId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.orderNumber) {
+            setOrderNumber(data.orderNumber);
+            setState("success");
+            trackPurchase(data.orderNumber, 0);
+          } else {
+            setError(data.error ?? "Commande introuvable.");
+            setState("error");
+          }
+        })
+        .catch(() => {
+          setError("Erreur de vérification.");
+          setState("error");
+        });
       return;
     }
 
