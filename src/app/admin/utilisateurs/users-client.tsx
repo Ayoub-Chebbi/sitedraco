@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Users, ChevronDown, ChevronRight, RefreshCw, ShoppingBag, Clock, CheckCircle, XCircle, Loader2, Shield, UserCog } from "lucide-react";
+import { Users, ChevronDown, ChevronRight, RefreshCw, ShoppingBag, Clock, CheckCircle, XCircle, Loader2, Shield, UserCog, Coins, X } from "lucide-react";
 import { formatPrice, formatDate, ORDER_STATUS_LABELS } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -112,6 +112,108 @@ function RoleSelector({ user, onChanged, isAdmin }: { user: UserRow; onChanged: 
   );
 }
 
+function CreditModal({ user, onClose, onCredited }: {
+  user: UserRow;
+  onClose: () => void;
+  onCredited: (userId: string, amount: number) => void;
+}) {
+  const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+
+  async function submit() {
+    const amt = parseFloat(amount);
+    if (!amt || amt <= 0) { setError("Montant invalide."); return; }
+    if (!description.trim()) { setError("Raison requise."); return; }
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/credit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, amount: amt, description: description.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error ?? "Erreur."); return; }
+      setSuccess(true);
+      onCredited(user.id, amt);
+      setTimeout(onClose, 1500);
+    } catch {
+      setError("Erreur réseau.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-md rounded-2xl border border-gray-700 bg-gray-900 shadow-2xl p-6">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <Coins className="h-4 w-4 text-yellow-400" />
+              Créditer un compte
+            </h2>
+            <p className="text-xs text-gray-500 mt-0.5 truncate">{user.name ?? user.email}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {success ? (
+          <div className="text-center py-6">
+            <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-3" />
+            <p className="text-white font-semibold">Crédit effectué !</p>
+            <p className="text-gray-400 text-sm mt-1">+{parseFloat(amount).toFixed(3)} TND ajoutés</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-medium text-gray-400 uppercase tracking-wide block mb-1.5">Montant (TND)</label>
+              <input
+                type="number"
+                min="0.001"
+                step="0.5"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="Ex : 5.000"
+                className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-white text-sm placeholder:text-gray-600 focus:outline-none focus:border-yellow-500"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-400 uppercase tracking-wide block mb-1.5">Raison</label>
+              <input
+                type="text"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Ex : Compensation retard livraison"
+                maxLength={200}
+                className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-white text-sm placeholder:text-gray-600 focus:outline-none focus:border-yellow-500"
+              />
+            </div>
+            {error && <p className="text-red-400 text-xs">{error}</p>}
+            <div className="flex gap-2 pt-1">
+              <Button variant="outline" className="flex-1" onClick={onClose} disabled={loading}>Annuler</Button>
+              <Button
+                className="flex-1 bg-yellow-600 hover:bg-yellow-500 text-white"
+                onClick={submit}
+                disabled={loading || !amount || !description}
+              >
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Coins className="h-4 w-4" />}
+                Créditer
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function UsersClient({ initialUsers, isAdmin }: { initialUsers: UserRow[]; isAdmin: boolean }) {
   const [users, setUsers] = useState<UserRow[]>(initialUsers);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -119,6 +221,7 @@ export function UsersClient({ initialUsers, isAdmin }: { initialUsers: UserRow[]
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [creditTarget, setCreditTarget] = useState<UserRow | null>(null);
 
   const refresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -150,6 +253,12 @@ export function UsersClient({ initialUsers, isAdmin }: { initialUsers: UserRow[]
     setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, role: newRole } : u));
   }
 
+  function handleCredited(userId: string, _amount: number) {
+    setCreditTarget(null);
+    // Refresh to get updated loyalty balance
+    refresh();
+  }
+
   const filtered = users.filter((u) => {
     if (!u) return false;
     if (roleFilter !== "all" && u.role !== roleFilter) return false;
@@ -175,6 +284,13 @@ export function UsersClient({ initialUsers, isAdmin }: { initialUsers: UserRow[]
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
+      {creditTarget && (
+        <CreditModal
+          user={creditTarget}
+          onClose={() => setCreditTarget(null)}
+          onCredited={handleCredited}
+        />
+      )}
       {/* Header */}
       <div className="flex items-start justify-between mb-6 gap-3 flex-wrap">
         <div className="flex items-center gap-3">
@@ -284,8 +400,18 @@ export function UsersClient({ initialUsers, isAdmin }: { initialUsers: UserRow[]
                   </div>
                 </div>
 
-                {/* Role selector + expand */}
+                {/* Role selector + credit + expand */}
                 <div className="flex items-center gap-2 shrink-0">
+                  {isAdmin && user.role === "customer" && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setCreditTarget(user); }}
+                      className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg bg-yellow-900/30 hover:bg-yellow-900/50 border border-yellow-700/40 text-yellow-400 transition-colors"
+                      title="Créditer le compte"
+                    >
+                      <Coins className="h-3 w-3" />
+                      Créditer
+                    </button>
+                  )}
                   <RoleSelector user={user} onChanged={handleRoleChanged} isAdmin={isAdmin} />
                   <button onClick={() => toggleExpand(user.id)} className="text-gray-600 hover:text-gray-400 transition-colors">
                     {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
