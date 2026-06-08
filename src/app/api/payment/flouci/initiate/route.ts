@@ -151,13 +151,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Deduct loyalty points
-    if (loyaltyDiscount > 0 && userId) {
-      await prisma.user.update({
-        where: { id: userId },
-        data: { loyaltyPoints: { decrement: loyaltyDiscount } },
-      });
-    }
+    // Note: loyalty points are NOT deducted here.
+    // They are deducted in /verify only after Flouci confirms payment.
+    // Exception: totalAmount=0 (fully covered) is handled below before returning.
 
     // Validate referral code (only for first-time buyers)
     let referralDiscount = 0;
