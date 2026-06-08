@@ -4,8 +4,13 @@ import { prisma } from "@/lib/prisma";
 import { verifyFlouciPayment } from "@/lib/flouci";
 import { notifyAdminsNewOrder } from "@/lib/push-notifications";
 import { sendWelcomeEmail, sendPaymentConfirmedEmail } from "@/lib/email";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? req.headers.get("x-real-ip") ?? "unknown";
+  const { allowed } = await rateLimit(`verify:${ip}`, { max: 20, windowMs: 60 * 60 * 1000 });
+  if (!allowed) return NextResponse.json({ error: "Trop de tentatives." }, { status: 429 });
+
   let body: { paymentId?: string; orderId?: string };
   try { body = await req.json(); } catch {
     return NextResponse.json({ error: "Corps invalide." }, { status: 400 });

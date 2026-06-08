@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
+import { rateLimit } from "@/lib/rate-limit";
 
 const schema = z.object({
   currentPassword: z.string().min(1),
@@ -14,6 +15,9 @@ export async function POST(req: NextRequest) {
   if (!session || !session.user.id) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
+
+  const { allowed } = await rateLimit(`pwd-change:${session.user.id}`, { max: 5, windowMs: 15 * 60 * 1000 });
+  if (!allowed) return NextResponse.json({ error: "Trop de tentatives. Réessayez dans 15 minutes." }, { status: 429 });
 
   const body = await req.json();
   const parsed = schema.safeParse(body);

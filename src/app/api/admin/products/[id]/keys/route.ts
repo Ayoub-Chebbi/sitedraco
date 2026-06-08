@@ -15,7 +15,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
-      keyValue: true,
       status: true,
       createdAt: true,
       deliveredAt: true,

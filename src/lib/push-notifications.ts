@@ -25,7 +25,10 @@ async function sendExpoPush(messages: PushMessage[]) {
       signal: AbortSignal.timeout(8_000),
     });
     const json = await res.json();
-    console.log("[push] Expo response:", JSON.stringify(json));
+    const statuses = (json.data ?? []).map((d: { status: string }) => d.status);
+    if (statuses.some((s: string) => s !== "ok")) {
+      console.warn("[push] Expo reported non-ok status:", statuses);
+    }
   } catch (err) {
     console.error("[push] Failed to send Expo push:", err);
   }

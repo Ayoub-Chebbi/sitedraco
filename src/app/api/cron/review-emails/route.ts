@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { randomBytes } from "crypto";
+import { randomBytes, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { sendReviewRequestEmail } from "@/lib/email";
 
@@ -7,8 +7,10 @@ import { sendReviewRequestEmail } from "@/lib/email";
 function isAuthorized(req: NextRequest) {
   const auth = req.headers.get("authorization");
   const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  return auth === `Bearer ${secret}`;
+  if (!secret || !auth) return false;
+  const expected = `Bearer ${secret}`;
+  if (auth.length !== expected.length) return false;
+  return timingSafeEqual(Buffer.from(auth), Buffer.from(expected));
 }
 
 export async function GET(req: NextRequest) {

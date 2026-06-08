@@ -15,11 +15,15 @@ export async function GET() {
   return NextResponse.json(settings);
 }
 
+const ALLOWED_SETTINGS_KEYS = new Set(["siteName", "logoUrl", "siteTagline", "siteUrl"]);
+
 export async function PATCH(req: NextRequest) {
   if (!(await requireAdmin())) return NextResponse.json({ error: "Accès refusé." }, { status: 403 });
   const body = await req.json();
+  const entries = Object.entries(body).filter(([key]) => ALLOWED_SETTINGS_KEYS.has(key));
+  if (entries.length === 0) return NextResponse.json({ error: "Aucune clé valide." }, { status: 400 });
   const updates = await Promise.all(
-    Object.entries(body).map(([key, value]) =>
+    entries.map(([key, value]) =>
       prisma.siteSettings.upsert({
         where: { key },
         update: { value: String(value) },
