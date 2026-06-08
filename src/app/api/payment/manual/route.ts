@@ -109,13 +109,12 @@ export async function POST(req: NextRequest) {
 
   const orderNumber = generateOrderNumber();
 
-  // Atomically deduct loyalty points (prevents double-spend)
+  // Deduct loyalty points
   if (loyaltyDiscount > 0 && userId) {
-    const deducted = await prisma.user.updateMany({
-      where: { id: userId, loyaltyPoints: { gte: loyaltyDiscount } },
+    await prisma.user.update({
+      where: { id: userId },
       data: { loyaltyPoints: { decrement: loyaltyDiscount } },
     });
-    if (deducted.count === 0) loyaltyDiscount = 0;
   }
 
   // Validate referral code (first-time buyers only)

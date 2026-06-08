@@ -12,6 +12,7 @@ export default async function AdminUsersPage() {
   const users = await prisma.user.findMany({
     where: { role: { in: ["customer", "support", "admin"] } },
     include: {
+      loyaltyTransactions: { orderBy: { createdAt: "desc" }, take: 20, select: { id: true, type: true, amount: true, description: true, createdAt: true } },
       orders: {
         include: {
           items: {
@@ -35,6 +36,8 @@ export default async function AdminUsersPage() {
     isVerified: u.isVerified,
     createdAt: u.createdAt.toISOString(),
     lastLogin: u.lastLogin?.toISOString() ?? null,
+    loyaltyPoints: u.loyaltyPoints,
+    loyaltyTransactions: u.loyaltyTransactions.map((t) => ({ ...t, createdAt: t.createdAt.toISOString() })),
     orders: u.orders.map((o) => ({
       id: o.id,
       orderNumber: o.orderNumber,

@@ -151,13 +151,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Atomically deduct loyalty points (prevents double-spend)
+    // Deduct loyalty points
     if (loyaltyDiscount > 0 && userId) {
-      const deducted = await prisma.user.updateMany({
-        where: { id: userId, loyaltyPoints: { gte: loyaltyDiscount } },
+      await prisma.user.update({
+        where: { id: userId },
         data: { loyaltyPoints: { decrement: loyaltyDiscount } },
       });
-      if (deducted.count === 0) loyaltyDiscount = 0;
     }
 
     // Validate referral code (only for first-time buyers)
@@ -199,12 +198,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    if (loyaltyDiscount > 0 && userId) {
-      prisma.loyaltyTransaction.create({
-        data: { userId, orderRef: order.id, type: "redeemed", amount: loyaltyDiscount, description: `Utilisé sur commande #${orderNumber}` },
-      }).catch(console.error);
-    }
-
     // Create pending referral record
     if (referrerId && userId && referralDiscount > 0) {
       prisma.referral.create({
@@ -227,6 +220,24 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // If loyalty covers the full order, skip Flouci and mark paid directly
+    if (totalAmount === 0) {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { paymentStatus: "paid", status: "processing", paidAt: new Date() },
+      });
+      if (appliedCouponId) {
+        prisma.coupon.update({ where: { id: appliedCouponId }, data: { usedCount: { increment: 1 } } }).catch(console.error);
+      }
+      if (loyaltyDiscount > 0 && userId) {
+        prisma.loyaltyTransaction.create({
+          data: { userId, orderRef: order.id, type: "redeemed", amount: loyaltyDiscount, description: `Utilisé sur commande #${orderNumber}` },
+        }).catch(console.error);
+      }
+      const base = process.env.SITE_URL ?? process.env.NEXTAUTH_URL ?? "https://loot.tn";
+      return NextResponse.json({ paymentUrl: `${base}/checkout/success?orderId=${order.id}`, orderId: order.id });
+    }
+
     const base = process.env.SITE_URL ?? process.env.NEXTAUTH_URL ?? "https://loot.tn";
 
     const { paymentUrl, paymentId } = await initiateFlouciPayment({
@@ -241,8 +252,11 @@ export async function POST(req: NextRequest) {
       data: { paymentRef: paymentId, paymentUrl },
     });
 
-    // usedCount incremented in /verify after payment confirmed
-    // Welcome email sent in /verify after payment confirmed
+    if (loyaltyDiscount > 0 && userId) {
+      prisma.loyaltyTransaction.create({
+        data: { userId, orderRef: order.id, type: "redeemed", amount: loyaltyDiscount, description: `Utilisé sur commande #${orderNumber}` },
+      }).catch(console.error);
+    }
 
     return NextResponse.json({ paymentUrl, orderId: order.id });
 

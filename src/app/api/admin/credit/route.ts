@@ -5,7 +5,7 @@ import { z } from "zod";
 
 const schema = z.object({
   userId: z.string().min(1),
-  amount: z.number().positive().max(10000),
+  amount: z.number().refine((v) => v !== 0 && Math.abs(v) <= 10000, { message: "Montant invalide." }),
   description: z.string().min(1).max(200),
 });
 
@@ -28,6 +28,11 @@ export async function POST(req: NextRequest) {
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, email: true, loyaltyPoints: true } });
   if (!user) return NextResponse.json({ error: "Utilisateur introuvable." }, { status: 404 });
 
+  const isDebit = amount < 0;
+  if (isDebit && user.loyaltyPoints + amount < 0) {
+    return NextResponse.json({ error: "Solde insuffisant pour cette déduction." }, { status: 400 });
+  }
+
   await prisma.user.update({
     where: { id: userId },
     data: { loyaltyPoints: { increment: amount } },
@@ -36,9 +41,9 @@ export async function POST(req: NextRequest) {
   await prisma.loyaltyTransaction.create({
     data: {
       userId,
-      type: "earned",
-      amount,
-      description: `Crédit admin : ${description}`,
+      type: isDebit ? "redeemed" : "earned",
+      amount: Math.abs(amount),
+      description: `${isDebit ? "Déduction" : "Crédit"} admin : ${description}`,
     },
   });
 

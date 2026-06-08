@@ -24,6 +24,14 @@ type Order = {
   items: OrderItem[];
 };
 
+type LoyaltyTx = {
+  id: string;
+  type: string;
+  amount: number;
+  description: string;
+  createdAt: string;
+};
+
 type UserRow = {
   id: string;
   name: string | null;
@@ -33,6 +41,8 @@ type UserRow = {
   isVerified: boolean;
   createdAt: string;
   lastLogin: string | null;
+  loyaltyPoints: number;
+  loyaltyTransactions: LoyaltyTx[];
   orders: Order[];
 };
 
@@ -117,11 +127,13 @@ function CreditModal({ user, onClose, onCredited }: {
   onClose: () => void;
   onCredited: (userId: string, amount: number) => void;
 }) {
+  const [mode, setMode] = useState<"credit" | "debit">("credit");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+  const [txs, setTxs] = useState<LoyaltyTx[]>(user.loyaltyTransactions ?? []);
+  const [balance, setBalance] = useState(user.loyaltyPoints ?? 0);
 
   async function submit() {
     const amt = parseFloat(amount);
@@ -129,17 +141,28 @@ function CreditModal({ user, onClose, onCredited }: {
     if (!description.trim()) { setError("Raison requise."); return; }
     setLoading(true);
     setError("");
+    const finalAmt = mode === "debit" ? -amt : amt;
     try {
       const res = await fetch("/api/admin/credit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, amount: amt, description: description.trim() }),
+        body: JSON.stringify({ userId: user.id, amount: finalAmt, description: description.trim() }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Erreur."); return; }
-      setSuccess(true);
-      onCredited(user.id, amt);
-      setTimeout(onClose, 1500);
+      const newBalance = data.newBalance as number;
+      setBalance(newBalance);
+      const newTx: LoyaltyTx = {
+        id: Date.now().toString(),
+        type: mode === "debit" ? "redeemed" : "earned",
+        amount: amt,
+        description: `${mode === "debit" ? "Déduction" : "Crédit"} admin : ${description.trim()}`,
+        createdAt: new Date().toISOString(),
+      };
+      setTxs((prev) => [newTx, ...prev]);
+      onCredited(user.id, finalAmt);
+      setAmount("");
+      setDescription("");
     } catch {
       setError("Erreur réseau.");
     } finally {
@@ -150,12 +173,13 @@ function CreditModal({ user, onClose, onCredited }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-md rounded-2xl border border-gray-700 bg-gray-900 shadow-2xl p-6">
+      <div className="relative z-10 w-full max-w-lg rounded-2xl border border-gray-700 bg-gray-900 shadow-2xl p-6 max-h-[90vh] overflow-y-auto">
+        {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="text-base font-bold text-white flex items-center gap-2">
               <Coins className="h-4 w-4 text-yellow-400" />
-              Créditer un compte
+              Points de fidélité
             </h2>
             <p className="text-xs text-gray-500 mt-0.5 truncate">{user.name ?? user.email}</p>
           </div>
@@ -164,51 +188,77 @@ function CreditModal({ user, onClose, onCredited }: {
           </button>
         </div>
 
-        {success ? (
-          <div className="text-center py-6">
-            <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-3" />
-            <p className="text-white font-semibold">Crédit effectué !</p>
-            <p className="text-gray-400 text-sm mt-1">+{parseFloat(amount).toFixed(3)} TND ajoutés</p>
+        {/* Current balance */}
+        <div className="rounded-xl bg-yellow-900/20 border border-yellow-700/30 px-4 py-3 mb-5 flex items-center justify-between">
+          <span className="text-sm text-gray-400">Solde actuel</span>
+          <span className="text-xl font-bold text-yellow-400">{balance.toFixed(3)} TND</span>
+        </div>
+
+        {/* Credit / Debit form */}
+        <div className="space-y-3 mb-6">
+          <div className="flex gap-1 bg-gray-800 rounded-lg p-1">
+            <button
+              onClick={() => setMode("credit")}
+              className={`flex-1 py-1.5 rounded-md text-xs font-semibold transition-colors ${mode === "credit" ? "bg-green-700 text-white" : "text-gray-400 hover:text-white"}`}
+            >
+              + Créditer
+            </button>
+            <button
+              onClick={() => setMode("debit")}
+              className={`flex-1 py-1.5 rounded-md text-xs font-semibold transition-colors ${mode === "debit" ? "bg-red-700 text-white" : "text-gray-400 hover:text-white"}`}
+            >
+              − Déduire
+            </button>
           </div>
-        ) : (
-          <div className="space-y-4">
-            <div>
-              <label className="text-xs font-medium text-gray-400 uppercase tracking-wide block mb-1.5">Montant (TND)</label>
-              <input
-                type="number"
-                min="0.001"
-                step="0.5"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="Ex : 5.000"
-                className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-white text-sm placeholder:text-gray-600 focus:outline-none focus:border-yellow-500"
-              />
+          <input
+            type="number"
+            min="0.001"
+            step="0.5"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="Montant en TND"
+            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-white text-sm placeholder:text-gray-600 focus:outline-none focus:border-yellow-500"
+          />
+          <input
+            type="text"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Raison (ex : compensation retard livraison)"
+            maxLength={200}
+            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-white text-sm placeholder:text-gray-600 focus:outline-none focus:border-yellow-500"
+          />
+          {error && <p className="text-red-400 text-xs">{error}</p>}
+          <Button
+            className={`w-full ${mode === "credit" ? "bg-green-700 hover:bg-green-600" : "bg-red-700 hover:bg-red-600"} text-white`}
+            onClick={submit}
+            disabled={loading || !amount || !description}
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Coins className="h-4 w-4 mr-2" />}
+            {mode === "credit" ? "Créditer" : "Déduire"}
+          </Button>
+        </div>
+
+        {/* Transaction log */}
+        <div>
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Historique ({txs.length})</h3>
+          {txs.length === 0 ? (
+            <p className="text-xs text-gray-600 text-center py-4">Aucune transaction</p>
+          ) : (
+            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+              {txs.map((tx) => (
+                <div key={tx.id} className="flex items-start gap-3 py-2 border-b border-gray-800/60 last:border-0">
+                  <span className={`mt-0.5 shrink-0 text-sm font-bold ${tx.type === "earned" ? "text-green-400" : "text-red-400"}`}>
+                    {tx.type === "earned" ? "+" : "−"}{tx.amount.toFixed(3)}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-300 truncate">{tx.description}</p>
+                    <p className="text-[10px] text-gray-600 mt-0.5">{formatDate(tx.createdAt)}</p>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div>
-              <label className="text-xs font-medium text-gray-400 uppercase tracking-wide block mb-1.5">Raison</label>
-              <input
-                type="text"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Ex : Compensation retard livraison"
-                maxLength={200}
-                className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-white text-sm placeholder:text-gray-600 focus:outline-none focus:border-yellow-500"
-              />
-            </div>
-            {error && <p className="text-red-400 text-xs">{error}</p>}
-            <div className="flex gap-2 pt-1">
-              <Button variant="outline" className="flex-1" onClick={onClose} disabled={loading}>Annuler</Button>
-              <Button
-                className="flex-1 bg-yellow-600 hover:bg-yellow-500 text-white"
-                onClick={submit}
-                disabled={loading || !amount || !description}
-              >
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Coins className="h-4 w-4" />}
-                Créditer
-              </Button>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
@@ -253,10 +303,8 @@ export function UsersClient({ initialUsers, isAdmin }: { initialUsers: UserRow[]
     setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, role: newRole } : u));
   }
 
-  function handleCredited(userId: string, _amount: number) {
-    setCreditTarget(null);
-    // Refresh to get updated loyalty balance
-    refresh();
+  function handleCredited(userId: string, amount: number) {
+    setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, loyaltyPoints: (u.loyaltyPoints ?? 0) + amount } : u));
   }
 
   const filtered = users.filter((u) => {
@@ -394,6 +442,12 @@ export function UsersClient({ initialUsers, isAdmin }: { initialUsers: UserRow[]
                     <p className="text-xs text-gray-500">Dépensé</p>
                     <p className="text-sm font-semibold text-white">{formatPrice(totalSpent)}</p>
                   </div>
+                  {user.role === "customer" && (user.loyaltyPoints ?? 0) > 0 && (
+                    <div className="text-right">
+                      <p className="text-xs text-gray-500">Fidélité</p>
+                      <p className="text-sm font-semibold text-yellow-400">{(user.loyaltyPoints ?? 0).toFixed(3)} TND</p>
+                    </div>
+                  )}
                   <div className="text-right">
                     <p className="text-xs text-gray-500">Inscrit</p>
                     <p className="text-xs text-gray-400">{formatDate(user.createdAt)}</p>
