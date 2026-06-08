@@ -9,7 +9,7 @@ export default function CgvPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-12">
       <h1 className="text-3xl font-bold text-white mb-2">Conditions générales de vente</h1>
-      <p className="text-sm text-gray-500 mb-10">Dernière mise à jour : janvier 2025</p>
+      <p className="text-sm text-gray-500 mb-10">Dernière mise à jour : juin 2025</p>
 
       <div className="prose prose-invert prose-sm max-w-none space-y-8 text-gray-400 leading-relaxed">
         <section>
@@ -39,7 +39,18 @@ export default function CgvPage() {
 
         <section>
           <h2 className="text-lg font-semibold text-white mb-3">6. Garantie et remboursement</h2>
-          <p>Nous garantissons que toutes les clés vendues sont valides au moment de la livraison. En cas de problème avéré (clé déjà utilisée, région incompatible non mentionnée), nous procédons au remplacement dans les meilleurs délais ou au remboursement intégral.</p>
+          <p>Nous garantissons que toutes les clés vendues sont valides au moment de la livraison. Un remboursement ou remplacement peut être accordé uniquement dans les cas suivants :</p>
+          <ul className="list-disc pl-5 mt-3 space-y-2">
+            <li>La clé d&apos;activation est invalide ou déjà utilisée, à condition que le client fournisse une <strong className="text-white">preuve vidéo</strong> montrant clairement la tentative d&apos;activation et le message d&apos;erreur.</li>
+            <li>Le compte livré ne fonctionne pas (identifiants incorrects, accès impossible), sous réserve d&apos;une <strong className="text-white">preuve vidéo</strong> démontrant le problème.</li>
+          </ul>
+          <p className="mt-3 font-semibold text-white">Cas exclus du remboursement :</p>
+          <ul className="list-disc pl-5 mt-2 space-y-2">
+            <li>Toute clé dont l&apos;activation a été tentée sans preuve vidéo ne pourra faire l&apos;objet d&apos;aucune réclamation.</li>
+            <li>Aucun remboursement ne sera accordé si le client n&apos;a pas lu la description du produit. La description précise notamment si le produit est livré sous forme de <strong className="text-white">compte</strong> : dans ce cas, le client est tenu de fournir un compte lors de la commande. Tout refus de fournir le compte requis mentionné dans la description annule tout droit au remboursement.</li>
+            <li>Les problèmes liés à une incompatibilité de région ou de plateforme clairement indiquée dans la description du produit ne sont pas couverts.</li>
+          </ul>
+          <p className="mt-3">Toute demande de remboursement doit être soumise via le système de tickets dans votre espace client, en y joignant obligatoirement la preuve vidéo.</p>
         </section>
 
         <section>
