@@ -37,6 +37,7 @@ type OrderData = {
     deliveredKey: { type: "key"; value: string } | { type: "account"; email: string; password: string } | null;
     productType: string;
     product: { id: string; name: string; platform: string; imageUrl: string | null };
+    variantName: string | null;
   }[];
   auditLogs: {
     id: string;
@@ -307,7 +308,10 @@ export function OrderDetailClient({ order }: { order: OrderData }) {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-white mt-0.5">{item.product.name}</p>
+                    <p className="text-sm text-white mt-0.5">
+                      {item.product.name}
+                      {item.variantName && <span className="text-gray-400"> — {item.variantName}</span>}
+                    </p>
                     <p className="text-xs text-gray-500">Qté: {item.quantity} · {formatPrice(item.unitPrice)}</p>
                   </div>
                 </div>
@@ -329,7 +333,9 @@ export function OrderDetailClient({ order }: { order: OrderData }) {
               </h2>
               {order.items.filter((i) => i.deliveredKey).map((item) => (
                 <div key={item.id} className="space-y-2">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{item.product.name}</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                    {item.product.name}{item.variantName && ` — ${item.variantName}`}
+                  </p>
                   {item.deliveredKey?.type === "key" ? (
                     <div className="flex items-center gap-2 bg-gray-800 rounded-lg px-4 py-3 border border-gray-700">
                       <Key className="h-4 w-4 text-purple-400 shrink-0" />

@@ -14,7 +14,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
   const order = await prisma.order.findUnique({
     where: { id },
     include: {
-      items: { include: { product: true, key: true } },
+      items: { include: { product: true, key: true, variant: { select: { name: true } } } },
       user: { select: { id: true, email: true, name: true, createdAt: true } },
       agent: { select: { email: true, name: true } },
       auditLogs: {
@@ -64,6 +64,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
         deliveredKey,
         productType: item.product.productType ?? "key",
         product: { id: item.product.id, name: item.product.name, platform: item.product.platform, imageUrl: item.product.imageUrl },
+        variantName: item.variant?.name ?? null,
       };
     }),
     auditLogs: order.auditLogs.map((log: typeof order.auditLogs[0]) => ({
