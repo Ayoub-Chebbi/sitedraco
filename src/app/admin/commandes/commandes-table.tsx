@@ -17,9 +17,10 @@ type Order = {
   paymentMethod: string | null;
   paymentProofUrl: string | null;
   totalAmount: number;
+  loyaltyPointsUsed: number;
   guestEmail: string | null;
   createdAt: string;
-  items: { product: { name: string } }[];
+  items: { product: { name: string }; variant: { name: string } | null }[];
   user: { email: string; name: string | null } | null;
 };
 
@@ -95,7 +96,7 @@ export function CommandesTable({ orders, activeTab }: { orders: Order[]; activeT
                   </td>
                   <td className="px-4 py-3">
                     <p className="text-xs text-gray-400 truncate max-w-[200px]">
-                      {order.items.map((i) => i.product.name).join(", ")}
+                      {order.items.map((i) => i.variant ? `${i.product.name} — ${i.variant.name}` : i.product.name).join(", ")}
                     </p>
                   </td>
                   <td className="px-4 py-3">
@@ -111,6 +112,11 @@ export function CommandesTable({ orders, activeTab }: { orders: Order[]; activeT
                          isAwaiting ? <><Clock className="h-3 w-3" /> Justificatif à vérifier</> :
                          "En attente"}
                       </span>
+                      {order.loyaltyPointsUsed > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-purple-600/20 text-purple-400 border border-purple-700/30">
+                          Crédits fidélité ({order.loyaltyPointsUsed.toFixed(3)} DT)
+                        </span>
+                      )}
                       {order.paymentMethod && (
                         <p className="text-[10px] text-gray-500">
                           {METHOD_LABEL[order.paymentMethod] ?? order.paymentMethod}

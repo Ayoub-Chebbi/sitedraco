@@ -175,7 +175,7 @@ export async function POST(req: NextRequest) {
       : (() => { const p = products.find((p) => p.id === item.productId)!; return p.discountPrice ?? p.price; })();
 
     await prisma.orderItem.create({
-      data: { orderId: order.id, productId: item.productId, quantity: item.quantity, unitPrice },
+      data: { orderId: order.id, productId: item.productId, ...(item.variantId && { variantId: item.variantId }), quantity: item.quantity, unitPrice },
     });
   }
 

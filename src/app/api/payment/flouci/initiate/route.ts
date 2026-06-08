@@ -210,6 +210,7 @@ export async function POST(req: NextRequest) {
         data: {
           orderId: order.id,
           productId: item.productId,
+          ...(item.variantId && { variantId: item.variantId }),
           quantity: item.quantity,
           unitPrice,
         },
@@ -226,6 +227,7 @@ export async function POST(req: NextRequest) {
         prisma.coupon.update({ where: { id: appliedCouponId }, data: { usedCount: { increment: 1 } } }).catch(console.error);
       }
       if (loyaltyDiscount > 0 && userId) {
+        await prisma.user.update({ where: { id: userId }, data: { loyaltyPoints: { decrement: loyaltyDiscount } } });
         prisma.loyaltyTransaction.create({
           data: { userId, orderRef: order.id, type: "redeemed", amount: loyaltyDiscount, description: `Utilisé sur commande #${orderNumber}` },
         }).catch(console.error);
