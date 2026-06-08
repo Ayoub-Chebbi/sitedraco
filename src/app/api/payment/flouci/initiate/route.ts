@@ -140,9 +140,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Apply loyalty points if requested (logged-in users only)
+    // Apply loyalty points if requested — only for the authenticated session user.
+    // Guard prevents a guest passing someone else's email from draining that user's balance.
     let loyaltyDiscount = 0;
-    if (useLoyalty && userId && !guestAutoCreated) {
+    if (useLoyalty && session?.user?.id && session.user.id === userId) {
       const loyaltyUser = await prisma.user.findUnique({ where: { id: userId }, select: { loyaltyPoints: true } });
       const balance = loyaltyUser?.loyaltyPoints ?? 0;
       if (balance >= 0.001) {
@@ -227,10 +228,16 @@ export async function POST(req: NextRequest) {
         prisma.coupon.update({ where: { id: appliedCouponId }, data: { usedCount: { increment: 1 } } }).catch(console.error);
       }
       if (loyaltyDiscount > 0 && userId) {
-        await prisma.user.update({ where: { id: userId }, data: { loyaltyPoints: { decrement: loyaltyDiscount } } });
-        prisma.loyaltyTransaction.create({
-          data: { userId, orderRef: order.id, type: "redeemed", amount: loyaltyDiscount, description: `Utilisé sur commande #${orderNumber}` },
-        }).catch(console.error);
+        // Atomic conditional decrement — prevents race condition double-spend
+        const affected = await prisma.$executeRaw`
+          UPDATE "User" SET "loyaltyPoints" = "loyaltyPoints" - ${loyaltyDiscount}
+          WHERE id = ${userId} AND "loyaltyPoints" >= ${loyaltyDiscount}
+        `;
+        if (affected > 0) {
+          prisma.loyaltyTransaction.create({
+            data: { userId, orderRef: order.id, type: "redeemed", amount: loyaltyDiscount, description: `Utilisé sur commande #${orderNumber}` },
+          }).catch(console.error);
+        }
       }
       return NextResponse.json({ paymentUrl: `/checkout/success?orderId=${order.id}`, orderId: order.id });
     }

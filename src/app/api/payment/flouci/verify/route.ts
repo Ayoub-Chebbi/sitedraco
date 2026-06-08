@@ -53,13 +53,17 @@ export async function POST(req: NextRequest) {
     data: { paymentStatus: "paid", paymentRef: paymentId, status: "processing", paidAt: new Date() },
   });
 
-  // Deduct loyalty points now that payment is confirmed (not at initiate time)
+  // Deduct loyalty points now that payment is confirmed — atomic to prevent race condition
   if (order.loyaltyPointsUsed > 0 && order.userId) {
-    prisma.user.update({ where: { id: order.userId }, data: { loyaltyPoints: { decrement: order.loyaltyPointsUsed } } })
-      .then(() => prisma.loyaltyTransaction.create({
-        data: { userId: order.userId!, orderRef: order.id, type: "redeemed", amount: order.loyaltyPointsUsed, description: `Utilisé sur commande #${order.orderNumber}` },
-      }))
-      .catch((err) => console.error("[verify] loyalty deduction failed:", err));
+    prisma.$executeRaw`
+      UPDATE "User" SET "loyaltyPoints" = "loyaltyPoints" - ${order.loyaltyPointsUsed}
+      WHERE id = ${order.userId} AND "loyaltyPoints" >= ${order.loyaltyPointsUsed}
+    `.then((affected) => affected > 0
+      ? prisma.loyaltyTransaction.create({
+          data: { userId: order.userId!, orderRef: order.id, type: "redeemed", amount: order.loyaltyPointsUsed, description: `Utilisé sur commande #${order.orderNumber}` },
+        })
+      : Promise.resolve(null)
+    ).catch((err) => console.error("[verify] loyalty deduction failed:", err));
   }
 
   // Increment coupon usedCount only after payment is confirmed

@@ -96,9 +96,10 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Apply loyalty points if requested (logged-in users only)
+  // Apply loyalty points if requested — only for the authenticated session user.
+  // Guard prevents a guest passing someone else's email from draining that user's balance.
   let loyaltyDiscount = 0;
-  if (useLoyalty && userId && !guestAutoCreated) {
+  if (useLoyalty && session?.user?.id && session.user.id === userId) {
     const loyaltyUser = await prisma.user.findUnique({ where: { id: userId }, select: { loyaltyPoints: true } });
     const balance = loyaltyUser?.loyaltyPoints ?? 0;
     if (balance >= 0.001) {
@@ -109,13 +110,9 @@ export async function POST(req: NextRequest) {
 
   const orderNumber = generateOrderNumber();
 
-  // Deduct loyalty points
-  if (loyaltyDiscount > 0 && userId) {
-    await prisma.user.update({
-      where: { id: userId },
-      data: { loyaltyPoints: { decrement: loyaltyDiscount } },
-    });
-  }
+  // Note: loyalty points are NOT deducted here.
+  // They are deducted in confirm_payment only after the admin verifies the proof.
+  // This prevents permanent balance loss if the admin rejects the order.
 
   // Validate referral code (first-time buyers only)
   let referralDiscount = 0;
@@ -156,12 +153,6 @@ export async function POST(req: NextRequest) {
       ...(steamUsername && { steamUsername }),
     },
   });
-
-  if (loyaltyDiscount > 0 && userId) {
-    prisma.loyaltyTransaction.create({
-      data: { userId, orderRef: order.id, type: "redeemed", amount: loyaltyDiscount, description: `Utilisé sur commande #${orderNumber}` },
-    }).catch(console.error);
-  }
 
   if (referrerId && userId && referralDiscount > 0) {
     prisma.referral.create({

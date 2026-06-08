@@ -145,8 +145,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (parsed.data.action === "confirm_payment") {
     const orderForEmail = await prisma.order.findUnique({
       where: { id },
-      select: { orderNumber: true, totalAmount: true, guestAutoCreated: true, guestEmail: true, userId: true, user: { select: { email: true } } },
+      select: { orderNumber: true, totalAmount: true, loyaltyPointsUsed: true, guestAutoCreated: true, guestEmail: true, userId: true, paymentStatus: true, user: { select: { email: true } } },
     });
+
+    // Idempotency guard — prevent double cashback/referral if called twice
+    if (orderForEmail?.paymentStatus === "paid") {
+      return NextResponse.json({ success: true });
+    }
 
     await prisma.order.update({
       where: { id },
@@ -170,6 +175,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           orderNumber: orderForEmail.orderNumber,
           totalAmount: orderForEmail.totalAmount,
         }).catch((err) => console.error("[confirm_payment] email failed:", err));
+      }
+
+      // Deduct loyalty points now that payment is confirmed — atomic to prevent race condition
+      if ((orderForEmail.loyaltyPointsUsed ?? 0) > 0 && orderForEmail.userId) {
+        const loyaltyAmt = orderForEmail.loyaltyPointsUsed;
+        const loyaltyUserId = orderForEmail.userId;
+        prisma.$executeRaw`
+          UPDATE "User" SET "loyaltyPoints" = "loyaltyPoints" - ${loyaltyAmt}
+          WHERE id = ${loyaltyUserId} AND "loyaltyPoints" >= ${loyaltyAmt}
+        `.then((affected) => affected > 0
+          ? prisma.loyaltyTransaction.create({
+              data: { userId: loyaltyUserId, orderRef: id, type: "redeemed", amount: loyaltyAmt, description: `Utilisé sur commande #${orderForEmail.orderNumber}` },
+            })
+          : Promise.resolve(null)
+        ).catch((err) => console.error("[confirm_payment] loyalty deduction failed:", err));
       }
 
       // Complete pending referral
