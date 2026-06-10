@@ -55,7 +55,9 @@ export async function POST(req: NextRequest) {
       }),
     ]);
 
-    if (products.length !== items.length) {
+    // Compare against unique productIds — multiple variants of the same product share one product record
+    const uniqueProductIds = new Set(items.map((i) => i.productId));
+    if (products.length !== uniqueProductIds.size) {
       return NextResponse.json({ error: "Un ou plusieurs produits introuvables." }, { status: 400 });
     }
 

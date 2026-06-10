@@ -57,7 +57,8 @@ export async function POST(req: NextRequest) {
     }),
   ]);
 
-  if (products.length !== items.length) {
+  const uniqueProductIds = new Set(items.map((i) => i.productId));
+  if (products.length !== uniqueProductIds.size) {
     return NextResponse.json({ error: "Produit introuvable." }, { status: 400 });
   }
 
