@@ -1,3 +1,5 @@
+export const maxDuration = 30; // allow up to 30s for cold-start + Flouci API round-trip
+
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { z } from "zod";

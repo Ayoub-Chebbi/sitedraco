@@ -269,18 +269,23 @@ export default function CheckoutPage() {
     setLoading(true);
     try {
       if (paymentMethod === "carte") {
-        const res = await fetch("/api/payment/flouci/initiate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email,
-            items: items.map((i) => ({ productId: i.productId, quantity: i.quantity, ...(i.variantId && { variantId: i.variantId }) })),
-            ...(appliedCoupon && { couponCode: appliedCoupon.code }),
-            ...(needsSteam && steamUsername.trim() && { steamUsername: steamUsername.trim() }),
-            ...(useLoyalty && loyaltyBalance > 0 && { useLoyalty: true }),
-            ...(appliedReferral && { referralCode: appliedReferral.code }),
-          }),
+        const payload = JSON.stringify({
+          email,
+          items: items.map((i) => ({ productId: i.productId, quantity: i.quantity, ...(i.variantId && { variantId: i.variantId }) })),
+          ...(appliedCoupon && { couponCode: appliedCoupon.code }),
+          ...(needsSteam && steamUsername.trim() && { steamUsername: steamUsername.trim() }),
+          ...(useLoyalty && loyaltyBalance > 0 && { useLoyalty: true }),
+          ...(appliedReferral && { referralCode: appliedReferral.code }),
         });
+        const opts: RequestInit = { method: "POST", headers: { "Content-Type": "application/json" }, body: payload };
+        // Retry once on network failure (cold-start can drop the first connection)
+        let res: Response;
+        try {
+          res = await fetch("/api/payment/flouci/initiate", opts);
+        } catch {
+          await new Promise((r) => setTimeout(r, 800));
+          res = await fetch("/api/payment/flouci/initiate", opts);
+        }
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ?? "Erreur de paiement.");
         clearCart();
