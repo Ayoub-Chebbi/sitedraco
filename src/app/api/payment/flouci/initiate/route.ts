@@ -244,7 +244,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ paymentUrl: `/checkout/success?orderId=${order.id}`, orderId: order.id });
     }
 
-    const base = process.env.SITE_URL ?? process.env.NEXTAUTH_URL ?? "https://loot.tn";
+    // Derive base URL from the request host so Flouci redirects to the correct domain
+    // regardless of what NEXTAUTH_URL / SITE_URL are set to locally.
+    const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "loot.tn";
+    const proto = host.startsWith("localhost") ? "http" : "https";
+    const base = `${proto}://${host}`;
 
     const { paymentUrl, paymentId } = await initiateFlouciPayment({
       amount: totalAmount,

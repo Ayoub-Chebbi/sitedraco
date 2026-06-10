@@ -130,7 +130,9 @@ export async function POST(req: NextRequest) {
   // Send welcome email to auto-created guest accounts only after payment confirmed
   // (welcome email already contains payment confirmation, so skip the duplicate)
   if (order.guestAutoCreated && order.user?.email) {
-    const base = process.env.SITE_URL ?? process.env.NEXTAUTH_URL ?? "https://loot.tn";
+    const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "loot.tn";
+    const proto = host.startsWith("localhost") ? "http" : "https";
+    const base = `${proto}://${host}`;
     const token = randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000);
 
