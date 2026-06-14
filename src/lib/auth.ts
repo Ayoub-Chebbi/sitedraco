@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { rateLimit } from "@/lib/rate-limit";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -12,8 +13,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Mot de passe", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         if (!credentials?.email || !credentials?.password) return null;
+
+        const ip = request?.headers?.get("x-forwarded-for")?.split(",")[0].trim()
+          ?? request?.headers?.get("x-real-ip")
+          ?? "unknown";
+        const { allowed } = await rateLimit(`login:${ip}`, { max: 10, windowMs: 15 * 60 * 1000 });
+        if (!allowed) return null;
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email as string },
@@ -49,10 +56,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id;
         token.role = (user as { role?: string }).role;
         token.avatarUrl = (user as { avatarUrl?: string | null }).avatarUrl;
+        token.roleCheckedAt = Date.now();
       }
       if (trigger === "update") {
         if (sessionData?.name !== undefined) token.name = sessionData.name;
         if (sessionData?.avatarUrl !== undefined) token.avatarUrl = sessionData.avatarUrl;
+      }
+      // Refresh role from DB every 15 min so role changes take effect quickly
+      const checkedAt = (token.roleCheckedAt as number) ?? 0;
+      if (token.id && Date.now() - checkedAt > 15 * 60 * 1000) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { role: true },
+        });
+        if (dbUser) {
+          token.role = dbUser.role;
+          token.roleCheckedAt = Date.now();
+        }
       }
       return token;
     },

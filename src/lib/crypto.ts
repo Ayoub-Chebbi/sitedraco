@@ -14,10 +14,14 @@ const fromBase64 = Buffer.from(raw, "base64");
 if (fromBase64.length === 32) {
   KEY = fromBase64;
 } else {
-  // Fall back to UTF-8 for backward compatibility with existing encrypted data
+  // Legacy UTF-8 fallback — kept only for backward compat with existing encrypted data.
+  // ENCRYPTION_KEY should be rotated to a base64-encoded 32-byte random key.
   KEY = Buffer.from(raw, "utf8").subarray(0, 32);
   if (KEY.length < 32) {
     throw new Error("ENCRYPTION_KEY must be at least 32 characters");
+  }
+  if (process.env.NODE_ENV === "production") {
+    console.warn("[crypto] ENCRYPTION_KEY is using low-entropy UTF-8 fallback. Rotate to a base64 32-byte random key.");
   }
 }
 

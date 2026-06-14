@@ -55,7 +55,9 @@ export async function POST(req: NextRequest) {
       }),
     ]);
 
-    if (products.length !== items.length) {
+    // Compare against unique productIds — multiple variants of the same product share one product record
+    const uniqueProductIds = new Set(items.map((i) => i.productId));
+    if (products.length !== uniqueProductIds.size) {
       return NextResponse.json({ error: "Un ou plusieurs produits introuvables." }, { status: 400 });
     }
 
@@ -140,9 +142,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Apply loyalty points if requested (logged-in users only)
+    // Apply loyalty points if requested — only for the authenticated session user.
+    // Guard prevents a guest passing someone else's email from draining that user's balance.
     let loyaltyDiscount = 0;
-    if (useLoyalty && userId && !guestAutoCreated) {
+    if (useLoyalty && session?.user?.id && session.user.id === userId) {
       const loyaltyUser = await prisma.user.findUnique({ where: { id: userId }, select: { loyaltyPoints: true } });
       const balance = loyaltyUser?.loyaltyPoints ?? 0;
       if (balance >= 0.001) {
@@ -151,14 +154,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Atomically deduct loyalty points (prevents double-spend)
-    if (loyaltyDiscount > 0 && userId) {
-      const deducted = await prisma.user.updateMany({
-        where: { id: userId, loyaltyPoints: { gte: loyaltyDiscount } },
-        data: { loyaltyPoints: { decrement: loyaltyDiscount } },
-      });
-      if (deducted.count === 0) loyaltyDiscount = 0;
-    }
+    // Note: loyalty points are NOT deducted here.
+    // They are deducted in /verify only after Flouci confirms payment.
+    // Exception: totalAmount=0 (fully covered) is handled below before returning.
 
     // Validate referral code (only for first-time buyers)
     let referralDiscount = 0;
@@ -199,12 +197,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    if (loyaltyDiscount > 0 && userId) {
-      prisma.loyaltyTransaction.create({
-        data: { userId, orderRef: order.id, type: "redeemed", amount: loyaltyDiscount, description: `Utilisé sur commande #${orderNumber}` },
-      }).catch(console.error);
-    }
-
     // Create pending referral record
     if (referrerId && userId && referralDiscount > 0) {
       prisma.referral.create({
@@ -221,13 +213,42 @@ export async function POST(req: NextRequest) {
         data: {
           orderId: order.id,
           productId: item.productId,
+          ...(item.variantId && { variantId: item.variantId }),
           quantity: item.quantity,
           unitPrice,
         },
       });
     }
 
-    const base = process.env.SITE_URL ?? process.env.NEXTAUTH_URL ?? "https://loot.tn";
+    // If loyalty covers the full order, skip Flouci and mark paid directly
+    if (totalAmount === 0) {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { paymentStatus: "paid", status: "processing", paidAt: new Date() },
+      });
+      if (appliedCouponId) {
+        prisma.coupon.update({ where: { id: appliedCouponId }, data: { usedCount: { increment: 1 } } }).catch(console.error);
+      }
+      if (loyaltyDiscount > 0 && userId) {
+        // Atomic conditional decrement — prevents race condition double-spend
+        const affected = await prisma.$executeRaw`
+          UPDATE "User" SET "loyaltyPoints" = "loyaltyPoints" - ${loyaltyDiscount}
+          WHERE id = ${userId} AND "loyaltyPoints" >= ${loyaltyDiscount}
+        `;
+        if (affected > 0) {
+          prisma.loyaltyTransaction.create({
+            data: { userId, orderRef: order.id, type: "redeemed", amount: loyaltyDiscount, description: `Utilisé sur commande #${orderNumber}` },
+          }).catch(console.error);
+        }
+      }
+      return NextResponse.json({ paymentUrl: `/checkout/success?orderId=${order.id}`, orderId: order.id });
+    }
+
+    // Derive base URL from the request host so Flouci redirects to the correct domain
+    // regardless of what NEXTAUTH_URL / SITE_URL are set to locally.
+    const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "loot.tn";
+    const proto = host.startsWith("localhost") ? "http" : "https";
+    const base = `${proto}://${host}`;
 
     const { paymentUrl, paymentId } = await initiateFlouciPayment({
       amount: totalAmount,
@@ -241,8 +262,10 @@ export async function POST(req: NextRequest) {
       data: { paymentRef: paymentId, paymentUrl },
     });
 
-    // usedCount incremented in /verify after payment confirmed
-    // Welcome email sent in /verify after payment confirmed
+    // NOTE: loyalty transaction is NOT created here.
+    // The actual deduction + transaction happens in /verify after Flouci confirms payment.
+    // Creating it here would produce a false "redeemed" entry if the user abandons payment,
+    // and a duplicate entry when verify later completes successfully.
 
     return NextResponse.json({ paymentUrl, orderId: order.id });
 
@@ -251,3 +274,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Erreur de paiement. Veuillez réessayer." }, { status: 500 });
   }
 }
+
+// Warmup endpoint — called by the checkout page on mount to pre-compile/pre-warm this route
+// so the first real POST from the user is always fast.
+export function GET() {
+  return NextResponse.json({ ok: true });
+}
+
+export const maxDuration = 30;

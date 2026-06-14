@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import { generateOrderNumber } from "@/lib/utils";
 import { notifyAdminsNewOrder } from "@/lib/push-notifications";
 import { sendOrderConfirmationEmail } from "@/lib/email";
+import { rateLimit } from "@/lib/rate-limit";
 
 const schema = z.object({
   email: z.string().email(),
@@ -27,6 +28,12 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? req.headers.get("x-real-ip") ?? "unknown";
+  const { allowed, retryAfterMs } = await rateLimit(`pay:${ip}`, { max: 5, windowMs: 15 * 60 * 1000 });
+  if (!allowed) {
+    return NextResponse.json({ error: "Trop de tentatives. Réessayez plus tard." }, { status: 429, headers: { "Retry-After": Math.ceil(retryAfterMs / 1000).toString() } });
+  }
+
   const session = await auth();
 
   let body: unknown;
@@ -50,7 +57,8 @@ export async function POST(req: NextRequest) {
     }),
   ]);
 
-  if (products.length !== items.length) {
+  const uniqueProductIds = new Set(items.map((i) => i.productId));
+  if (products.length !== uniqueProductIds.size) {
     return NextResponse.json({ error: "Produit introuvable." }, { status: 400 });
   }
 
@@ -96,9 +104,10 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Apply loyalty points if requested (logged-in users only)
+  // Apply loyalty points if requested — only for the authenticated session user.
+  // Guard prevents a guest passing someone else's email from draining that user's balance.
   let loyaltyDiscount = 0;
-  if (useLoyalty && userId && !guestAutoCreated) {
+  if (useLoyalty && session?.user?.id && session.user.id === userId) {
     const loyaltyUser = await prisma.user.findUnique({ where: { id: userId }, select: { loyaltyPoints: true } });
     const balance = loyaltyUser?.loyaltyPoints ?? 0;
     if (balance >= 0.001) {
@@ -109,14 +118,9 @@ export async function POST(req: NextRequest) {
 
   const orderNumber = generateOrderNumber();
 
-  // Atomically deduct loyalty points (prevents double-spend)
-  if (loyaltyDiscount > 0 && userId) {
-    const deducted = await prisma.user.updateMany({
-      where: { id: userId, loyaltyPoints: { gte: loyaltyDiscount } },
-      data: { loyaltyPoints: { decrement: loyaltyDiscount } },
-    });
-    if (deducted.count === 0) loyaltyDiscount = 0;
-  }
+  // Note: loyalty points are NOT deducted here.
+  // They are deducted in confirm_payment only after the admin verifies the proof.
+  // This prevents permanent balance loss if the admin rejects the order.
 
   // Validate referral code (first-time buyers only)
   let referralDiscount = 0;
@@ -158,12 +162,6 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  if (loyaltyDiscount > 0 && userId) {
-    prisma.loyaltyTransaction.create({
-      data: { userId, orderRef: order.id, type: "redeemed", amount: loyaltyDiscount, description: `Utilisé sur commande #${orderNumber}` },
-    }).catch(console.error);
-  }
-
   if (referrerId && userId && referralDiscount > 0) {
     prisma.referral.create({
       data: { referrerId, referredUserId: userId, status: "pending", discountGiven: referralDiscount },
@@ -176,11 +174,11 @@ export async function POST(req: NextRequest) {
       : (() => { const p = products.find((p) => p.id === item.productId)!; return p.discountPrice ?? p.price; })();
 
     await prisma.orderItem.create({
-      data: { orderId: order.id, productId: item.productId, quantity: item.quantity, unitPrice },
+      data: { orderId: order.id, productId: item.productId, ...(item.variantId && { variantId: item.variantId }), quantity: item.quantity, unitPrice },
     });
   }
 
-  notifyAdminsNewOrder({
+  await notifyAdminsNewOrder({
     orderNumber,
     clientEmail: email,
     clientName: session?.user?.name ?? null,

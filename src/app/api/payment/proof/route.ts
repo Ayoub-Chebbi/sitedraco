@@ -9,7 +9,7 @@ const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
-  const { allowed, retryAfterMs } = await rateLimit(`proof:${ip}`, { max: 10, windowMs: 60 * 60 * 1000 });
+  const { allowed, retryAfterMs } = await rateLimit(`proof:${ip}`, { max: 3, windowMs: 60 * 60 * 1000 });
   if (!allowed) {
     return NextResponse.json({ error: "Trop de tentatives. Réessayez plus tard." }, { status: 429, headers: { "Retry-After": Math.ceil(retryAfterMs / 1000).toString() } });
   }
@@ -45,4 +45,9 @@ export async function POST(req: NextRequest) {
   });
 
   return NextResponse.json({ url: blob.url }, { status: 201 });
+}
+
+// Warmup endpoint — called by the checkout page on mount to pre-compile this route
+export function GET() {
+  return NextResponse.json({ ok: true });
 }

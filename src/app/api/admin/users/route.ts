@@ -20,6 +20,12 @@ export async function GET() {
       isVerified: true,
       createdAt: true,
       lastLogin: true,
+      loyaltyPoints: true,
+      loyaltyTransactions: {
+        orderBy: { createdAt: "desc" },
+        take: 20,
+        select: { id: true, type: true, amount: true, description: true, createdAt: true },
+      },
       orders: {
         select: {
           id: true,

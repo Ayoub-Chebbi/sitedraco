@@ -25,11 +25,15 @@ const UpdateSchema = z.object({
   imageUrl: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
   lowStockAlert: z.number().int().min(0).optional(),
+  urgencyHours: z.number().int().min(0).optional(),
+  manualStock: z.number().int().min(0).optional().nullable(),
+});
+
+// These fields affect trust signals — admin only, not support
+const AdminOnlyUpdateSchema = UpdateSchema.extend({
   soldCount: z.number().int().min(0).optional(),
   rating: z.number().min(0).max(5).optional(),
   reviewCount: z.number().int().min(0).optional(),
-  urgencyHours: z.number().int().min(0).optional(),
-  manualStock: z.number().int().min(0).optional().nullable(),
 });
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -53,7 +57,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { id } = await params;
   const body = await req.json();
-  const parsed = UpdateSchema.safeParse(body);
+  const schema = session.user.role === "admin" ? AdminOnlyUpdateSchema : UpdateSchema;
+  const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
 
   if (parsed.data.slug) {

@@ -173,6 +173,10 @@ export default function CheckoutPage() {
   const selectedMethod = PAYMENT_METHODS.find((m) => m.id === paymentMethod)!;
 
   useEffect(() => {
+    // Pre-warm payment routes so the first click is never cold
+    fetch("/api/payment/flouci/initiate").catch(() => {});
+    fetch("/api/payment/proof").catch(() => {});
+
     if (items.length > 0) {
       trackInitiateCheckout(total(), items.reduce((s, i) => s + i.quantity, 0));
       const ids = items.map((i) => i.productId).join(",");
@@ -214,13 +218,22 @@ export default function CheckoutPage() {
   async function uploadProof(): Promise<string> {
     if (!proofFile) throw new Error("Aucun justificatif sélectionné.");
     setUploadingProof(true);
-    const fd = new FormData();
-    fd.append("file", proofFile);
-    const res = await fetch("/api/payment/proof", { method: "POST", body: fd });
-    setUploadingProof(false);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error ?? "Échec de l'upload.");
-    return data.url;
+    try {
+      const fd = new FormData();
+      fd.append("file", proofFile);
+      let res: Response;
+      try {
+        res = await fetch("/api/payment/proof", { method: "POST", body: fd });
+      } catch {
+        await new Promise((r) => setTimeout(r, 3000));
+        res = await fetch("/api/payment/proof", { method: "POST", body: fd });
+      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Échec de l'upload.");
+      return data.url;
+    } finally {
+      setUploadingProof(false);
+    }
   }
 
   async function applyCode() {
@@ -269,18 +282,23 @@ export default function CheckoutPage() {
     setLoading(true);
     try {
       if (paymentMethod === "carte") {
-        const res = await fetch("/api/payment/flouci/initiate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email,
-            items: items.map((i) => ({ productId: i.productId, quantity: i.quantity, ...(i.variantId && { variantId: i.variantId }) })),
-            ...(appliedCoupon && { couponCode: appliedCoupon.code }),
-            ...(needsSteam && steamUsername.trim() && { steamUsername: steamUsername.trim() }),
-            ...(useLoyalty && loyaltyBalance > 0 && { useLoyalty: true }),
-            ...(appliedReferral && { referralCode: appliedReferral.code }),
-          }),
+        const payload = JSON.stringify({
+          email,
+          items: items.map((i) => ({ productId: i.productId, quantity: i.quantity, ...(i.variantId && { variantId: i.variantId }) })),
+          ...(appliedCoupon && { couponCode: appliedCoupon.code }),
+          ...(needsSteam && steamUsername.trim() && { steamUsername: steamUsername.trim() }),
+          ...(useLoyalty && loyaltyBalance > 0 && { useLoyalty: true }),
+          ...(appliedReferral && { referralCode: appliedReferral.code }),
         });
+        const opts: RequestInit = { method: "POST", headers: { "Content-Type": "application/json" }, body: payload };
+        // Retry once on network failure (cold-start can drop the first connection)
+        let res: Response;
+        try {
+          res = await fetch("/api/payment/flouci/initiate", opts);
+        } catch {
+          await new Promise((r) => setTimeout(r, 3000));
+          res = await fetch("/api/payment/flouci/initiate", opts);
+        }
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ?? "Erreur de paiement.");
         clearCart();

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Users, ChevronDown, ChevronRight, RefreshCw, ShoppingBag, Clock, CheckCircle, XCircle, Loader2, Shield, UserCog } from "lucide-react";
+import { Users, ChevronDown, ChevronRight, RefreshCw, ShoppingBag, Clock, CheckCircle, XCircle, Loader2, Shield, UserCog, Coins, X } from "lucide-react";
 import { formatPrice, formatDate, ORDER_STATUS_LABELS } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -24,6 +24,14 @@ type Order = {
   items: OrderItem[];
 };
 
+type LoyaltyTx = {
+  id: string;
+  type: string;
+  amount: number;
+  description: string;
+  createdAt: string;
+};
+
 type UserRow = {
   id: string;
   name: string | null;
@@ -33,6 +41,8 @@ type UserRow = {
   isVerified: boolean;
   createdAt: string;
   lastLogin: string | null;
+  loyaltyPoints: number;
+  loyaltyTransactions: LoyaltyTx[];
   orders: Order[];
 };
 
@@ -112,6 +122,148 @@ function RoleSelector({ user, onChanged, isAdmin }: { user: UserRow; onChanged: 
   );
 }
 
+function CreditModal({ user, onClose, onCredited }: {
+  user: UserRow;
+  onClose: () => void;
+  onCredited: (userId: string, amount: number) => void;
+}) {
+  const [mode, setMode] = useState<"credit" | "debit">("credit");
+  const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [txs, setTxs] = useState<LoyaltyTx[]>(user.loyaltyTransactions ?? []);
+  const [balance, setBalance] = useState(user.loyaltyPoints ?? 0);
+
+  async function submit() {
+    const amt = parseFloat(amount);
+    if (!amt || amt <= 0) { setError("Montant invalide."); return; }
+    if (!description.trim()) { setError("Raison requise."); return; }
+    setLoading(true);
+    setError("");
+    const finalAmt = mode === "debit" ? -amt : amt;
+    try {
+      const res = await fetch("/api/admin/credit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, amount: finalAmt, description: description.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error ?? "Erreur."); return; }
+      const newBalance = data.newBalance as number;
+      setBalance(newBalance);
+      const newTx: LoyaltyTx = {
+        id: Date.now().toString(),
+        type: mode === "debit" ? "redeemed" : "earned",
+        amount: amt,
+        description: `${mode === "debit" ? "Déduction" : "Crédit"} admin : ${description.trim()}`,
+        createdAt: new Date().toISOString(),
+      };
+      setTxs((prev) => [newTx, ...prev]);
+      onCredited(user.id, finalAmt);
+      setAmount("");
+      setDescription("");
+    } catch {
+      setError("Erreur réseau.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-lg rounded-2xl border border-gray-700 bg-gray-900 shadow-2xl p-6 max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <Coins className="h-4 w-4 text-yellow-400" />
+              Points de fidélité
+            </h2>
+            <p className="text-xs text-gray-500 mt-0.5 truncate">{user.name ?? user.email}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Current balance */}
+        <div className="rounded-xl bg-yellow-900/20 border border-yellow-700/30 px-4 py-3 mb-5 flex items-center justify-between">
+          <span className="text-sm text-gray-400">Solde actuel</span>
+          <span className="text-xl font-bold text-yellow-400">{balance.toFixed(3)} TND</span>
+        </div>
+
+        {/* Credit / Debit form */}
+        <div className="space-y-3 mb-6">
+          <div className="flex gap-1 bg-gray-800 rounded-lg p-1">
+            <button
+              onClick={() => setMode("credit")}
+              className={`flex-1 py-1.5 rounded-md text-xs font-semibold transition-colors ${mode === "credit" ? "bg-green-700 text-white" : "text-gray-400 hover:text-white"}`}
+            >
+              + Créditer
+            </button>
+            <button
+              onClick={() => setMode("debit")}
+              className={`flex-1 py-1.5 rounded-md text-xs font-semibold transition-colors ${mode === "debit" ? "bg-red-700 text-white" : "text-gray-400 hover:text-white"}`}
+            >
+              − Déduire
+            </button>
+          </div>
+          <input
+            type="number"
+            min="0.001"
+            step="0.5"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="Montant en TND"
+            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-white text-sm placeholder:text-gray-600 focus:outline-none focus:border-yellow-500"
+          />
+          <input
+            type="text"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Raison (ex : compensation retard livraison)"
+            maxLength={200}
+            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-white text-sm placeholder:text-gray-600 focus:outline-none focus:border-yellow-500"
+          />
+          {error && <p className="text-red-400 text-xs">{error}</p>}
+          <Button
+            className={`w-full ${mode === "credit" ? "bg-green-700 hover:bg-green-600" : "bg-red-700 hover:bg-red-600"} text-white`}
+            onClick={submit}
+            disabled={loading || !amount || !description}
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Coins className="h-4 w-4 mr-2" />}
+            {mode === "credit" ? "Créditer" : "Déduire"}
+          </Button>
+        </div>
+
+        {/* Transaction log */}
+        <div>
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Historique ({txs.length})</h3>
+          {txs.length === 0 ? (
+            <p className="text-xs text-gray-600 text-center py-4">Aucune transaction</p>
+          ) : (
+            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+              {txs.map((tx) => (
+                <div key={tx.id} className="flex items-start gap-3 py-2 border-b border-gray-800/60 last:border-0">
+                  <span className={`mt-0.5 shrink-0 text-sm font-bold ${tx.type === "earned" ? "text-green-400" : "text-red-400"}`}>
+                    {tx.type === "earned" ? "+" : "−"}{tx.amount.toFixed(3)}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-300 truncate">{tx.description}</p>
+                    <p className="text-[10px] text-gray-600 mt-0.5">{formatDate(tx.createdAt)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function UsersClient({ initialUsers, isAdmin }: { initialUsers: UserRow[]; isAdmin: boolean }) {
   const [users, setUsers] = useState<UserRow[]>(initialUsers);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -119,6 +271,7 @@ export function UsersClient({ initialUsers, isAdmin }: { initialUsers: UserRow[]
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [creditTarget, setCreditTarget] = useState<UserRow | null>(null);
 
   const refresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -150,6 +303,10 @@ export function UsersClient({ initialUsers, isAdmin }: { initialUsers: UserRow[]
     setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, role: newRole } : u));
   }
 
+  function handleCredited(userId: string, amount: number) {
+    setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, loyaltyPoints: (u.loyaltyPoints ?? 0) + amount } : u));
+  }
+
   const filtered = users.filter((u) => {
     if (!u) return false;
     if (roleFilter !== "all" && u.role !== roleFilter) return false;
@@ -175,6 +332,13 @@ export function UsersClient({ initialUsers, isAdmin }: { initialUsers: UserRow[]
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
+      {creditTarget && (
+        <CreditModal
+          user={creditTarget}
+          onClose={() => setCreditTarget(null)}
+          onCredited={handleCredited}
+        />
+      )}
       {/* Header */}
       <div className="flex items-start justify-between mb-6 gap-3 flex-wrap">
         <div className="flex items-center gap-3">
@@ -278,14 +442,30 @@ export function UsersClient({ initialUsers, isAdmin }: { initialUsers: UserRow[]
                     <p className="text-xs text-gray-500">Dépensé</p>
                     <p className="text-sm font-semibold text-white">{formatPrice(totalSpent)}</p>
                   </div>
+                  {user.role === "customer" && (user.loyaltyPoints ?? 0) > 0 && (
+                    <div className="text-right">
+                      <p className="text-xs text-gray-500">Fidélité</p>
+                      <p className="text-sm font-semibold text-yellow-400">{(user.loyaltyPoints ?? 0).toFixed(3)} TND</p>
+                    </div>
+                  )}
                   <div className="text-right">
                     <p className="text-xs text-gray-500">Inscrit</p>
                     <p className="text-xs text-gray-400">{formatDate(user.createdAt)}</p>
                   </div>
                 </div>
 
-                {/* Role selector + expand */}
+                {/* Role selector + credit + expand */}
                 <div className="flex items-center gap-2 shrink-0">
+                  {isAdmin && user.role === "customer" && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setCreditTarget(user); }}
+                      className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg bg-yellow-900/30 hover:bg-yellow-900/50 border border-yellow-700/40 text-yellow-400 transition-colors"
+                      title="Créditer le compte"
+                    >
+                      <Coins className="h-3 w-3" />
+                      Créditer
+                    </button>
+                  )}
                   <RoleSelector user={user} onChanged={handleRoleChanged} isAdmin={isAdmin} />
                   <button onClick={() => toggleExpand(user.id)} className="text-gray-600 hover:text-gray-400 transition-colors">
                     {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}

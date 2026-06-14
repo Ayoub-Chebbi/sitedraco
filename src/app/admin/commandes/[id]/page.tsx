@@ -14,7 +14,8 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
   const order = await prisma.order.findUnique({
     where: { id },
     include: {
-      items: { include: { product: true, key: true } },
+      items: { include: { product: true, key: true, variant: { select: { name: true } } } },
+      coupon: { select: { code: true } },
       user: { select: { id: true, email: true, name: true, createdAt: true } },
       agent: { select: { email: true, name: true } },
       auditLogs: {
@@ -26,6 +27,13 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
 
   if (!order) notFound();
 
+  const referral = (order.userId && order.referralDiscount > 0)
+    ? await prisma.referral.findUnique({
+        where: { referredUserId: order.userId },
+        select: { referrer: { select: { referralCode: true } } },
+      })
+    : null;
+
   const serialized = {
     id: order.id,
     orderNumber: order.orderNumber,
@@ -35,6 +43,10 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
     paymentProofUrl: order.paymentProofUrl,
     totalAmount: order.totalAmount,
     discountAmount: order.discountAmount,
+    loyaltyPointsUsed: order.loyaltyPointsUsed,
+    referralDiscount: order.referralDiscount,
+    couponCode: order.coupon?.code ?? null,
+    referralCode: referral?.referrer?.referralCode ?? null,
     steamUsername: order.steamUsername,
     notesInternal: order.notesInternal,
     createdAt: order.createdAt.toISOString(),
@@ -64,6 +76,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
         deliveredKey,
         productType: item.product.productType ?? "key",
         product: { id: item.product.id, name: item.product.name, platform: item.product.platform, imageUrl: item.product.imageUrl },
+        variantName: item.variant?.name ?? null,
       };
     }),
     auditLogs: order.auditLogs.map((log: typeof order.auditLogs[0]) => ({

@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
       .catch((err) => console.error("Welcome email failed:", err));
   }
 
-  notifyAdminsNewOrder({
+  await notifyAdminsNewOrder({
     orderNumber,
     clientEmail: email,
     clientName: session?.user?.name ?? null,

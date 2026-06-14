@@ -15,15 +15,20 @@ interface PushMessage {
 async function sendExpoPush(messages: PushMessage[]) {
   if (messages.length === 0) return;
   try {
-    await fetch(EXPO_PUSH_URL, {
+    const res = await fetch(EXPO_PUSH_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
       body: JSON.stringify(messages),
-      signal: AbortSignal.timeout(5_000),
+      signal: AbortSignal.timeout(8_000),
     });
+    const json = await res.json();
+    const statuses = (json.data ?? []).map((d: { status: string }) => d.status);
+    if (statuses.some((s: string) => s !== "ok")) {
+      console.warn("[push] Expo reported non-ok status:", statuses);
+    }
   } catch (err) {
     console.error("[push] Failed to send Expo push:", err);
   }

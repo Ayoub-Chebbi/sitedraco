@@ -23,6 +23,10 @@ type OrderData = {
   paymentProofUrl?: string | null;
   totalAmount: number;
   discountAmount?: number;
+  loyaltyPointsUsed?: number;
+  referralDiscount?: number;
+  couponCode?: string | null;
+  referralCode?: string | null;
   steamUsername?: string | null;
   notesInternal: string | null;
   createdAt: string;
@@ -37,6 +41,7 @@ type OrderData = {
     deliveredKey: { type: "key"; value: string } | { type: "account"; email: string; password: string } | null;
     productType: string;
     product: { id: string; name: string; platform: string; imageUrl: string | null };
+    variantName: string | null;
   }[];
   auditLogs: {
     id: string;
@@ -279,6 +284,24 @@ export function OrderDetailClient({ order }: { order: OrderData }) {
                   {order.paymentStatus === "paid" ? "Confirmé" : "En attente"}
                 </span>
               </div>
+              {(order.discountAmount ?? 0) > 0 && (
+                <div>
+                  <p className="text-gray-500 text-xs mb-0.5">Code promo {order.couponCode && <span className="font-mono text-purple-400 ml-1">{order.couponCode}</span>}</p>
+                  <p className="text-green-400 font-medium">−{formatPrice(order.discountAmount!)}</p>
+                </div>
+              )}
+              {(order.loyaltyPointsUsed ?? 0) > 0 && (
+                <div>
+                  <p className="text-gray-500 text-xs mb-0.5">Crédits fidélité</p>
+                  <p className="text-purple-400 font-medium">−{formatPrice(order.loyaltyPointsUsed!)}</p>
+                </div>
+              )}
+              {(order.referralDiscount ?? 0) > 0 && (
+                <div>
+                  <p className="text-gray-500 text-xs mb-0.5">Code parrainage {order.referralCode && <span className="font-mono text-blue-400 ml-1">{order.referralCode}</span>}</p>
+                  <p className="text-blue-400 font-medium">−{formatPrice(order.referralDiscount!)}</p>
+                </div>
+              )}
               <div>
                 <p className="text-gray-500 text-xs mb-0.5">Total</p>
                 <p className="text-white font-bold">{formatPrice(order.totalAmount)}</p>
@@ -307,7 +330,10 @@ export function OrderDetailClient({ order }: { order: OrderData }) {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-white mt-0.5">{item.product.name}</p>
+                    <p className="text-sm text-white mt-0.5">
+                      {item.product.name}
+                      {item.variantName && <span className="text-gray-400"> — {item.variantName}</span>}
+                    </p>
                     <p className="text-xs text-gray-500">Qté: {item.quantity} · {formatPrice(item.unitPrice)}</p>
                   </div>
                 </div>
@@ -329,7 +355,9 @@ export function OrderDetailClient({ order }: { order: OrderData }) {
               </h2>
               {order.items.filter((i) => i.deliveredKey).map((item) => (
                 <div key={item.id} className="space-y-2">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{item.product.name}</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                    {item.product.name}{item.variantName && ` — ${item.variantName}`}
+                  </p>
                   {item.deliveredKey?.type === "key" ? (
                     <div className="flex items-center gap-2 bg-gray-800 rounded-lg px-4 py-3 border border-gray-700">
                       <Key className="h-4 w-4 text-purple-400 shrink-0" />
@@ -555,6 +583,30 @@ export function OrderDetailClient({ order }: { order: OrderData }) {
               >
                 {loading === "refund" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
                 Marquer remboursée
+              </Button>
+            )}
+
+            {order.paymentStatus === "paid" && (
+              <Button
+                variant="outline"
+                className="w-full gap-2 border-yellow-700/50 text-yellow-300 hover:bg-yellow-900/20 hover:text-yellow-200"
+                disabled={!!loading}
+                onClick={async () => {
+                  setLoading("review");
+                  const res = await fetch("/api/admin/review-emails", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ orderId: order.id }),
+                  });
+                  setLoading(null);
+                  const data = await res.json();
+                  if (res.ok && data.sent > 0) toast({ title: "Email d'avis envoyé", variant: "success" });
+                  else if (res.ok && data.sent === 0) toast({ title: "Aucun email envoyé", description: data.errors?.[0] ?? "Email manquant ou commande invalide", variant: "error" });
+                  else toast({ title: "Erreur", description: data.error, variant: "error" });
+                }}
+              >
+                {loading === "review" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                Envoyer email d&apos;avis
               </Button>
             )}
           </div>

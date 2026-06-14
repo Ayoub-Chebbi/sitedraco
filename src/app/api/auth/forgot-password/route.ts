@@ -2,8 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { sendPasswordResetEmail } from "@/lib/email";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? req.headers.get("x-real-ip") ?? "unknown";
+  const { allowed } = await rateLimit(`forgot-pwd:${ip}`, { max: 10, windowMs: 60 * 60 * 1000 });
+  if (!allowed) return NextResponse.json({ success: true }); // silent — don't reveal rate limiting
+
   const { email } = await req.json();
   if (!email) return NextResponse.json({ error: "Email requis." }, { status: 400 });
 
@@ -29,7 +34,9 @@ export async function POST(req: NextRequest) {
 
   await prisma.passwordResetToken.create({ data: { email, token, expiresAt } });
 
-  const resetUrl = `${process.env.SITE_URL ?? process.env.NEXTAUTH_URL ?? "https://loot.tn"}/reinitialiser-mot-de-passe?token=${token}`;
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "loot.tn";
+  const proto = host.startsWith("localhost") ? "http" : "https";
+  const resetUrl = `${proto}://${host}/reinitialiser-mot-de-passe?token=${token}`;
 
   // Always return success — never leak whether the email exists or the send failed
   sendPasswordResetEmail(email, resetUrl).catch((err) =>

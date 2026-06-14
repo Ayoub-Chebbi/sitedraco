@@ -4,8 +4,13 @@ import { prisma } from "@/lib/prisma";
 import { verifyFlouciPayment } from "@/lib/flouci";
 import { notifyAdminsNewOrder } from "@/lib/push-notifications";
 import { sendWelcomeEmail, sendPaymentConfirmedEmail } from "@/lib/email";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? req.headers.get("x-real-ip") ?? "unknown";
+  const { allowed } = await rateLimit(`verify:${ip}`, { max: 20, windowMs: 60 * 60 * 1000 });
+  if (!allowed) return NextResponse.json({ error: "Trop de tentatives." }, { status: 429 });
+
   let body: { paymentId?: string; orderId?: string };
   try { body = await req.json(); } catch {
     return NextResponse.json({ error: "Corps invalide." }, { status: 400 });
@@ -53,6 +58,19 @@ export async function POST(req: NextRequest) {
     data: { paymentStatus: "paid", paymentRef: paymentId, status: "processing", paidAt: new Date() },
   });
 
+  // Deduct loyalty points now that payment is confirmed — atomic to prevent race condition
+  if (order.loyaltyPointsUsed > 0 && order.userId) {
+    prisma.$executeRaw`
+      UPDATE "User" SET "loyaltyPoints" = "loyaltyPoints" - ${order.loyaltyPointsUsed}
+      WHERE id = ${order.userId} AND "loyaltyPoints" >= ${order.loyaltyPointsUsed}
+    `.then((affected) => affected > 0
+      ? prisma.loyaltyTransaction.create({
+          data: { userId: order.userId!, orderRef: order.id, type: "redeemed", amount: order.loyaltyPointsUsed, description: `Utilisé sur commande #${order.orderNumber}` },
+        })
+      : Promise.resolve(null)
+    ).catch((err) => console.error("[verify] loyalty deduction failed:", err));
+  }
+
   // Increment coupon usedCount only after payment is confirmed
   if (order.couponId) {
     await prisma.coupon.update({
@@ -90,7 +108,7 @@ export async function POST(req: NextRequest) {
       .catch((err) => console.error("[verify] loyalty award failed:", err));
   }
 
-  notifyAdminsNewOrder({
+  await notifyAdminsNewOrder({
     orderNumber: order.orderNumber,
     clientEmail: order.user?.email ?? order.guestEmail ?? "guest",
     clientName: order.user?.name ?? null,
@@ -112,7 +130,9 @@ export async function POST(req: NextRequest) {
   // Send welcome email to auto-created guest accounts only after payment confirmed
   // (welcome email already contains payment confirmation, so skip the duplicate)
   if (order.guestAutoCreated && order.user?.email) {
-    const base = process.env.SITE_URL ?? process.env.NEXTAUTH_URL ?? "https://loot.tn";
+    const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "loot.tn";
+    const proto = host.startsWith("localhost") ? "http" : "https";
+    const base = `${proto}://${host}`;
     const token = randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000);
 
