@@ -35,8 +35,12 @@ export async function GET(req: NextRequest) {
         { paidAt: null, createdAt: { gte: twoHoursAgo, lte: tenMinutesAgo } },
       ],
     },
-    include: {
-      items: { include: { product: { select: { id: true, name: true } } } },
+    select: {
+      id: true,
+      orderNumber: true,
+      guestEmail: true,
+      reviewToken: true,
+      items: { select: { product: { select: { id: true, name: true } } } },
       user: { select: { email: true } },
     },
   });
@@ -49,10 +53,10 @@ export async function GET(req: NextRequest) {
     const email = order.user?.email ?? order.guestEmail;
     if (!email) continue;
 
-    const firstProductId = order.items[0]?.product.id;
-    if (!firstProductId) continue;
+    if (!order.items[0]) continue;
 
-    const token = randomBytes(32).toString("hex");
+    // Reuse existing token so previously sent links stay valid
+    const token = order.reviewToken ?? randomBytes(32).toString("hex");
     const reviewUrl = `${base}/review?token=${token}`;
 
     try {

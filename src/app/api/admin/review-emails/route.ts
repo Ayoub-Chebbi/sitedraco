@@ -33,8 +33,12 @@ export async function POST(req: NextRequest) {
             { paidAt: null, createdAt: { gte: sevenDaysAgo } },
           ],
         },
-    include: {
-      items: { include: { product: { select: { id: true, name: true } } } },
+    select: {
+      id: true,
+      orderNumber: true,
+      guestEmail: true,
+      reviewToken: true,
+      items: { select: { product: { select: { name: true } } } },
       user: { select: { email: true } },
     },
   });
@@ -47,7 +51,8 @@ export async function POST(req: NextRequest) {
     if (!email) continue;
     if (!order.items[0]) continue;
 
-    const token = randomBytes(32).toString("hex");
+    // Reuse existing token so old email links stay valid if admin resends
+    const token = order.reviewToken ?? randomBytes(32).toString("hex");
     const reviewUrl = `${base}/review?token=${token}`;
 
     try {
