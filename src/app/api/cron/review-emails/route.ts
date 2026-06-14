@@ -19,18 +19,18 @@ export async function GET(req: NextRequest) {
   }
 
   const now = new Date();
-  const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
+  const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
   const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
 
   // Find paid orders that haven't had a review email sent yet,
-  // paid between 15 minutes and 2 hours ago (2h ceiling avoids retroactive emails on first deploy)
+  // paid between 10 minutes and 2 hours ago (2h ceiling avoids retroactive emails on first deploy)
   const orders = await prisma.order.findMany({
     where: {
       paymentStatus: "paid",
       reviewEmailSentAt: null,
       OR: [
-        { paidAt: { gte: twoHoursAgo, lte: fifteenMinutesAgo } },
-        { paidAt: null, createdAt: { gte: twoHoursAgo, lte: fifteenMinutesAgo } },
+        { paidAt: { gte: twoHoursAgo, lte: tenMinutesAgo } },
+        { paidAt: null, createdAt: { gte: twoHoursAgo, lte: tenMinutesAgo } },
       ],
     },
     include: {
