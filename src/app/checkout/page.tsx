@@ -173,8 +173,9 @@ export default function CheckoutPage() {
   const selectedMethod = PAYMENT_METHODS.find((m) => m.id === paymentMethod)!;
 
   useEffect(() => {
-    // Pre-warm the Flouci initiate route so the first click is never cold
+    // Pre-warm payment routes so the first click is never cold
     fetch("/api/payment/flouci/initiate").catch(() => {});
+    fetch("/api/payment/proof").catch(() => {});
 
     if (items.length > 0) {
       trackInitiateCheckout(total(), items.reduce((s, i) => s + i.quantity, 0));
@@ -217,13 +218,22 @@ export default function CheckoutPage() {
   async function uploadProof(): Promise<string> {
     if (!proofFile) throw new Error("Aucun justificatif sélectionné.");
     setUploadingProof(true);
-    const fd = new FormData();
-    fd.append("file", proofFile);
-    const res = await fetch("/api/payment/proof", { method: "POST", body: fd });
-    setUploadingProof(false);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error ?? "Échec de l'upload.");
-    return data.url;
+    try {
+      const fd = new FormData();
+      fd.append("file", proofFile);
+      let res: Response;
+      try {
+        res = await fetch("/api/payment/proof", { method: "POST", body: fd });
+      } catch {
+        await new Promise((r) => setTimeout(r, 3000));
+        res = await fetch("/api/payment/proof", { method: "POST", body: fd });
+      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Échec de l'upload.");
+      return data.url;
+    } finally {
+      setUploadingProof(false);
+    }
   }
 
   async function applyCode() {

@@ -46,3 +46,8 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ url: blob.url }, { status: 201 });
 }
+
+// Warmup endpoint — called by the checkout page on mount to pre-compile this route
+export function GET() {
+  return NextResponse.json({ ok: true });
+}
