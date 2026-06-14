@@ -1,5 +1,3 @@
-export const maxDuration = 30; // allow up to 30s for cold-start + Flouci API round-trip
-
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { z } from "zod";
@@ -264,11 +262,10 @@ export async function POST(req: NextRequest) {
       data: { paymentRef: paymentId, paymentUrl },
     });
 
-    if (loyaltyDiscount > 0 && userId) {
-      prisma.loyaltyTransaction.create({
-        data: { userId, orderRef: order.id, type: "redeemed", amount: loyaltyDiscount, description: `Utilisé sur commande #${orderNumber}` },
-      }).catch(console.error);
-    }
+    // NOTE: loyalty transaction is NOT created here.
+    // The actual deduction + transaction happens in /verify after Flouci confirms payment.
+    // Creating it here would produce a false "redeemed" entry if the user abandons payment,
+    // and a duplicate entry when verify later completes successfully.
 
     return NextResponse.json({ paymentUrl, orderId: order.id });
 
@@ -277,3 +274,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Erreur de paiement. Veuillez réessayer." }, { status: 500 });
   }
 }
+
+// Warmup endpoint — called by the checkout page on mount to pre-compile/pre-warm this route
+// so the first real POST from the user is always fast.
+export function GET() {
+  return NextResponse.json({ ok: true });
+}
+
+export const maxDuration = 30;

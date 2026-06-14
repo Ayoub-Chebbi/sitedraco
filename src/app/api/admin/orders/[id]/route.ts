@@ -145,7 +145,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (parsed.data.action === "confirm_payment") {
     const orderForEmail = await prisma.order.findUnique({
       where: { id },
-      select: { orderNumber: true, totalAmount: true, loyaltyPointsUsed: true, guestAutoCreated: true, guestEmail: true, userId: true, paymentStatus: true, user: { select: { email: true } } },
+      select: { orderNumber: true, totalAmount: true, loyaltyPointsUsed: true, guestAutoCreated: true, guestEmail: true, userId: true, paymentStatus: true, couponId: true, user: { select: { email: true } } },
     });
 
     // Idempotency guard — prevent double cashback/referral if called twice
@@ -175,6 +175,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           orderNumber: orderForEmail.orderNumber,
           totalAmount: orderForEmail.totalAmount,
         }).catch((err) => console.error("[confirm_payment] email failed:", err));
+      }
+
+      // Increment coupon usedCount — same as Flouci verify does for card payments
+      if (orderForEmail.couponId) {
+        prisma.coupon.update({ where: { id: orderForEmail.couponId }, data: { usedCount: { increment: 1 } } })
+          .catch((err) => console.error("[confirm_payment] coupon increment failed:", err));
       }
 
       // Deduct loyalty points now that payment is confirmed — atomic to prevent race condition
