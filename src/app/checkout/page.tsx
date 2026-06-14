@@ -173,6 +173,9 @@ export default function CheckoutPage() {
   const selectedMethod = PAYMENT_METHODS.find((m) => m.id === paymentMethod)!;
 
   useEffect(() => {
+    // Pre-warm the Flouci initiate route so the first click is never cold
+    fetch("/api/payment/flouci/initiate").catch(() => {});
+
     if (items.length > 0) {
       trackInitiateCheckout(total(), items.reduce((s, i) => s + i.quantity, 0));
       const ids = items.map((i) => i.productId).join(",");
@@ -283,7 +286,7 @@ export default function CheckoutPage() {
         try {
           res = await fetch("/api/payment/flouci/initiate", opts);
         } catch {
-          await new Promise((r) => setTimeout(r, 800));
+          await new Promise((r) => setTimeout(r, 3000));
           res = await fetch("/api/payment/flouci/initiate", opts);
         }
         const data = await res.json();
