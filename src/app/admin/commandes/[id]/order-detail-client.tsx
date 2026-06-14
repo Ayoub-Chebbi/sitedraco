@@ -585,6 +585,30 @@ export function OrderDetailClient({ order }: { order: OrderData }) {
                 Marquer remboursée
               </Button>
             )}
+
+            {order.paymentStatus === "paid" && (
+              <Button
+                variant="outline"
+                className="w-full gap-2 border-yellow-700/50 text-yellow-300 hover:bg-yellow-900/20 hover:text-yellow-200"
+                disabled={!!loading}
+                onClick={async () => {
+                  setLoading("review");
+                  const res = await fetch("/api/admin/review-emails", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ orderId: order.id }),
+                  });
+                  setLoading(null);
+                  const data = await res.json();
+                  if (res.ok && data.sent > 0) toast({ title: "Email d'avis envoyé", variant: "success" });
+                  else if (res.ok && data.sent === 0) toast({ title: "Aucun email envoyé", description: data.errors?.[0] ?? "Email manquant ou commande invalide", variant: "error" });
+                  else toast({ title: "Erreur", description: data.error, variant: "error" });
+                }}
+              >
+                {loading === "review" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                Envoyer email d&apos;avis
+              </Button>
+            )}
           </div>
 
           <div className="rounded-xl border border-gray-800 bg-gray-900 p-5">

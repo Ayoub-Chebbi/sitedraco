@@ -15,9 +15,11 @@ function isAuthorized(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) {
+    console.warn("[review-cron] unauthorized — check CRON_SECRET env var");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  console.log("[review-cron] starting at", new Date().toISOString());
   const now = new Date();
   const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
   const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
@@ -39,6 +41,7 @@ export async function GET(req: NextRequest) {
     },
   });
 
+  console.log(`[review-cron] found ${orders.length} orders to process`);
   let sent = 0;
   const base = process.env.SITE_URL ?? process.env.NEXTAUTH_URL ?? "https://loot.tn";
 
@@ -75,5 +78,6 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  console.log(`[review-cron] done — sent ${sent}/${orders.length}`);
   return NextResponse.json({ processed: orders.length, sent });
 }
